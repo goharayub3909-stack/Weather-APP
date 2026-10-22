@@ -9,7 +9,7 @@ import json
 import math
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urlsplit
@@ -17,10 +17,10 @@ from urllib.request import Request, urlopen
 
 ENDPOINT='https://api.open-meteo.com/v1/forecast'
 GRID={'west':60,'east':78,'south':23,'north':38,'columns':19,'rows':16,'spacing_degrees':1}
-LEVELS=('surface','850','500','250')
+LEVELS=('surface','925','850','700','500','300','250','200')
 FIELDS=['temperature_2m','relative_humidity_2m','wind_speed_10m','wind_direction_10m','cloud_cover','surface_pressure','rain']
 for pressure in LEVELS[1:]:
-    FIELDS.extend(f'{field}_{pressure}hPa' for field in ('temperature','relative_humidity','wind_speed','wind_direction'))
+    FIELDS.extend(f'{field}_{pressure}hPa' for field in ('temperature','relative_humidity','wind_speed','wind_direction','geopotential_height'))
 
 def number(value,low,high):
     return round(value,3) if type(value) in (int,float) and math.isfinite(value) and low<=value<=high else None
@@ -36,12 +36,13 @@ def build(points,coords,grid=GRID):
     if len(points)!=len(coords) or len(points)!=grid['columns']*grid['rows']:
         raise ValueError('Missing forecast points')
     times=[utc(t) for t in points[0].get('hourly',{}).get('time',[])]
-    if len(times)<24 or any(datetime.fromisoformat(b.replace('Z','+00:00')).timestamp()-datetime.fromisoformat(a.replace('Z','+00:00')).timestamp()!=3600 for a,b in zip(times,times[1:])):
+    if len(times)!=48 or any(datetime.fromisoformat(b.replace('Z','+00:00')).timestamp()-datetime.fromisoformat(a.replace('Z','+00:00')).timestamp()!=3600 for a,b in zip(times,times[1:])):
         raise ValueError('Invalid hourly forecast axis')
     count=len(coords)
-    levels={level:{key:[[None]*count for _ in times] for key in ('temperature','humidity','u','v')} for level in LEVELS}
+    levels={level:{key:[[None]*count for _ in times] for key in ('temperature','humidity','u','v','height')} for level in LEVELS}
     clouds=[[None]*count for _ in times]
     rain=[[None]*count for _ in times]
+    pressures=[[None]*count for _ in times]
     for index,(point,(lat,lon)) in enumerate(zip(points,coords)):
         if abs(point.get('latitude',999)-lat)>.26 or abs(point.get('longitude',999)-lon)>.26:
             raise ValueError('Provider returned an unexpected model cell')
@@ -50,12 +51,12 @@ def build(points,coords,grid=GRID):
             raise ValueError('Inconsistent forecast times')
         for field in FIELDS:
             if len(hourly.get(field,[]))!=len(times): raise ValueError('Missing forecast field')
-            unit='m/s' if field.startswith('wind_speed') else '°' if field.startswith('wind_direction') else '°C' if field.startswith('temperature') else 'hPa' if field=='surface_pressure' else 'mm' if field=='rain' else '%'
+            unit='m/s' if field.startswith('wind_speed') else '°' if field.startswith('wind_direction') else '°C' if field.startswith('temperature') else 'hPa' if field=='surface_pressure' else 'mm' if field=='rain' else 'm' if field.startswith('geopotential_height') else '%'
             if units.get(field)!=unit: raise ValueError('Unexpected provider units')
         for t in range(len(times)):
             clouds[t][index]=number(hourly['cloud_cover'][t],0,100)
             rain[t][index]=number(hourly['rain'][t],0,500)
-            surface_pressure=number(hourly['surface_pressure'][t],100,1100)
+            surface_pressure=number(hourly['surface_pressure'][t],100,1100);pressures[t][index]=surface_pressure
             for level in LEVELS:
                 # Do not plot extrapolated pressure-level weather below ground.
                 if level!='surface' and (surface_pressure is None or float(level)>surface_pressure): continue
@@ -65,17 +66,17 @@ def build(points,coords,grid=GRID):
                 suffix='10m' if level=='surface' else level+'hPa'
                 speed=number(hourly['wind_speed_'+suffix][t],0,200)
                 direction=number(hourly['wind_direction_'+suffix][t],0,360)
-                fields=levels[level];fields['temperature'][t][index]=temp;fields['humidity'][t][index]=rh
+                fields=levels[level];fields['height'][t][index]=None if level=='surface' else number(hourly['geopotential_height_'+level+'hPa'][t],-500,25000);fields['temperature'][t][index]=temp;fields['humidity'][t][index]=rh
                 if speed is not None and (direction is not None or speed==0):
                     angle=math.radians(direction or 0)
                     fields['u'][t][index]=round(-speed*math.sin(angle),4)
                     fields['v'][t][index]=round(-speed*math.cos(angle),4)
     if any(not any(value is not None for row in levels[level]['u'] for value in row) for level in LEVELS):
         raise ValueError('A wind level has no actual forecast values')
-    return {'schema_version':2,'model':'ecmwf_ifs025','source':'ECMWF IFS via Open-Meteo','source_url':ENDPOINT,
+    return {'schema_version':3,'model':'ecmwf_ifs025','source':'ECMWF IFS via Open-Meteo','source_url':ENDPOINT,
             'retrieved_at':datetime.now(timezone.utc).isoformat(),'status':'updated','grid':grid,
-            'times':times,'levels':levels,'cloud_cover':clouds,'rain':rain,
-            'units':{'temperature':'°C','humidity':'%','u':'m/s','v':'m/s','cloud_cover':'%','rain':'mm'},
+            'times':times,'levels':levels,'cloud_cover':clouds,'rain':rain,'surface_pressure':pressures,
+            'units':{'temperature':'°C','humidity':'%','u':'m/s','v':'m/s','cloud_cover':'%','rain':'mm','surface_pressure':'hPa','height':'m'},
             'notes':'1° display sampling of the 0.25° model. Rain is the surface hourly rain amount in mm. Cloud cover is total column, not pressure-level cloud. Below-terrain pressure levels are masked. Model initialization time is not supplied by this API.'}
 
 def get(url):
@@ -88,7 +89,7 @@ def get(url):
             delay=min(40,max(2,int(error.headers.get('Retry-After','20'))));time.sleep(delay)
 
 def valid_previous(data):
-    return data.get('model')=='ecmwf_ifs025' and data.get('schema_version')==2 and data.get('times') and data.get('levels') and data.get('grid')==GRID and isinstance(data.get('rain'),list)
+    return data.get('model')=='ecmwf_ifs025' and data.get('schema_version')==3 and data.get('times') and data.get('levels') and data.get('grid')==GRID and isinstance(data.get('rain'),list) and all(level in data['levels'] for level in LEVELS)
 
 def sync(path):
     old=None
@@ -110,20 +111,24 @@ def sync(path):
             path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(old,separators=(',',':'))+'\n')
             print('Studio: reused actual forecast snapshot; next upstream refresh after six hours.');return True
     try:
-        coords=coordinates();points=[]
+        coords=coordinates();points=[];first=now.replace(minute=0,second=0,microsecond=0)
+        # Fixed UTC range keeps batches aligned even if the wall-clock hour changes.
         for start in range(0,len(coords),8):
             batch=coords[start:start+8]
             query={'latitude':','.join(str(p[0]) for p in batch),'longitude':','.join(str(p[1]) for p in batch),
-                   'hourly':','.join(FIELDS),'models':'ecmwf_ifs025','forecast_hours':48,
+                   'hourly':','.join(FIELDS),'models':'ecmwf_ifs025','start_hour':first.strftime('%Y-%m-%dT%H:00'),'end_hour':(first+timedelta(hours=47)).strftime('%Y-%m-%dT%H:00'),
                    'wind_speed_unit':'ms','timezone':'UTC','cell_selection':'nearest'}
             result=get(ENDPOINT+'?'+urlencode(query))
             if isinstance(result,dict): result=[result]
             if not isinstance(result,list) or len(result)!=len(batch): raise ValueError('Incomplete forecast batch')
             points.extend(result)
             print(f'Studio: fetched {len(points)}/{len(coords)} actual model cells',flush=True)
+            # Expanded pressure/height fields are weighted API requests. Pace the
+            # shared refresh to stay within the free per-minute allowance.
+            if start+len(batch)<len(coords): time.sleep(4)
         data=build(points,coords);path.parent.mkdir(parents=True,exist_ok=True)
         temp=path.with_suffix('.tmp');temp.write_text(json.dumps(data,separators=(',',':'))+'\n');temp.replace(path)
-        print('Studio: published',len(data['times']),'hourly frames at four elevations.');return True
+        print('Studio: published',len(data['times']),'hourly frames at eight elevations.');return True
     except Exception as error:
         if old:
             old={**old,'status':'cached','attempted_at':now.isoformat()};path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(old,separators=(',',':'))+'\n')

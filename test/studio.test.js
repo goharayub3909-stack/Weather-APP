@@ -24,3 +24,12 @@ test('rain remains a surface field at every pressure and missing rain is never z
  box.dataset.units.rain='inch';assert.throws(()=>box.validateForecast(box.dataset));
  box.dataset=structuredClone(actual);box.dataset.rain.pop();assert.throws(()=>box.validateForecast(box.dataset));
 });
+
+test('terrain-aware interpolation preserves valid slopes without filling provider gaps',()=>{
+ const box=context(),sampler=new box.GridSampler(box.dataset,{time:0}),g=box.dataset.grid,a=(30-g.south)*g.columns+(69-g.west),b=a+1;
+ box.dataset.surface_pressure[0][a]=800;box.dataset.surface_pressure[0][b]=1000;
+ for(const key of ['temperature','humidity','u','v','height']){box.dataset.levels['850'][key][0][a]=null;box.dataset.levels['850'][key][0][b]=10;}
+ const slope=sampler.sample(69.5,30,'850');assert.equal(slope.belowTerrain,false);assert.equal(slope.temperature,10);assert.equal(slope.surfacePressure,900);
+ const mountain=sampler.sample(69.1,30,'850');assert.equal(mountain.belowTerrain,true);assert.equal(mountain.temperature,null);assert.equal(mountain.windKnots,null);
+ box.dataset.surface_pressure[0][a]=1000;assert.equal(sampler.sample(69.5,30,'850').temperature,null,'a genuine provider gap stays missing');
+});
