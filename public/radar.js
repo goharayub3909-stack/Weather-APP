@@ -3,7 +3,7 @@ export function initRadar(){
  const $=id=>document.getElementById(id);
  let catalog,map,layer,pendingLayer,marker,coverage,frames=[],position=0,player,request,imageTimeout,sequence=0,initialized=false;
  const label=(id,value)=>$(id).textContent=value;
- function stop(){clearInterval(player);player=null;label('radar-play','▶ Play');$('radar-play').setAttribute('aria-pressed','false');}
+ function stop(){clearInterval(player);player=null;label('radar-play','▶ Play');$('radar-play').setAttribute('aria-pressed','false');label('radar-playback-state','SELECTED FRAME');}
  function current(){return catalog?.stations?.[$('radar-station').value];}
  function controls(disabled){for(const id of ['radar-play','radar-latest','radar-timeline','radar-opacity'])$(id).disabled=disabled;}
  function catalogNote(){
@@ -20,7 +20,7 @@ export function initRadar(){
   // Remove the old product immediately, so failed loads cannot masquerade as the selected frame.
   if(layer){map.removeLayer(layer);layer=null;}
   $('radar-timeline').value=String(position);label('radar-frame-count',`${position+1} / ${frames.length}`);
-  label('radar-time',frame.datetime+' · PMD time (timezone unspecified)');label('radar-radius',frame.radius+' km');
+  label('radar-time',frame.datetime+' · PMD time (timezone unspecified)');label('radar-map-time','Image: '+frame.datetime+' · PMD time');label('radar-playback-state',player?'PLAYBACK':'SELECTED FRAME');label('radar-radius',frame.radius+' km');
   label('radar-status','Loading PMD radar image…');$('radar-status').className='radar-status';
   const image=L.imageOverlay(frameURL(frame),imageBounds(current().site,frame.radius),{opacity:Number($('radar-opacity').value)/100,interactive:false,className:'pmd-radar-echo',attribution:'Radar imagery © Pakistan Meteorological Department'});
   pendingLayer=image;
@@ -41,7 +41,7 @@ export function initRadar(){
   const file=legends[$('radar-product').value];$('radar-legend').hidden=!file;
   if(file){$('radar-legend').src=new URL('./radar-data/legends/'+file,import.meta.url).href;$('radar-legend').alt='Official PMD color scale: '+$('radar-product').value;}
  }
- function chooseProduct(){stop();clearTimeout(imageTimeout);sequence++;if(coverage){map.removeLayer(coverage);coverage=null;}frames=productFrames(current(),$('radar-product').value);position=Math.max(0,frames.length-1);$('radar-timeline').max=String(position);controls(!frames.length);if(!frames.length){if(pendingLayer){map.removeLayer(pendingLayer);pendingLayer=null;}if(layer){map.removeLayer(layer);layer=null;}label('radar-status','No frames available for this product.');return;}coverage=L.circle(current().site.center,{radius:Number(frames[position].radius)*1000,color:'#347887',weight:1,fill:false,dashArray:'5 5',interactive:false}).addTo(map);updateLegend();showFrame();fit();catalogNote();}
+ function chooseProduct(){stop();clearTimeout(imageTimeout);sequence++;if(coverage){map.removeLayer(coverage);coverage=null;}frames=productFrames(current(),$('radar-product').value);position=Math.max(0,frames.length-1);label('radar-latest-time',frames.length?frames.at(-1).datetime+' · PMD time':'Unavailable');$('radar-timeline').max=String(position);controls(!frames.length);if(!frames.length){if(pendingLayer){map.removeLayer(pendingLayer);pendingLayer=null;}if(layer){map.removeLayer(layer);layer=null;}label('radar-status','No frames available for this product.');return;}coverage=L.circle(current().site.center,{radius:Number(frames[position].radius)*1000,color:'#347887',weight:1,fill:false,dashArray:'5 5',interactive:false}).addTo(map);updateLegend();showFrame();fit();catalogNote();}
  function chooseStation(){
   stop();const station=current();if(!station){controls(true);label('radar-status','This station has no available catalog.');return;}
   $('radar-product').replaceChildren(...productOptions(station).map(product=>{const option=document.createElement('option');option.value=product;option.textContent=product;return option;}));
@@ -63,7 +63,7 @@ export function initRadar(){
   if(!initialized){
    initialized=true;$('pmd-placeholder').hidden=true;$('radar-workspace').hidden=false;
    map=L.map('pmd-map',{scrollWheelZoom:false,zoomControl:true}).setView([30.4,69.3],5);
-   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+   L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:12,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
    map.on('click',()=>map.scrollWheelZoom.enable());
    label('load-pmd','Refresh data ↻');
   }
@@ -74,7 +74,8 @@ export function initRadar(){
  $('radar-latest').addEventListener('click',()=>{stop();position=frames.length-1;showFrame();});
  $('radar-recenter').addEventListener('click',fit);
  $('radar-opacity').addEventListener('input',()=>{label('radar-opacity-value',$('radar-opacity').value+'%');(layer||pendingLayer)?.setOpacity(Number($('radar-opacity').value)/100);});
- $('radar-play').addEventListener('click',()=>{if(player){stop();return;}if(frames.length<2)return;label('radar-play','❚❚ Pause');$('radar-play').setAttribute('aria-pressed','true');player=setInterval(()=>{if(pendingLayer)return;position=(position+1)%frames.length;showFrame();},1400);});
+ $('radar-play').addEventListener('click',()=>{if(player){stop();return;}if(frames.length<2)return;label('radar-play','❚❚ Pause');label('radar-playback-state','PLAYBACK');$('radar-play').setAttribute('aria-pressed','true');player=setInterval(()=>{if(pendingLayer)return;position=(position+1)%frames.length;showFrame();},1400);});
  $('radar-legend').addEventListener('error',()=>{$('radar-legend').hidden=true;label('radar-legend-note','Official PMD color scale is unavailable.');});
+ function radarClock(){label('radar-clock',new Date().toLocaleString('en-GB',{timeZone:'Asia/Karachi',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})+' PKT');}radarClock();setInterval(radarClock,1000);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});controls(true);
 }
