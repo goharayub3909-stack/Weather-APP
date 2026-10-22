@@ -35,3 +35,23 @@ for doc in documents:
     for path in re.findall(r'["\']((?:https://forecasting\.weatherwalay\.com)?/(?:api|realtime|static)[^"\'\s]*)["\']', doc):
         paths.add(urlsplit(path).path)
 print(json.dumps({'authenticated': True, 'paths': sorted(paths)}))
+# Bootstrap tokens stay in this process; only station field structure is logged.
+match = re.search(r'(?:window\.)?__WW_BOOT__\s*=\s*(\{[^;]+\})\s*;', html)
+if not match:
+    print(json.dumps({'bootstrap_found': False}))
+else:
+    boot = json.loads(match.group(1))
+    endpoint = urljoin(origin, boot.get('endpoint', '/feed/current'))
+    if urlsplit(endpoint).hostname != 'forecasting.weatherwalay.com':
+        raise SystemExit('Unexpected station endpoint host')
+    payload = json.load(opener.open(Request(endpoint, headers={'X-Requested-With':'XMLHttpRequest','X-WW-Token':boot.get('token','')}),timeout=30))
+    perm = boot.get('perm', [])
+    rows = payload.get('rows', [])
+    if not perm or not rows: raise SystemExit('No station rows')
+    row = [None]*len(perm)
+    for i,index in enumerate(perm): row[index] = rows[0][i]
+    columns=[]
+    for i,value in enumerate(row):
+        example = value if isinstance(value,(int,float)) else value if isinstance(value,str) and len(value)<80 and not re.search(r'[A-Fa-f0-9]{24,}',value) else None
+        columns.append({'index':i,'type':type(value).__name__,'example':example})
+    print(json.dumps({'count':len(rows),'columns':columns,'payload_keys':list(payload.keys())}))
