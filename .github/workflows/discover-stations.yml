@@ -1,0 +1,14 @@
+name: Discover authenticated station endpoints
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect endpoint paths without publishing credentials
+        env:
+          WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
+          WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
+        run: python3 scripts/inspect-stations.py
