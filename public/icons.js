@@ -1,5 +1,15 @@
 // Original, decorative vector icons. Paths are trusted code, never provider HTML.
 const paths={
+ leaf:'<path d="M20 3C9 2 3 7 5 14s13 8 15-11ZM5 21l10-13M9 15l-1-5m4 2h5"/>',
+ grain:'<path d="M12 22V3m0 5c-6 0-7-5-7-5 6 0 7 5 7 5Zm0 6c-6 0-7-5-7-5 6 0 7 5 7 5Zm0 6c-6 0-7-5-7-5 6 0 7 5 7 5Zm0-12c6 0 7-5 7-5-6 0-7 5-7 5Zm0 6c6 0 7-5 7-5-6 0-7 5-7 5Zm0 6c6 0 7-5 7-5-6 0-7 5-7 5Z"/>',
+ rice:'<path d="M8 22V9m0 6c0-7 2-12 8-13m-8 8 5 2m-3-6 5 2m-2-5 4 2M5 20l-3-7m6 9 6-6m-1 0 3-4"/>',
+ cotton:'<path d="M7 15a4 4 0 1 1-1-7 4 4 0 0 1 8-1 4 4 0 1 1 3 8H7Zm-1 0 6 5 6-5m-6 5v3"/>',
+ cane:'<path d="m8 22 2-20m3 20 2-20M9 8h7M8 15h7m0-5c1-6 6-6 6-6-1 5-6 6-6 6ZM9 12c-5-1-6-6-6-6 5 0 6 6 6 6Z"/>',
+ maize:'<path d="M9 19C4 14 4 8 7 4c2-3 8-3 10 0 3 4 3 10-2 15M9 5v11m6-11v11M6 8h12M6 12h12m-6 11C3 18 3 11 3 11c9 1 9 12 9 12Zm0 0c9-5 9-12 9-12-9 1-9 12-9 12Z"/>',
+ tuber:'<path d="M6 8c2-6 11-7 14-1s-1 12-7 13S0 15 6 8Z"/><path d="m8 9 1 1m6-4 1 1m-4 7 1 1m4-2 1 1m-9 3 1 1"/>',
+ pulse:'<path d="M20 3C9 1 2 8 4 15s13 9 16-12Z"/><circle cx="14" cy="7" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="8" cy="17" r="2"/>',
+ flower:'<circle cx="12" cy="12" r="3"/><path d="M10 9C5 1 19 1 14 9m1 1c8-5 8 9 0 4m-1 1c5 8-9 8-4 0m-1-1c-8 5-8-9 0-4M12 21v2"/>',
+ fruit:'<path d="M12 7c-9-7-13 7-6 13 3 3 4 0 6 0s3 3 6 0c7-6 3-20-6-13Zm0 0c-1-4 1-6 4-6m-4 6C7 7 6 3 6 3c5-1 6 4 6 4Z"/>',
  temperature:'<path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 7v10"/><circle cx="12" cy="18" r="1.3"/>',
  humidity:'<path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/><path d="m9 16 6-5"/><circle cx="9" cy="11" r=".6"/><circle cx="15" cy="16" r=".6"/>',
  wind:'<path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/>',

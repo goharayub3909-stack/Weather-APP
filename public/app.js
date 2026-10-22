@@ -1,3 +1,4 @@
+import {initFarmers} from './farmers.js';
 import {supplementalFields,stormScreen,dailyStorm,dailyCondition} from './storms.js';
 import {icon} from './icons.js';
 import {initGeolocation} from './geolocation.js';
@@ -12,6 +13,7 @@ import {showCityImage} from './city-images.js';
 import {cities} from './cities.js';
 import {forecastURL,weather,hourIndex,isNumber,aqiCategory,direction} from './weather.js';
 const $=id=>document.getElementById(id);
+const farmers=initFarmers();
 const store={get(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}},set(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}};
 const custom=store.get('monsoon-places',{});for(const [id,p]of Object.entries(custom)){if(Array.isArray(p)&&typeof p[0]==='string'&&Number.isFinite(p[1])&&Number.isFinite(p[2])&&p[1]>=23&&p[1]<=38&&p[2]>=60&&p[2]<=78)cities[id]=p;}
 let selectionRevision=0;
@@ -63,6 +65,7 @@ applyTheme(store.get('monsoon-theme','dark'));
 $('theme').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
 $('unit').addEventListener('click',()=>{unit=unit==='C'?'F':'C';store.set('monsoon-unit',unit);text('unit','°'+unit);render();});text('unit','°'+unit);
 function reset(){
+ farmers.update({place:cities[selected],forecast:null,supplemental:null,status:'loading',retrievedAt:null});
  data=null;supplemental=null;index=-1;text('location',cities[selected][0]);text('temperature','—°');text('condition','Loading your forecast…');text('feels','Feels like — · High — / Low —');
  for(const id of ['hero-wind','hero-humidity','hero-rain','sunrise','sunset','daylight','aqi','pm25','pm10'])text(id,'—');
  for(const [key,,note] of metrics){text('metric-'+key,'—');text('note-'+key,note);}text('chart-caption','Loading hourly forecast…');
@@ -80,8 +83,8 @@ async function load(){
   const result=await response.json();if(!response.ok)throw Error(result.reason||'Weather provider is unavailable.');
   if(!result.hourly?.time?.length||!result.daily?.time?.length)throw Error('Incomplete forecast response.');
   const i=hourIndex(result.hourly.time);if(i<0)throw Error('The provider has no forecast for the current Pakistan hour.');
-  data=result;index=i;render();text('status','ECMWF IFS 0.25° via Open-Meteo · Forecasts, not station observations · Retrieved '+new Date().toLocaleTimeString('en-PK',{timeZone:'Asia/Karachi',hour:'2-digit',minute:'2-digit'})+' PKT');
- }catch(e){if(signal.aborted)return;$('status').className='status error';text('status','Forecast unavailable. Check your internet connection and press Refresh. '+(e.name==='TimeoutError'?'The request timed out.':''));text('condition','Unable to load forecast');text('week','No forecast data available.');text('chart','No forecast data available.');}
+  if(signal.aborted)return;data=result;index=i;farmers.update({forecast:result,status:'ready',retrievedAt:new Date()});render();text('status','ECMWF IFS 0.25° via Open-Meteo · Forecasts, not station observations · Retrieved '+new Date().toLocaleTimeString('en-PK',{timeZone:'Asia/Karachi',hour:'2-digit',minute:'2-digit'})+' PKT');
+ }catch(e){if(signal.aborted)return;$('status').className='status error';text('status','Forecast unavailable. Check your internet connection and press Refresh. '+(e.name==='TimeoutError'?'The request timed out.':''));text('condition','Unable to load forecast');text('week','No forecast data available.');text('chart','No forecast data available.');farmers.update({forecast:null,status:'error'});}
 }
 async function loadAir(lat,lon,signal){
  try{const url=new URL('https://air-quality-api.open-meteo.com/v1/air-quality');url.search=new URLSearchParams({latitude:lat,longitude:lon,hourly:'us_aqi,pm2_5,pm10',timezone:'Asia/Karachi',forecast_days:1});const response=await fetch(url,{signal:AbortSignal.any([signal,AbortSignal.timeout(15000)])});if(!response.ok)throw Error();const result=await response.json();const i=hourIndex(result.hourly?.time||[]);if(i<0)throw Error();text('aqi',n(result.hourly.us_aqi?.[i]));text('aqi-label',aqiCategory(result.hourly.us_aqi?.[i]));text('pm25',n(result.hourly.pm2_5?.[i],' µg/m³',1));text('pm10',n(result.hourly.pm10?.[i],' µg/m³',1));text('aq-note','CAMS atmospheric model via Open-Meteo · Not a local sensor reading.');}
@@ -95,7 +98,7 @@ function renderSupplement(){
  text('note-hail_signal',`Freezing height ${n(isNumber(screen.freezing)?screen.freezing/1000:null,' km',1)} · 500 hPa ${n(screen.cold,'°C')} · ingredient screen, not hail probability`);
 }
 async function loadSupplement(lat,lon,signal){
- try{const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:lat,longitude:lon,hourly:supplementalFields.join(','),daily:'precipitation_probability_max,weather_code',timezone:'Asia/Karachi',forecast_days:7});const r=await fetch(url,{signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});if(!r.ok)throw Error();const result=await r.json();if(!result.hourly?.time?.length)throw Error();supplemental=result;renderSupplement();if(data)renderWeek();}catch{if(!signal.aborted){supplemental=null;renderSupplement();if(data)renderWeek();}}
+ try{const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:lat,longitude:lon,hourly:supplementalFields.join(','),daily:'precipitation_probability_max,weather_code',timezone:'Asia/Karachi',forecast_days:7});const r=await fetch(url,{signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});if(!r.ok)throw Error();const result=await r.json();if(!result.hourly?.time?.length)throw Error();if(signal.aborted)return;supplemental=result;farmers.update({supplemental:result});renderSupplement();if(data)renderWeek();}catch{if(!signal.aborted){supplemental=null;farmers.update({supplemental:null});renderSupplement();if(data)renderWeek();}}
 }
 
 function value(key){return data?.hourly?.[key]?.[index];}

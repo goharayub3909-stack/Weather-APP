@@ -13,7 +13,7 @@ function createBoltRenderer(){
 }
 export function initLightning(){
  const $=id=>document.getElementById(id);let map,group,renderer,ringGroup,centerMarker,rings=[],labels=[],placing=false,dragFrame=0,center=['Ring centre',33.6844,73.0479],all=new Map(),timer,player,historyRequest,busy=false,live=true,lastFetch=0;
- const active=()=>!document.hidden&&!$('lightning').hidden;
+ const active=()=>!document.hidden&&!$('lightning').hidden&&!$('weather-view')?.hidden;
  function centreText(){return Math.abs(center[1]).toFixed(3)+'°'+(center[1]<0?'S':'N')+', '+Math.abs(center[2]).toFixed(3)+'°'+(center[2]<0?'W':'E');}
  function drawRings(){
   $('lightning-ring-location').textContent='Ring centre: '+centreText();

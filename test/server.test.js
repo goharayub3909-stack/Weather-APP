@@ -12,6 +12,7 @@ test('serves the website, rejects bad locations, forwards forecasts and handles 
  const base=`http://127.0.0.1:${server.address().port}`;
  try {
   const page=await fetch(base);assert.equal(page.status,200);assert.match(await page.text(),/<title>Badal PK/);
+  for(const module of ['farmers.js','farm-data.js','farm-advice.js']){const asset=await fetch(base+'/'+module);assert.equal(asset.status,200,module);assert.match(asset.headers.get('content-type'),/javascript/);assert.match(await asset.text(),/export /);}
   assert.equal((await fetch(base+'/api/forecast?lat=0&lon=0')).status,400);
   assert.equal((await fetch(base+'/api/forecast')).status,400);
   const weather=await (await fetch(base+'/api/forecast?lat=33.69&lon=73.05')).json();assert.equal(weather.source,'ECMWF via Open-Meteo');assert.ok(weather.fetched_at);
