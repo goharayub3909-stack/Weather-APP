@@ -63,3 +63,11 @@ for document in documents:
     lines = document.splitlines()
     snippets = [line[:250] for line in lines if re.search(r'MetData|row\[|\b(?:index|label|field|title)\s*:',line) and not re.search(r'token|secret|password|__WW_BOOT__',line,re.I)]
     if snippets: print(json.dumps({'field_usage':snippets[:100]}))
+for doc in documents:
+    lines=doc.splitlines()
+    selected=set()
+    for i,line in enumerate(lines):
+        if re.search(r'data\[\d+\]|\b(?:Temp|Humidity|Wind|Rain|pressure|variableIndex|parameterIndex)\b',line,re.I):
+            selected.update(range(max(0,i-1),min(len(lines),i+2)))
+    safe=[lines[i][:300] for i in sorted(selected) if not re.search(r'token|secret|password|__WW_BOOT__|apiKey',lines[i],re.I)]
+    if safe: print(json.dumps({'measurement_mapping':safe[:180]}))
