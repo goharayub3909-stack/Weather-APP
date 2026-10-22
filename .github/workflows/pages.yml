@@ -28,6 +28,14 @@ jobs:
         run: python3 scripts/sync-radar.py
       - name: Discover EUMETView natural-colour layers and acquisition times
         run: python3 scripts/sync-satellite.py
+      - name: Refresh free airport observations
+        run: python3 scripts/sync-metar.py
+      - name: Refresh WeatherWalay observations securely
+        env:
+          WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
+          WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
+          PREVIOUS_STATIONS_URL: ${{ steps.pages.outputs.base_url }}/observation-data/stations.json
+        run: python3 scripts/sync-stations.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

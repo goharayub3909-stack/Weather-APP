@@ -1,6 +1,6 @@
-# Monsoon — Pakistan Weather
+# Badal PK — Pakistan Weather
 
-A responsive, free-to-host weather dashboard for 86 Pakistani cities and regional centers. Dark/light themes, city search, saved cities and Celsius/Fahrenheit preferences work locally in the browser.
+A responsive, free-to-host weather dashboard with 86 pinned Pakistani cities and a searchable GeoNames index of 156,343 cities, towns, villages and geographic places. Dark/light themes, city search, saved cities and Celsius/Fahrenheit preferences work locally in the browser.
 
 ## Run locally
 
@@ -8,7 +8,7 @@ Use Node.js 22+ and run `npm start` in this folder. Open the server on port 3000
 
 ## Free GitHub Pages hosting
 
-The site fetches its data directly from Open-Meteo; it does not require a paid backend. `.github/workflows/pages.yml` deploys **public/** on a push to **main**. On a public GitHub repository, enable **Settings → Pages → Source → GitHub Actions**. Commit and push this project to main to trigger deployment. Subsequent pushes update the same website. This configuration has been prepared locally; GitHub Pages has not yet been enabled, deployed or verified. Free services have terms, availability and usage limits.
+The site fetches its data directly from Open-Meteo; it does not require a paid backend. `.github/workflows/pages.yml` deploys **public/** on a push to **main**. On a public GitHub repository, enable **Settings → Pages → Source → GitHub Actions**. Commit and push this project to main to trigger deployment. Subsequent pushes update the same website. The website is deployed at https://goharayub3909-stack.github.io/Weather-APP/. Main pushes update that address. Free services have terms, availability and usage limits.
 
 ## Parameters and sources
 
@@ -25,7 +25,7 @@ The old Windy embeds and PMD link-card section have been removed. Source attribu
 
 ### Windy-style Pakistan weather studio — single HTML file
 
-`public/explorer/index.html` contains all custom HTML, CSS and modular, commented JavaScript in one file. It loads pinned OpenLayers 10.6.1 JS/CSS from jsDelivr using verified SHA-384 integrity attributes, with CARTO Dark Matter tiles and required attribution. The main website embeds this same-origin file; it is also available independently at `explorer/`.
+`public/explorer/index.html` contains all custom HTML, CSS and modular, commented JavaScript in one file. It loads pinned OpenLayers 10.6.1 JS/CSS from jsDelivr using verified SHA-384 integrity attributes, with key-free OpenStreetMap tiles styled in dark colours and required attribution. The main website embeds this same-origin file; it is also available independently at `explorer/`.
 
 - Center: Pakistan, 30.3753°N / 69.3451°E, zoom 5; navigation is constrained around the region.
 - Parameters: wind, temperature and relative humidity. Elevations: surface/10 m, 850, 500 and 250 hPa.
@@ -38,13 +38,13 @@ The old Windy embeds and PMD link-card section have been removed. Source attribu
 
 The website uses its own Leaflet wrapper, not a third-party viewer page. `scripts/sync-satellite.py` sends a WMS 1.3.0 GetCapabilities request to `https://view.eumetsat.int/geoserver/wms`, discovers natural/true-colour image layers intersecting Pakistan, inherits geographic bounds/CRS/time dimensions, and writes `public/satellite-data/catalog.json`. It excludes NaturalEarth background layers. Names and acquisition times are advertised values, not guesses.
 
-The preferred verified layer is **`msg_iodc:rgb_natural` (Natural Colour RGB — MSG — Indian Ocean)**, which covers Pakistan. The browser requests standard GetMap tiles with an explicit layer, CRS, WMS version and acquisition `TIME`. Leaflet handles WMS 1.3.0 EPSG:4326 axis order when that CRS is needed; EPSG:3857 is preferred when advertised. Layer selection, timeline/playback, opacity, zoom/pan and Pakistan recenter controls are included. UTC and PKT acquisition times are shown on the map and below it; catalog retrieval time is labeled separately. Failed tiles produce a failure/partial-coverage message. Natural colour needs daylight and can appear dark at night.
+The preferred verified layer is **`msg_iodc:rgb_natural` (Natural Colour RGB — MSG — Indian Ocean)**, which covers Pakistan. A separately labeled HRV RGB option (`msg_iodc:rgb_eview`) offers higher-resolution visible cloud detail, with possible coverage gaps and different colour interpretation. Retina tile requests improve display density without claiming new native detail. The browser requests standard GetMap tiles with an explicit layer, CRS, WMS version and acquisition `TIME`. Leaflet handles WMS 1.3.0 EPSG:4326 axis order when that CRS is needed; EPSG:3857 is preferred when advertised. Layer selection, timeline/playback, opacity, zoom/pan and Pakistan recenter controls are included. UTC and PKT acquisition times are shown on the map and below it; catalog retrieval time is labeled separately. Failed tiles produce a failure/partial-coverage message. Natural colour needs daylight and can appear dark at night.
 
 Capabilities and a representative Pakistan GetMap PNG were fetched live with TLS verification. Browser checks rendered real WMS tile responses through a TLS-verified test relay, exercised controls and image failure, and verified mobile layout. The scheduled Pages workflow refreshes the capabilities catalog at minutes 17 and 47; runs can be delayed. The browser refresh button reloads the deployed catalog, rather than forcing a server-side build.
 
 ### Direct observed rain radar
 
-Radar imagery is plotted on **Monsoon's CARTO Dark Matter/OpenStreetMap basemap**, not PMD map images or an iframe. The user-provided HAR supplied public catalog schemas and geographic bounds; PMD's public app source confirmed its relative PNG paths. Live catalogs and PNGs were then retrieved with verified HTTPS and an identified `MonsoonWeather/1.0` user agent. No API key, captured cookie or session header is used.
+Radar imagery is plotted on **Badal PK's dark OpenStreetMap basemap**, not PMD map images or an iframe. The user-provided HAR supplied public catalog schemas and geographic bounds; PMD's public app source confirmed its relative PNG paths. Live catalogs and PNGs were then retrieved with verified HTTPS and an identified `Badal PKWeather/1.0` user agent. No API key, captured cookie or session header is used.
 
 - Stations: Islamabad and Karachi. Products: Surface-R, Accumulated-R (12h), CAPPI-R (01km), with their own supplied bounds and radii.
 - Station/product selectors, playback, frame slider, latest available frame, opacity, pan/zoom and recenter controls are included. Station selection is independent of forecast city.
@@ -52,13 +52,27 @@ Radar imagery is plotted on **Monsoon's CARTO Dark Matter/OpenStreetMap basemap*
 - Product legend PNGs are included unchanged and credited. Radar PNGs load directly as transparent image overlays. A failed frame removes the previous overlay and pauses playback.
 - The HAR itself is not published. Only public station/frame metadata and official legends are included. Cookies, request headers, session details and unrelated district geometry are excluded.
 
-### Lightning — WetterOnline only
+### Lightning — WeatherWalay public feeds
 
-The only configured lightning source is the user-supplied `https://www.wetteronline.de/blitzradar/pakistan?wrx=32.07,71.51&wrm=7.26`. Its viewer is loaded on demand, with a direct fallback link. No other provider or synthetic lightning data is substituted. WetterOnline returned HTTP 202 with `x-amzn-waf-action: challenge` to cloud inspection, so successful iframe rendering and actual lightning observations remain **unverified**. The app does not treat an iframe load event as proof of lightning availability. Viewer timestamps and legends belong to WetterOnline; they cannot be read across origins.
+The selected WeatherWalay dashboard exposes a shared live buffer and a history API. `public/lightning.js` integrates these data feeds directly into Badal PK's own Leaflet map, without embedding or copying the provider dashboard. Positions are filtered to the Pakistan region. The shared buffer is polled every 15 seconds only while the panel is active and the document is visible; no per-visitor upstream stream is opened. Live/history observations are deduplicated by position and timestamp. History supports 1/3/6/12/24-hour windows and 15-minute playback buckets; markers are capped at the newest 8,000. Failures preserve explicit fetch/observation timestamps. Blank areas are not a safety indication.
+
+### Airports and WeatherWalay station observations
+
+`scripts/sync-metar.py` retrieves the free official NOAA Aviation Weather Center METAR API, filters valid Pakistan OP-prefixed airports and keeps the latest report per airport. The same-origin snapshot preserves observation epoch times and raw METARs. Wind is displayed in knots and pressure in hPa. Reports older than three hours are marked as old.
+
+WeatherWalay staff authentication is performed only in GitHub Actions using repository secrets `WEATHERWALAY_USERNAME` and `WEATHERWALAY_PASSWORD`. Session cookies and bootstrap tokens stay in process memory. Never add credentials to public JavaScript or JSON. `scripts/sync-stations.py` authenticates, reads the bootstrap permutation/token, and retrieves the feed using an in-memory cookie jar. It publishes only validated station IDs/names/coordinates, current temperature, RH, wind and provider display times. Pakistan-region records are retained and IMD station records excluded. A timestamp without year/timezone is preserved verbatim and labeled age unverified, never assigned today’s date. Previous sanitized snapshots are retained on failure. The diagnostic workflow records only sanitized station schema/endpoint information. Station integration status is visible in the map panel.
+
+### Weather.com provider display
+
+The Weather.com Islamabad radar URL supplied by the user is loaded as an opt-in external viewer, with a direct opening fallback. This is the provider's complete viewer, not a copied API integration. Provider cookies, embedding policy and the available timeline control its behavior. A free six-hour Pakistan forecast feed and successful end-to-end embedded playback have **not** been independently verified. No Weather.com API credential is copied or used.
+
+### Compact interface and place search
+
+Maps share an accessible tab panel, with inactive playback paused. The dashboard uses smaller cards and a blue translucent theme. The national GeoNames gazetteer is CC BY 4.0 and credited in the UI. It is fetched and indexed in a module Web Worker on first search focus, keeping parsing and ranking off the main thread. The 86 common cities work immediately; new selections are retained locally. Some village names are duplicated in the source, and coordinates should be checked before relying on a place forecast.
 
 ### City backgrounds
 
-Search/selection updates a translucent background illustration for every city. Where verified images are available, the site loads local freely licensed photographs: 27 cities currently have photos. Remaining cities retain original city/landmark illustrations, not mislabeled photographs. `scripts/prepare-city-images.py` resolves Wikipedia pages, checks their coordinates against the selected city, rejects obvious flags/logos, retrieves Commons licensing metadata, and downloads original thumbnail bytes. The site shows artist, source and license links. `public/city-data/catalog.json` records credits; photos remain unmodified and transparency is CSS-only. Photos are retained in the repository and do not need API access at runtime.
+Search/selection updates a translucent background illustration for every city. Where verified images are available, the site loads local freely licensed photographs: 27 cities currently have photos. Remaining places retain original city/landmark illustrations. An on-demand gallery discovers up to 24 freely licensed, geotagged Commons photographs within 10 km of the selected place, with source/artist/licence links. These are labeled nearby photographs, and may show surrounding features. Google image results are not scraped. `scripts/prepare-city-images.py` resolves Wikipedia pages, checks their coordinates against the selected city, rejects obvious flags/logos, retrieves Commons licensing metadata, and downloads original thumbnail bytes. The site shows artist, source and license links. `public/city-data/catalog.json` records credits; photos remain unmodified and transparency is CSS-only. Photos are retained in the repository and do not need API access at runtime.
 
 ### Automatic radar catalog refresh on free Pages hosting
 
@@ -68,8 +82,8 @@ The refresh script uses standard Python, verified HTTPS and public resources onl
 
 Leaflet 1.9.4 is vendored locally with its license; JS and CSS were verified against the official release SRI SHA-256 digests. No API keys are required. PMD link cards and external PMD warning links were removed as requested; source credits remain. The user states that PMD has granted integration permission. Consult PMD for official warnings.
 
-## Networking and validation
+## Validation
 
-Browser egress: `api.open-meteo.com`, `air-quality-api.open-meteo.com`, `view.eumetsat.int`, `radar.weather.gov.pk`, `basemaps.cartocdn.com`, `tile.openstreetmap.org`, optional `www.wetteronline.de`, `cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`, and linked meteorological websites. Fonts have system fallbacks. Initial external requests were denied by network policy. After the saved network settings propagated, TLS-verified live HTTP requests succeeded for the full ECMWF payload (seven days, 168 hours, no entirely missing requested field), supplemental weather and air quality. The cloud Chromium instance lacks the proxy certificate trust, so direct live browser requests remain unverified; browser interactions were tested with controlled provider responses. PMD live catalogs and PNGs have now been verified over trusted HTTPS; direct cloud Chromium requests still need the correct proxy trust. WetterOnline viewer imagery remains unverified because its automated response is a WAF challenge. The UI displays explicit failures and never invents weather values.
+Run `npm test` and `python3 -m unittest discover -s test -p "*_test.py"`. Browser checks cover forecast rendering/units/themes/errors, national place search and persistence, responsive layout, one active map panel, radar timelines/products, satellite acquisition times/failed imagery, lightning history/playback, airport popups and key-free basemap rendering. Actual PMD/EUMETSAT imagery, NOAA reports, lightning feeds and OSM tile bytes were exercised through a normal TLS-verified relay because the cloud Chromium instance lacks the proxy certificate trust. TLS verification was not disabled. The studio remains explicitly simulated.
 
-Automated server/helper tests cover request configuration, 86 city coordinates, Pakistan date rollover, missing values, AQI classification, invalid requests and upstream failure. Chromium browser checks with explicitly mocked providers cover rendered forecasts, hourly charts, city selection, unit/theme switches, small-screen layout and clearing stale forecasts on failure. Mocked checks do not establish live-provider availability. Additional Node/Python tests cover actual PMD catalog geometry, safe image paths, product filtering, timestamp ordering and preserving data on refresh failure. The radar browser test serves the app at a repository-prefixed static URL, renders actual PMD PNG bytes through a TLS-verified test relay, and exercises station/product changes, timeline, playback, opacity, old-data warnings and removal of overlays after image failure. OSM tiles are blocked in that test; direct end-to-end GitHub Pages delivery remains to be verified.
+The Node server and static Pages paths must both serve all module/worker/data files. No build or dependency install is needed. Free services have availability, attribution and usage limits; scheduled GitHub refresh times are not guaranteed.

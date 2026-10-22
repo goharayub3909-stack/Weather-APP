@@ -11,7 +11,7 @@ test('serves the website, rejects bad locations, forwards forecasts and handles 
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const base=`http://127.0.0.1:${server.address().port}`;
  try {
-  const page=await fetch(base);assert.equal(page.status,200);assert.match(await page.text(),/Whatever the weather/);
+  const page=await fetch(base);assert.equal(page.status,200);assert.match(await page.text(),/<title>Badal PK/);
   assert.equal((await fetch(base+'/api/forecast?lat=0&lon=0')).status,400);
   assert.equal((await fetch(base+'/api/forecast')).status,400);
   const weather=await (await fetch(base+'/api/forecast?lat=33.69&lon=73.05')).json();assert.equal(weather.source,'ECMWF via Open-Meteo');assert.ok(weather.fetched_at);

@@ -62,8 +62,9 @@ export function initRadar(){
   if(!window.L){label('radar-status','The map library could not be loaded. Refresh this page.');return;}
   if(!initialized){
    initialized=true;$('pmd-placeholder').hidden=true;$('radar-workspace').hidden=false;
-   map=L.map('pmd-map',{scrollWheelZoom:false,zoomControl:true}).setView([30.4,69.3],5);
-   L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:12,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+   map=L.map('pmd-map',{scrollWheelZoom:false,trackResize:false,zoomControl:true}).setView([30.4,69.3],5);
+   map.createPane('keyfree-basemap');map.getPane('keyfree-basemap').classList.add('dark-osm-basemap');map.getPane('keyfree-basemap').style.zIndex=200;
+   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{pane:'keyfree-basemap',maxZoom:12,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
    map.on('click',()=>map.scrollWheelZoom.enable());
    label('load-pmd','Refresh data ↻');
   }
@@ -78,4 +79,6 @@ export function initRadar(){
  $('radar-legend').addEventListener('error',()=>{$('radar-legend').hidden=true;label('radar-legend-note','Official PMD color scale is unavailable.');});
  function radarClock(){label('radar-clock',new Date().toLocaleString('en-GB',{timeZone:'Asia/Karachi',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'})+' PKT');}radarClock();setInterval(radarClock,1000);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});controls(true);
+ window.addEventListener('resize',()=>{if(!$('pmd-radar').hidden)map?.invalidateSize();});
+ document.addEventListener('mapchange',()=>{stop();if(!$('pmd-radar').hidden)setTimeout(()=>map?.invalidateSize(),0);});
 }

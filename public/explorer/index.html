@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#091522">
-<title>Monsoon · Pakistan Weather Studio</title>
+<title>Badal PK · Pakistan Weather Studio</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css" integrity="sha384-Jpg1uvTciFJuHq+90Ly0/2SKRT9yS5OhbIN5FuFoFWji9fc44ok8xxO88CJi8Z5W" crossorigin="anonymous">
 <style>
 /* This document is self-contained, except for the pinned OpenLayers CDN and basemap tiles. */
@@ -15,7 +15,7 @@
 </head>
 <body>
 <div id="map" tabindex="0" aria-label="Interactive Pakistan demo weather map. Click a location, or press Enter to inspect the map center."></div>
-<header class="topbar"><div class="identity"><span class="brand-mark">m°</span><div class="brand-text"><span class="eyebrow">MONSOON · PAKISTAN</span><strong>Weather studio</strong></div></div><span class="demo-badge glass">DEMO · SYNTHETIC DATA</span></header>
+<header class="topbar"><div class="identity"><span class="brand-mark">b°</span><div class="brand-text"><span class="eyebrow">BADAL PK · PAKISTAN</span><strong>Weather studio</strong></div></div><span class="demo-badge glass">DEMO · SYNTHETIC DATA</span></header>
 <aside class="panel glass" aria-label="Weather parameter controls"><span class="eyebrow">EXPLORE THE ATMOSPHERE</span><h1>Choose your view.</h1><div class="parameter-list" role="group" aria-label="Weather parameter"><button class="parameter-button" data-parameter="wind" aria-pressed="true"><span aria-hidden="true">≋</span><span>Wind</span></button><button class="parameter-button" data-parameter="temperature" aria-pressed="false"><span aria-hidden="true">♨</span><span>Temperature</span></button><button class="parameter-button" data-parameter="humidity" aria-pressed="false"><span aria-hidden="true">◉</span><span>Humidity</span></button></div><button id="flow-toggle" class="flow-button" aria-pressed="true">❚❚ Pause wind flow</button><p class="panel-note">A structured, simulated ECMWF-style grid for exploring weather layers. No live observations or forecasts are shown in this studio.</p></aside>
 <aside class="elevation-panel glass" aria-label="Pressure level controls"><span class="eyebrow">ELEVATION</span><div class="levels" role="group" aria-label="Elevation"><button class="level" data-level="250" aria-pressed="false">250 hPa<small>UPPER AIR</small></button><button class="level" data-level="500" aria-pressed="false">500 hPa<small>MID TROPOSPHERE</small></button><button class="level" data-level="850" aria-pressed="false">850 hPa<small>LOWER AIR</small></button><button class="level" data-level="surface" aria-pressed="true">Surface<small>WIND AT 10 m</small></button></div></aside>
 <button id="recenter" class="recenter glass" aria-label="Recenter map on Pakistan" title="Recenter Pakistan">⌖</button><div class="map-hint">⌖ Click the map to inspect a location</div>
@@ -202,16 +202,20 @@ class WeatherPicker{
 /* ======================================================================
  * 6. APPLICATION CONTROLLER
  * The view is constrained around Pakistan; the grid covers a study rectangle,
- * not an authoritative political boundary. Carto tiles retain attribution.
+ * not an authoritative political boundary. Key-free OpenStreetMap tiles retain attribution.
  * ====================================================================== */
 class WeatherExplorer{
  constructor(){
   this.state={parameter:'wind',level:'surface',animate:!matchMedia('(prefers-reduced-motion: reduce)').matches};
   this.sampler=new GridSampler(ECMWF_DEMO_GRID);
   const pakistanCenter=ol.proj.fromLonLat([69.3451,30.3753]);
-  const tiles=new ol.source.XYZ({url:'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',attributions:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',crossOrigin:'anonymous',maxZoom:18});
+  const tiles=new ol.source.XYZ({url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attributions:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',crossOrigin:'anonymous',maxZoom:18});
   let tileWarning=false;tiles.on('tileloaderror',()=>{if(!tileWarning){tileWarning=true;document.getElementById('map-status').textContent='Basemap tiles unavailable. The colored demo grid remains usable.';}});
-  this.map=new ol.Map({target:'map',layers:[new ol.layer.Tile({source:tiles})],view:new ol.View({center:pakistanCenter,zoom:5,minZoom:4,maxZoom:10,extent:ol.proj.transformExtent([57,20,82,41],'EPSG:4326','EPSG:3857'),constrainOnlyCenter:true}),controls:ol.control.defaults.defaults({rotate:false,attributionOptions:{collapsible:false}})});
+  const basemap=new ol.layer.Tile({source:tiles});
+  // Dark styling applies only to key-free OSM tiles, never to weather rasters.
+  basemap.on('prerender',event=>{event.context.save();event.context.filter='grayscale(1) invert(1) brightness(.7) contrast(1.15)';});
+  basemap.on('postrender',event=>event.context.restore());
+  this.map=new ol.Map({target:'map',layers:[basemap],view:new ol.View({center:pakistanCenter,zoom:5,minZoom:4,maxZoom:10,extent:ol.proj.transformExtent([57,20,82,41],'EPSG:4326','EPSG:3857'),constrainOnlyCenter:true}),controls:ol.control.defaults.defaults({rotate:false,attributionOptions:{collapsible:false}})});
   this.raster=new RasterFieldLayer(this.map,this.sampler,this.state);this.particles=new WindParticleLayer(this.map,this.sampler,this.state);this.picker=new WeatherPicker(this.map,this.sampler,this.state);
   document.querySelectorAll('[data-parameter]').forEach(button=>button.addEventListener('click',()=>{this.state.parameter=button.dataset.parameter;this.update();}));
   document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{this.state.level=button.dataset.level;this.update();}));

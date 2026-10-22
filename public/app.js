@@ -1,3 +1,7 @@
+import {initPlacePhotos,setPhotoPlace} from './place-photos.js';
+import {initMapTabs} from './maps.js';
+import {initObservations} from './observations.js';
+import {initLocationSearch} from './locations.js';
 import {initRadar} from './radar.js';
 import {initSatellite} from './satellite.js';
 import {initLightning} from './lightning.js';
@@ -6,6 +10,7 @@ import {cities} from './cities.js';
 import {forecastURL,weather,hourIndex,isNumber,aqiCategory,direction} from './weather.js';
 const $=id=>document.getElementById(id);
 const store={get(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}},set(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}};
+const custom=store.get('monsoon-places',{});for(const [id,p]of Object.entries(custom)){if(Array.isArray(p)&&typeof p[0]==='string'&&Number.isFinite(p[1])&&Number.isFinite(p[2])&&p[1]>=23&&p[1]<=38&&p[2]>=60&&p[2]<=78)cities[id]=p;}
 let selected=store.get('monsoon-city','islamabad');if(!cities[selected])selected='islamabad';
 let unit=store.get('monsoon-unit','C'),saved=store.get('monsoon-favorites',['islamabad','karachi','lahore']);if(!Array.isArray(saved))saved=[];
 let supplemental=null,data=null,index=-1,request,chartMetric='temperature_2m';
@@ -38,9 +43,12 @@ function favorites(){
  saved.filter(id=>cities[id]).slice(0,5).forEach(id=>{const button=document.createElement('button');button.className='city-chip'+(selected===id?' active':'');button.textContent=cities[id][0];button.addEventListener('click',()=>selectCity(id));$('quick-cities').append(button);});
  const active=saved.includes(selected);text('favorite',active?'★':'☆');$('favorite').setAttribute('aria-pressed',String(active));$('favorite').setAttribute('aria-label',active?'Remove saved city':'Save city');
 }
-function selectCity(id){selected=id;$('city').value=id;$('search').value='';store.set('monsoon-city',id);favorites();load();showCityImage(selected,cities[selected]);}
+function selectCity(id){selected=id;$('city').value=id;$('search').value='';store.set('monsoon-city',id);favorites();load();showCityImage(selected,cities[selected]);setPhotoPlace(cities[selected]);}
 $('city').addEventListener('change',()=>selectCity($('city').value));
-$('search').addEventListener('change',()=>{const found=Object.entries(cities).find(([,c])=>c[0].toLowerCase()===$('search').value.trim().toLowerCase());if(found)selectCity(found[0]);else text('status','Choose a city from the search suggestions.');});
+initLocationSearch({cities,onSelect(place){
+ if(!cities[place.id]){cities[place.id]=[place.name,place.lat,place.lon];custom[place.id]=cities[place.id];store.set('monsoon-places',custom);const option=new Option(place.name,place.id);$('city').append(option);}
+ selectCity(place.id);
+}});
 $('favorite').addEventListener('click',()=>{saved=saved.includes(selected)?saved.filter(id=>id!==selected):[selected,...saved].slice(0,5);store.set('monsoon-favorites',saved);favorites();});
 function applyTheme(theme){document.documentElement.dataset.theme=theme;store.set('monsoon-theme',theme);text('theme',theme==='dark'?'☼':'☾');}
 applyTheme(store.get('monsoon-theme','dark'));
@@ -108,8 +116,13 @@ function renderChart(){
 }
 document.querySelectorAll('[data-chart]').forEach(button=>button.addEventListener('click',()=>{chartMetric=button.dataset.chart;document.querySelectorAll('[data-chart]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});renderChart();}));
 $('refresh').addEventListener('click',load);
-function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Karachi'}));text('clock',now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Karachi'})+' PKT · UTC+5');}tick();setInterval(tick,60000);favorites();load();showCityImage(selected,cities[selected]);
+function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Karachi'}));text('clock',now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Karachi'})+' PKT · UTC+5');}tick();setInterval(tick,60000);favorites();load();showCityImage(selected,cities[selected]);setPhotoPlace(cities[selected]);
 
 initRadar();
 initSatellite();
 initLightning();
+
+initObservations();
+initMapTabs();
+
+initPlacePhotos();
