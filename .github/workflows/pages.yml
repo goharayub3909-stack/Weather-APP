@@ -36,6 +36,14 @@ jobs:
           WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
           PREVIOUS_STATIONS_URL: ${{ steps.pages.outputs.base_url }}/observation-data/stations.json
         run: python3 scripts/sync-stations.py
+      - name: Refresh shared ECMWF forecast studio snapshot
+        env:
+          PREVIOUS_STUDIO_URL: ${{ steps.pages.outputs.base_url }}/studio-data/forecast.json
+        run: python3 scripts/sync-studio.py
+      - name: Validate application and forecast data handling
+        run: |
+          npm test
+          python3 -m unittest discover -s test -p '*_test.py'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

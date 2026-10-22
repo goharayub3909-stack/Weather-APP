@@ -7,8 +7,8 @@ test('natural colour layer is discovered for Pakistan and uses explicit WMS time
  const first=catalog.layers[0];assert.equal(first.name,'msg_iodc:rgb_natural');assert.ok(validSatelliteLayer(first));assert.ok(first.times.length);assert.equal(wmsOptions(first,first.times.at(-1)).version,'1.3.0');assert.throws(()=>wmsOptions(first,'1900-01-01T00:00:00Z'));
  assert.ok(!catalog.layers.some(l=>l.name.startsWith('backgrounds:')));
 });
-test('satellite acquisition label separates UTC and Pakistan local time',()=>{
- assert.match(acquisitionLabel('2026-10-22T07:45:00Z'),/07:45 UTC/);assert.match(acquisitionLabel('2026-10-22T07:45:00Z'),/12:45 PKT/);assert.match(acquisitionLabel(null),/unavailable/);
+test('satellite acquisition label converts UTC source instants to Pakistan local time',()=>{
+ assert.doesNotMatch(acquisitionLabel('2026-10-22T07:45:00Z'),/UTC/);assert.match(acquisitionLabel('2026-10-22T07:45:00Z'),/12:45 PKT/);assert.match(acquisitionLabel(null),/unavailable/);
 });
 test('city photos are local, credited, and restricted to free licenses',async()=>{
  const data=JSON.parse(await readFile(new URL('../public/city-data/catalog.json',import.meta.url)));

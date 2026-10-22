@@ -33,8 +33,8 @@ export function createServer(fetcher = fetch) {
     }
     const files = { '/explorer/': ['explorer/index.html','text/html'], '/explorer/index.html': ['explorer/index.html','text/html'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/cities.js': ['cities.js', 'text/javascript'], '/weather.js': ['weather.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
     let file = files[url.pathname];
-    if (['/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
-    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
+    if (['/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js','/geolocation.js','/icons.js','/storms.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
+    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data|studio-data)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
       const relative=url.pathname.slice(1);
       const path=resolve(root,relative);
       const types={'.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.txt':'text/plain'};

@@ -11,7 +11,7 @@ export function initRadar(){
   let message=s.synced_at?'Catalog retrieved '+new Date(s.synced_at).toLocaleString('en-PK',{timeZone:'Asia/Karachi'})+' PKT.':'Catalog from the supplied browser capture; live catalog refresh has not succeeded.';
   if(s.status==='cached')message+=' Last refresh failed; previous catalog retained.';
   if(s.site.isMaintenance)message+=' PMD marks this station as under maintenance.';
-  label('radar-catalog-note',message+' Radar image time is shown separately; PMD did not specify its timezone.');
+  label('radar-catalog-note',message+' Radar image time is shown separately. Display setting: PKT; source timestamps omit an offset and are treated as Pakistan local time.');
  }
  function showFrame(){
   const frame=frames[position];if(!frame||!map)return;
@@ -20,14 +20,14 @@ export function initRadar(){
   // Remove the old product immediately, so failed loads cannot masquerade as the selected frame.
   if(layer){map.removeLayer(layer);layer=null;}
   $('radar-timeline').value=String(position);label('radar-frame-count',`${position+1} / ${frames.length}`);
-  label('radar-time',frame.datetime+' · PMD time (timezone unspecified)');label('radar-map-time','Image: '+frame.datetime+' · PMD time');label('radar-playback-state',player?'PLAYBACK':'SELECTED FRAME');label('radar-radius',frame.radius+' km');
+  label('radar-time',frame.datetime+' PKT · PMD image time');label('radar-map-time','Image: '+frame.datetime+' PKT · PMD image time');label('radar-playback-state',player?'PLAYBACK':'SELECTED FRAME');label('radar-radius',frame.radius+' km');
   label('radar-status','Loading PMD radar image…');$('radar-status').className='radar-status';
   const image=L.imageOverlay(frameURL(frame),imageBounds(current().site,frame.radius),{opacity:Number($('radar-opacity').value)/100,interactive:false,className:'pmd-radar-echo',attribution:'Radar imagery © Pakistan Meteorological Department'});
   pendingLayer=image;
   image.on('load',()=>{
    if(token!==sequence){map.removeLayer(image);return;}clearTimeout(imageTimeout);layer=image;pendingLayer=null;
-   const oldDate=frame.datetime.slice(0,10)<new Date().toISOString().slice(0,10);
-   label('radar-status',oldDate?'Image loaded. The displayed PMD timestamp predates today (UTC); do not assume current conditions.':'PMD image loaded. Check its timestamp before interpreting conditions.');
+   const oldDate=frame.datetime.slice(0,10)<new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Karachi'});
+   label('radar-status',oldDate?'Image loaded. The displayed PMD timestamp predates today in Pakistan; do not assume current conditions.':'PMD image loaded. Check its timestamp before interpreting conditions.');
    $('radar-status').className='radar-status'+(oldDate?' radar-warning':'');
   });
   const failed=()=>{if(token!==sequence)return;clearTimeout(imageTimeout);map.removeLayer(image);pendingLayer=null;stop();label('radar-status','PMD’s image could not be loaded. The selected radar frame is not being displayed. Try Refresh data or a different product.');$('radar-status').className='radar-status radar-warning';};
@@ -41,7 +41,7 @@ export function initRadar(){
   const file=legends[$('radar-product').value];$('radar-legend').hidden=!file;
   if(file){$('radar-legend').src=new URL('./radar-data/legends/'+file,import.meta.url).href;$('radar-legend').alt='Official PMD color scale: '+$('radar-product').value;}
  }
- function chooseProduct(){stop();clearTimeout(imageTimeout);sequence++;if(coverage){map.removeLayer(coverage);coverage=null;}frames=productFrames(current(),$('radar-product').value);position=Math.max(0,frames.length-1);label('radar-latest-time',frames.length?frames.at(-1).datetime+' · PMD time':'Unavailable');$('radar-timeline').max=String(position);controls(!frames.length);if(!frames.length){if(pendingLayer){map.removeLayer(pendingLayer);pendingLayer=null;}if(layer){map.removeLayer(layer);layer=null;}label('radar-status','No frames available for this product.');return;}coverage=L.circle(current().site.center,{radius:Number(frames[position].radius)*1000,color:'#347887',weight:1,fill:false,dashArray:'5 5',interactive:false}).addTo(map);updateLegend();showFrame();fit();catalogNote();}
+ function chooseProduct(){stop();clearTimeout(imageTimeout);sequence++;if(coverage){map.removeLayer(coverage);coverage=null;}frames=productFrames(current(),$('radar-product').value);position=Math.max(0,frames.length-1);label('radar-latest-time',frames.length?frames.at(-1).datetime+' PKT · PMD image time':'Unavailable');$('radar-timeline').max=String(position);controls(!frames.length);if(!frames.length){if(pendingLayer){map.removeLayer(pendingLayer);pendingLayer=null;}if(layer){map.removeLayer(layer);layer=null;}label('radar-status','No frames available for this product.');return;}coverage=L.circle(current().site.center,{radius:Number(frames[position].radius)*1000,color:'#347887',weight:1,fill:false,dashArray:'5 5',interactive:false}).addTo(map);updateLegend();showFrame();fit();catalogNote();}
  function chooseStation(){
   stop();const station=current();if(!station){controls(true);label('radar-status','This station has no available catalog.');return;}
   $('radar-product').replaceChildren(...productOptions(station).map(product=>{const option=document.createElement('option');option.value=product;option.textContent=product;return option;}));

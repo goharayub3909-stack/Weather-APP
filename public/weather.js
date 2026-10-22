@@ -11,7 +11,7 @@ export function weather(code){
  if(code===0)return ['Clear skies','☀'];if(code<=3)return [code===3?'Overcast':'Partly cloudy','☁'];
  if([45,48].includes(code))return ['Fog','≋'];if(code>=51&&code<=67)return ['Rain','☂'];
  if((code>=71&&code<=77)||[85,86].includes(code))return ['Snow','❄'];
- if(code>=80&&code<=82)return ['Rain showers','☂'];if(code>=95)return ['Thunderstorms','ϟ'];return ['Unavailable','—'];
+ if([96,99].includes(code))return ['Thunderstorm with hail','⛈'];if(code>=80&&code<=82)return ['Rain showers','☂'];if(code>=95)return ['Thunderstorms','ϟ'];return ['Unavailable','—'];
 }
 export function hourIndex(times,now=new Date()){
  const stamp=now.toLocaleString('sv-SE',{timeZone:'Asia/Karachi'}).slice(0,13).replace(' ','T');

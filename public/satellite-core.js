@@ -5,7 +5,7 @@ export function validSatelliteLayer(layer){
 export function acquisitionLabel(stamp){
  if(!stamp)return 'Provider default · exact acquisition time unavailable';
  const date=new Date(stamp);if(!Number.isFinite(date.getTime()))return 'Acquisition time unavailable';
- return date.toLocaleString('en-GB',{timeZone:'UTC',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' UTC · '+date.toLocaleTimeString('en-GB',{timeZone:'Asia/Karachi',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' PKT';
+ return date.toLocaleString('en-GB',{timeZone:'Asia/Karachi',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' PKT';
 }
 export function wmsOptions(layer,time){
  if(!validSatelliteLayer(layer))throw Error('Invalid advertised WMS layer');

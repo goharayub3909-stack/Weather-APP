@@ -1,0 +1,26 @@
+// Original, decorative vector icons. Paths are trusted code, never provider HTML.
+const paths={
+ temperature:'<path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 7v10"/><circle cx="12" cy="18" r="1.3"/>',
+ humidity:'<path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/><path d="m9 16 6-5"/><circle cx="9" cy="11" r=".6"/><circle cx="15" cy="16" r=".6"/>',
+ wind:'<path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/>',
+ gust:'<path d="M2 6h9a3 3 0 1 1 3 3H5M2 13h16a3 3 0 1 1-3 3M3 19h6"/><path d="m18 2-2 3h4l-2 3"/>',
+ dew:'<path d="M10 3c-2 4-6 7-6 11a6 6 0 0 0 9 5"/><path d="M17 9v12m-5-6h10m-9-4 8 8m0-8-8 8"/>',
+ pressure:'<path d="M4 18a9 9 0 1 1 16 0"/><path d="m12 13 4-5M5 13h1m12 0h1M8 6l1 1m3-3v2"/><circle cx="12" cy="14" r="2"/><path d="M8 21h8"/>',
+ surface:'<path d="M3 19h18M5 15l4-4 4 3 4-6 3 7M12 2v7m-3-3 3 3 3-3"/>',
+ cloud:'<path d="M6 18a4 4 0 1 1 .4-8 6 6 0 0 1 11.5 1A3.5 3.5 0 1 1 18 18Z"/>',
+ rain:'<path d="M5 14a3.5 3.5 0 1 1 .8-6.9 5 5 0 0 1 9.5.9A3 3 0 1 1 17 14H5Z"/><path d="m7 17-1 3m6-3-1 3m6-3-1 3"/>',
+ umbrella:'<path d="M3 12a9 9 0 0 1 18 0H3ZM12 3v16a2 2 0 0 0 4 0"/>',
+ snow:'<path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4-1-1-4m13 9-4 1 1 4M4 14l4 1-1 4m13-9-4-1 1-4"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+ uv:'<circle cx="12" cy="12" r="7"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2m-4-7 1-1M5 19l1-1m-1-13 1 1m12 12 1 1m-7-10-2 4h4l-2 4"/>',
+ eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+ plane:'<path d="m22 3-7 18-3-8-9-3 19-7ZM12 13l5-5"/>',
+ station:'<path d="M12 9v12m-4 0h8M8 6a6 6 0 0 0 0 8m8-8a6 6 0 0 1 0 8M5 3a10 10 0 0 0 0 14M19 3a10 10 0 0 1 0 14"/><circle cx="12" cy="8" r="2"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+ refresh:'<path d="M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5M4 17a9 9 0 0 0 15 2l3-3m0 5v-5h-5"/>',
+ storm:'<path d="M6 14a4 4 0 1 1 .5-8 6 6 0 0 1 11 2A3 3 0 1 1 18 14"/><path d="m12 11-4 7h5l-2 5 7-9h-5l2-3"/>',
+ hail:'<path d="M5 13a3.5 3.5 0 1 1 .8-6.9 5 5 0 0 1 9.5.9A3 3 0 1 1 17 13H5Z"/><path d="m7 16-1 2m6-2-1 2m6-2-1 2"/><circle cx="5" cy="21" r="1"/><circle cx="11" cy="21" r="1"/><circle cx="17" cy="21" r="1"/>',
+ partly:'<circle cx="8" cy="8" r="4"/><path d="M8 1v1M1 8h1m1-5 1 1m8-1-1 1M8 19a4 4 0 1 1 1-7.8 5 5 0 0 1 9.7.8A3.5 3.5 0 1 1 19 19Z"/>',
+ fog:'<path d="M6 12a4 4 0 1 1 .5-8 6 6 0 0 1 11 2A3 3 0 1 1 18 12M3 16h18M5 20h14"/>'
+};
+export function icon(name){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name]||paths.cloud}</svg>`;}

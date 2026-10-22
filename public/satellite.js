@@ -1,7 +1,15 @@
+import {cities} from './cities.js';
 import{WMS_ENDPOINT,validSatelliteLayer,acquisitionLabel,wmsOptions}from './satellite-core.js';
 export function initSatellite(){
  const $=id=>document.getElementById(id),text=(id,value)=>$(id).textContent=value;
- let map,imagery,catalog,times=[],position=0,player,request,timeout,generation=0,loading=false;
+ let map,imagery,cityLabels,catalog,times=[],position=0,player,request,timeout,generation=0,loading=false;
+ function labelCities(){
+  if(!map)return;if(!cityLabels){map.createPane('satellite-city-labels');map.getPane('satellite-city-labels').style.zIndex=650;map.getPane('satellite-city-labels').style.pointerEvents='none';cityLabels=L.layerGroup().addTo(map);}cityLabels.clearLayers();
+  const major=['karachi','lahore','islamabad','peshawar','quetta','multan','faisalabad','hyderabad','sukkur','gilgit','skardu','gwadar'];
+  const regional=['sialkot','bahawalpur','muzaffarabad','abbottabad','chitral','turbat','zhob','dera-ismail-khan'];
+  const ids=map.getZoom()>=8?Object.keys(cities).filter(id=>!id.startsWith('gn:')&&id!=='current-location'):map.getZoom()>=6?[...major,...regional]:major;
+  for(const id of ids){const place=cities[id];if(!place)continue;const [name,lat,lon]=place,root=document.createElement('div'),dot=document.createElement('span'),text=document.createElement('span');root.className='satellite-city-label';dot.className='city-label-dot';text.textContent=name;root.append(dot,text);L.marker([lat,lon],{pane:'satellite-city-labels',interactive:false,keyboard:false,icon:L.divIcon({className:'satellite-city-marker',html:root,iconSize:[110,18],iconAnchor:[3,9]})}).addTo(cityLabels);}
+ }
  function stop(){clearInterval(player);player=null;text('satellite-play','▶ Play');$('satellite-play').setAttribute('aria-pressed','false');}
  function selected(){return catalog?.layers.find(layer=>layer.name===$('satellite-layer').value);}
  function enabled(active){for(const id of ['satellite-layer','satellite-opacity','satellite-latest'])$(id).disabled=!active;for(const id of ['satellite-play','satellite-timeline'])$(id).disabled=!active||times.length<2;}
@@ -35,7 +43,7 @@ export function initSatellite(){
  }
  $('load-satellite').addEventListener('click',()=>{
   if(!window.L){text('satellite-status','The map could not be initialized. Refresh this page.');return;}
-  if(!map){$('satellite-placeholder').hidden=true;$('satellite-workspace').hidden=false;map=L.map('satellite-map',{scrollWheelZoom:false,trackResize:false}).setView([30.5,69.5],5);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);map.on('click',()=>map.scrollWheelZoom.enable());text('load-satellite','Refresh satellite catalog ↻');}map.invalidateSize();load();
+  if(!map){$('satellite-placeholder').hidden=true;$('satellite-workspace').hidden=false;map=L.map('satellite-map',{scrollWheelZoom:false,trackResize:false}).setView([30.5,69.5],5);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);map.on('click',()=>map.scrollWheelZoom.enable());map.on('zoomend',labelCities);labelCities();text('load-satellite','Refresh satellite catalog ↻');}map.invalidateSize();load();
  });
  $('satellite-layer').addEventListener('change',chooseLayer);$('satellite-timeline').addEventListener('input',()=>{stop();position=Number($('satellite-timeline').value);show();});$('satellite-latest').addEventListener('click',()=>{stop();position=Math.max(0,times.length-1);show();});$('satellite-recenter').addEventListener('click',()=>map?.fitBounds([[23.5,60.5],[37.5,77.5]],{padding:[10,10]}));
  $('satellite-opacity').addEventListener('input',()=>{text('satellite-opacity-value',$('satellite-opacity').value+'%');imagery?.setOpacity(Number($('satellite-opacity').value)/100);});

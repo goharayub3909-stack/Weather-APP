@@ -9,84 +9,69 @@
 <style>
 /* This document is self-contained, except for the pinned OpenLayers CDN and basemap tiles. */
 :root{color-scheme:dark;--glass:rgba(9,21,34,.88);--border:rgba(222,238,255,.13);--text:#edf5fb;--muted:#9db0c0;--accent:#c3ef74}
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;min-height:520px;overflow:hidden;background:#091522;color:var(--text);font:13px system-ui,-apple-system,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button:disabled{opacity:.5;cursor:default}#map{position:absolute;inset:0}.glass{background:var(--glass);border:1px solid var(--border);box-shadow:0 12px 36px #0003;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.topbar{position:absolute;z-index:20;left:22px;right:22px;top:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;pointer-events:none}.topbar>*{pointer-events:auto}.identity{display:flex;align-items:center;gap:11px}.brand-mark{font-size:33px;font-weight:800;letter-spacing:-4px;color:var(--accent);text-shadow:0 2px 12px #0008}.brand-text strong{display:block;font-size:16px;letter-spacing:-.6px}.eyebrow{font-size:8px;letter-spacing:1.7px;color:var(--muted);text-transform:uppercase}.demo-badge{padding:9px 12px;border-radius:30px;font-size:9px;letter-spacing:1.1px;color:#ffe1a3;white-space:nowrap}.demo-badge:before{content:'';display:inline-block;background:#ffc66a;width:5px;height:5px;border-radius:50%;margin-right:7px}.panel{position:absolute;left:22px;top:100px;z-index:20;border-radius:16px;padding:20px;width:205px}.panel h1{font-size:18px;font-weight:600;letter-spacing:-.6px;margin:5px 0 17px}.parameter-list{display:grid;gap:7px}.parameter-button{display:flex;align-items:center;gap:12px;border:1px solid transparent;border-radius:9px;padding:12px;background:transparent;color:var(--muted);text-align:left;font-size:12px;transition:background .18s,color .18s}.parameter-button span:first-child{font-size:20px;width:21px}.parameter-button[aria-pressed=true]{color:var(--text);background:#d6edff12;border-color:#ffffff10}.parameter-button:hover{background:#ffffff0c}.panel-note{font-size:10px;color:var(--muted);line-height:1.7;padding-top:15px;border-top:1px solid var(--border);margin:16px 0 0}.flow-button{width:100%;border:1px solid var(--border);background:#ffffff08;border-radius:8px;padding:10px;margin-top:14px;font-size:11px}.elevation-panel{position:absolute;z-index:20;right:22px;top:100px;width:104px;border-radius:14px;padding:13px 9px}.elevation-panel>.eyebrow{text-align:center;display:block;font-size:7px;letter-spacing:1.2px;margin-bottom:12px}.levels{display:flex;flex-direction:column;gap:5px}.level{border:1px solid transparent;background:transparent;border-radius:8px;padding:10px 3px;font-size:12px;text-align:center;color:var(--muted);position:relative}.level small{display:block;font-size:8px;margin-top:4px;opacity:.75}.level[aria-pressed=true]{background:#c3ef7414;color:var(--accent);border-color:#c3ef7440}.level[aria-pressed=true]:before{content:'';position:absolute;left:-10px;top:14px;width:3px;height:22px;border-radius:2px;background:var(--accent)}.recenter{position:absolute;z-index:20;right:22px;bottom:118px;border-radius:10px;width:40px;height:40px;font-size:23px}.legend{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:31px;width:min(590px,calc(100% - 48px));border-radius:13px;padding:14px 18px 11px}.legend-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:15px}.legend-heading strong{font-size:12px;font-weight:500}.legend-heading span{font-size:9px;color:var(--muted)}#legend-gradient{height:9px;border-radius:8px}.legend-ticks{display:flex;justify-content:space-between;font-size:9px;color:#d8e6f0;padding-top:7px}.source-note{font-size:8px;color:var(--muted);line-height:1.5;margin:9px 0 0}.map-hint{position:absolute;left:22px;bottom:127px;z-index:20;font-size:10px;color:#dbe8f1;text-shadow:0 2px 8px #000;padding:7px 10px;border-radius:20px;background:#09152280}.map-status{position:absolute;left:22px;bottom:6px;z-index:20;font-size:8px;color:#b0c4d3;max-width:calc(100% - 200px);pointer-events:none}.particles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}.ol-overlaycontainer,.ol-overlaycontainer-stopevent{z-index:10}.ol-zoom{left:24px;top:auto;bottom:168px;background:#091522c0;border-radius:8px;padding:3px}.ol-control button{background:#102436cc;color:#e6eef7;border-radius:5px}.ol-control button:hover{background:#28445c}.ol-attribution{font-size:8px;background:#091522cc!important;color:#a3b8c9;padding:3px 6px;border-radius:5px 0 0}.ol-attribution a{color:#bdd6e8}.picker{width:264px;border-radius:15px;position:relative;box-shadow:0 15px 60px #0007;cursor:auto}.picker:after{content:'';position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);border-left:13px solid transparent;border-right:13px solid transparent;border-top:14px solid #0c1b2a}.picker-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 17px 10px}.picker-head strong{display:block;font-size:13px;font-weight:600}.picker-coordinates{color:var(--muted);font-size:9px;margin-top:5px}.close{border:0;background:#ffffff0a;border-radius:50%;height:24px;width:24px;color:var(--muted);font-size:17px}.picker-primary{padding:0 17px 13px;display:flex;align-items:baseline;gap:8px}.picker-primary strong{font-size:34px;font-weight:500;letter-spacing:-1.6px}.picker-primary span{font-size:11px;color:var(--muted)}.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:15px 17px;border-top:1px solid var(--border);background:#ffffff03}.picker-cell span{display:block;font-size:9px;color:var(--muted);margin-bottom:5px}.picker-cell strong{font-size:12px;font-weight:500}.picker-footer{padding:10px 17px;font-size:8px;color:#eac78d;line-height:1.5}.map-error{position:absolute;inset:0;display:grid;place-items:center;background:#091522;z-index:100;padding:30px;text-align:center;line-height:1.8}.map-error[hidden]{display:none}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:650px){.topbar{left:14px;right:14px;top:14px}.brand-text strong{font-size:13px}.brand-text .eyebrow{font-size:6px;letter-spacing:1.2px}.brand-mark{font-size:28px}.demo-badge{font-size:7px;padding:8px}.panel{left:13px;top:78px;width:155px;padding:15px;border-radius:12px}.panel h1{font-size:16px;margin:5px 0 12px}.parameter-button{font-size:11px;padding:9px;gap:8px}.parameter-button span:first-child{font-size:17px;width:18px}.panel-note{font-size:8px;margin-top:11px;padding-top:11px}.flow-button{font-size:9px;padding:8px;margin-top:10px}.elevation-panel{right:13px;top:78px;width:78px;padding:12px 7px}.level{padding:9px 1px;font-size:11px}.level small{font-size:7px}.level[aria-pressed=true]:before{left:-8px}.elevation-panel>.eyebrow{font-size:6px}.legend{width:calc(100% - 26px);bottom:28px;padding:12px 14px}.legend-heading strong{font-size:11px}.legend-heading span{font-size:8px}.source-note{font-size:7px}.map-hint{left:13px;bottom:140px;font-size:8px}.recenter{right:13px;bottom:142px;width:35px;height:35px;font-size:20px}.ol-zoom{left:14px;bottom:178px}.map-status{left:13px;font-size:7px;bottom:6px;max-width:calc(100% - 150px)}.picker{width:236px}.picker-primary strong{font-size:29px}.picker-head{padding:14px 14px 10px}.picker-primary{padding:0 14px 12px}.picker-grid{padding:13px 14px;gap:12px}.picker-head strong{font-size:12px}}
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;min-height:520px;overflow:hidden;background:#091522;color:var(--text);font:13px system-ui,-apple-system,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button:disabled{opacity:.5;cursor:default}#map{position:absolute;inset:0}.glass{background:var(--glass);border:1px solid var(--border);box-shadow:0 12px 36px #0003;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.topbar{position:absolute;z-index:20;left:22px;right:22px;top:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;pointer-events:none}.topbar>*{pointer-events:auto}.identity{display:flex;align-items:center;gap:11px}.brand-mark{font-size:33px;font-weight:800;letter-spacing:-4px;color:var(--accent);text-shadow:0 2px 12px #0008}.brand-text strong{display:block;font-size:16px;letter-spacing:-.6px}.eyebrow{font-size:8px;letter-spacing:1.7px;color:var(--muted);text-transform:uppercase}.forecast-badge{padding:9px 12px;border-radius:30px;font-size:9px;letter-spacing:1.1px;color:#ffe1a3;white-space:nowrap}.forecast-badge:before{content:'';display:inline-block;background:#ffc66a;width:5px;height:5px;border-radius:50%;margin-right:7px}.panel{position:absolute;left:22px;top:100px;z-index:20;border-radius:16px;padding:20px;width:205px}.panel h1{font-size:18px;font-weight:600;letter-spacing:-.6px;margin:5px 0 17px}.parameter-list{display:grid;gap:7px}.parameter-button{display:flex;align-items:center;gap:12px;border:1px solid transparent;border-radius:9px;padding:12px;background:transparent;color:var(--muted);text-align:left;font-size:12px;transition:background .18s,color .18s}.parameter-button span:first-child{font-size:20px;width:21px}.parameter-button[aria-pressed=true]{color:var(--text);background:#d6edff12;border-color:#ffffff10}.parameter-button:hover{background:#ffffff0c}.panel-note{font-size:10px;color:var(--muted);line-height:1.7;padding-top:15px;border-top:1px solid var(--border);margin:16px 0 0}.flow-button{width:100%;border:1px solid var(--border);background:#ffffff08;border-radius:8px;padding:10px;margin-top:14px;font-size:11px}.elevation-panel{position:absolute;z-index:20;right:22px;top:100px;width:104px;border-radius:14px;padding:13px 9px}.elevation-panel>.eyebrow{text-align:center;display:block;font-size:7px;letter-spacing:1.2px;margin-bottom:12px}.levels{display:flex;flex-direction:column;gap:5px}.level{border:1px solid transparent;background:transparent;border-radius:8px;padding:10px 3px;font-size:12px;text-align:center;color:var(--muted);position:relative}.level small{display:block;font-size:8px;margin-top:4px;opacity:.75}.level[aria-pressed=true]{background:#c3ef7414;color:var(--accent);border-color:#c3ef7440}.level[aria-pressed=true]:before{content:'';position:absolute;left:-10px;top:14px;width:3px;height:22px;border-radius:2px;background:var(--accent)}.recenter{position:absolute;z-index:20;right:22px;bottom:118px;border-radius:10px;width:40px;height:40px;font-size:23px}.legend{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:31px;width:min(590px,calc(100% - 48px));border-radius:13px;padding:14px 18px 11px}.legend-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:15px}.legend-heading strong{font-size:12px;font-weight:500}.legend-heading span{font-size:9px;color:var(--muted)}#legend-gradient{height:9px;border-radius:8px}.legend-ticks{display:flex;justify-content:space-between;font-size:9px;color:#d8e6f0;padding-top:7px}.source-note{font-size:8px;color:var(--muted);line-height:1.5;margin:9px 0 0}.map-hint{position:absolute;left:22px;bottom:127px;z-index:20;font-size:10px;color:#dbe8f1;text-shadow:0 2px 8px #000;padding:7px 10px;border-radius:20px;background:#09152280}.map-status{position:absolute;left:22px;bottom:6px;z-index:20;font-size:8px;color:#b0c4d3;max-width:calc(100% - 200px);pointer-events:none}.particles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}.ol-overlaycontainer,.ol-overlaycontainer-stopevent{z-index:10}.ol-zoom{left:24px;top:auto;bottom:168px;background:#091522c0;border-radius:8px;padding:3px}.ol-control button{background:#102436cc;color:#e6eef7;border-radius:5px}.ol-control button:hover{background:#28445c}.ol-attribution{font-size:8px;background:#091522cc!important;color:#a3b8c9;padding:3px 6px;border-radius:5px 0 0}.ol-attribution a{color:#bdd6e8}.picker{width:264px;border-radius:15px;position:relative;box-shadow:0 15px 60px #0007;cursor:auto}.picker:after{content:'';position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);border-left:13px solid transparent;border-right:13px solid transparent;border-top:14px solid #0c1b2a}.picker-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 17px 10px}.picker-head strong{display:block;font-size:13px;font-weight:600}.picker-coordinates{color:var(--muted);font-size:9px;margin-top:5px}.close{border:0;background:#ffffff0a;border-radius:50%;height:24px;width:24px;color:var(--muted);font-size:17px}.picker-primary{padding:0 17px 13px;display:flex;align-items:baseline;gap:8px}.picker-primary strong{font-size:34px;font-weight:500;letter-spacing:-1.6px}.picker-primary span{font-size:11px;color:var(--muted)}.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:15px 17px;border-top:1px solid var(--border);background:#ffffff03}.picker-cell span{display:block;font-size:9px;color:var(--muted);margin-bottom:5px}.picker-cell strong{font-size:12px;font-weight:500}.picker-footer{padding:10px 17px;font-size:8px;color:#eac78d;line-height:1.5}.map-error{position:absolute;inset:0;display:grid;place-items:center;background:#091522;z-index:100;padding:30px;text-align:center;line-height:1.8}.map-error[hidden]{display:none}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:650px){.topbar{left:14px;right:14px;top:14px}.brand-text strong{font-size:13px}.brand-text .eyebrow{font-size:6px;letter-spacing:1.2px}.brand-mark{font-size:28px}.forecast-badge{font-size:7px;padding:8px}.panel{left:13px;top:78px;width:155px;padding:15px;border-radius:12px}.panel h1{font-size:16px;margin:5px 0 12px}.parameter-button{font-size:11px;padding:9px;gap:8px}.parameter-button span:first-child{font-size:17px;width:18px}.panel-note{font-size:8px;margin-top:11px;padding-top:11px}.flow-button{font-size:9px;padding:8px;margin-top:10px}.elevation-panel{right:13px;top:78px;width:78px;padding:12px 7px}.level{padding:9px 1px;font-size:11px}.level small{font-size:7px}.level[aria-pressed=true]:before{left:-8px}.elevation-panel>.eyebrow{font-size:6px}.legend{width:calc(100% - 26px);bottom:28px;padding:12px 14px}.legend-heading strong{font-size:11px}.legend-heading span{font-size:8px}.source-note{font-size:7px}.map-hint{left:13px;bottom:140px;font-size:8px}.recenter{right:13px;bottom:142px;width:35px;height:35px;font-size:20px}.ol-zoom{left:14px;bottom:178px}.map-status{left:13px;font-size:7px;bottom:6px;max-width:calc(100% - 150px)}.picker{width:236px}.picker-primary strong{font-size:29px}.picker-head{padding:14px 14px 10px}.picker-primary{padding:0 14px 12px}.picker-grid{padding:13px 14px;gap:12px}.picker-head strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.forecast-badge{color:#b6f0da}.forecast-badge:before{background:#81eac2}.forecast-badge.older{color:#ffcc86}.forecast-badge.older:before{background:#ffcc86}.source-note a{color:#b6e6ff;text-decoration:underline}.legend{bottom:116px}.map-hint{bottom:215px}.recenter{bottom:215px}.ol-zoom{bottom:255px}.forecast-timeline{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:24px;width:min(760px,calc(100% - 44px));padding:12px 16px;border-radius:12px}.forecast-time-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:10px}.forecast-time-heading strong{font-size:11px;font-weight:500}.forecast-time-heading span{font-size:8px;color:var(--muted)}.forecast-time-controls{display:flex;align-items:center;gap:12px;margin-top:9px}.forecast-time-controls button{border:1px solid var(--border);background:#ffffff0b;border-radius:7px;padding:7px 11px;white-space:nowrap;font-size:11px;color:var(--text)}.forecast-time-controls input{width:100%;min-width:40px;accent-color:var(--accent)}.forecast-time-controls span{font-size:9px;color:var(--muted);min-width:32px}.panel-note{font-size:9px}.map-status{max-width:calc(100% - 175px)}
+@media(max-width:650px){.forecast-timeline{width:calc(100% - 26px);bottom:23px;padding:10px 12px}.forecast-time-heading{align-items:flex-start;gap:5px;flex-direction:column}.forecast-time-heading strong{font-size:10px}.forecast-time-heading span{font-size:7px}.forecast-time-controls{gap:8px;margin-top:6px}.forecast-time-controls button{font-size:10px;padding:7px 9px}.legend{bottom:128px}.map-hint{bottom:227px}.recenter{bottom:225px}.ol-zoom{bottom:265px}.map-status{font-size:6px}}
+@media(max-height:760px){.panel-note{display:none}.panel{padding:13px;top:76px}.panel h1{font-size:15px;margin-bottom:10px}.parameter-button{padding:8px}.flow-button{margin-top:8px;padding:7px}.elevation-panel{top:76px}.source-note{font-size:7px}.map-hint{display:none}}
+#map .ol-overlaycontainer,#map .ol-overlaycontainer-stopevent{z-index:40}
+@media(max-height:620px){.panel h1,.panel>.eyebrow{display:none}.elevation-panel{padding:9px 6px}.level{padding:5px 2px}.elevation-panel>.eyebrow{margin-bottom:6px}}
 </style>
 </head>
 <body>
-<div id="map" tabindex="0" aria-label="Interactive Pakistan demo weather map. Click a location, or press Enter to inspect the map center."></div>
-<header class="topbar"><div class="identity"><span class="brand-mark">b°</span><div class="brand-text"><span class="eyebrow">BADAL PK · PAKISTAN</span><strong>Weather studio</strong></div></div><span class="demo-badge glass">DEMO · SYNTHETIC DATA</span></header>
-<aside class="panel glass" aria-label="Weather parameter controls"><span class="eyebrow">EXPLORE THE ATMOSPHERE</span><h1>Choose your view.</h1><div class="parameter-list" role="group" aria-label="Weather parameter"><button class="parameter-button" data-parameter="wind" aria-pressed="true"><span aria-hidden="true">≋</span><span>Wind</span></button><button class="parameter-button" data-parameter="temperature" aria-pressed="false"><span aria-hidden="true">♨</span><span>Temperature</span></button><button class="parameter-button" data-parameter="humidity" aria-pressed="false"><span aria-hidden="true">◉</span><span>Humidity</span></button></div><button id="flow-toggle" class="flow-button" aria-pressed="true">❚❚ Pause wind flow</button><p class="panel-note">A structured, simulated ECMWF-style grid for exploring weather layers. No live observations or forecasts are shown in this studio.</p></aside>
+<div id="map" tabindex="0" aria-label="Interactive Pakistan ECMWF forecast map. Click a location, or press Enter to inspect the map center."></div>
+<header class="topbar"><div class="identity"><span class="brand-mark">b°</span><div class="brand-text"><span class="eyebrow">BADAL PK · PAKISTAN</span><strong>Weather studio</strong></div></div><span id="forecast-badge" class="forecast-badge glass">LOADING ECMWF</span></header>
+<aside class="panel glass" aria-label="Weather parameter controls"><span class="eyebrow">EXPLORE THE ATMOSPHERE</span><h1>Choose your view.</h1><div class="parameter-list" role="group" aria-label="Weather parameter"><button class="parameter-button" data-parameter="wind" aria-pressed="true"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/></svg></span><span>Wind</span></button><button class="parameter-button" data-parameter="temperature" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 7v10"/></svg></span><span>Temperature</span></button><button class="parameter-button" data-parameter="humidity" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/></svg></span><span>Humidity</span></button></div><button id="flow-toggle" class="flow-button" aria-pressed="true">❚❚ Pause wind flow</button><p class="panel-note">Actual ECMWF IFS forecasts at four elevations. Wind particles follow forecast U/V vectors; their motion is accelerated for display.</p><button id="forecast-refresh" class="flow-button" type="button">↻ Refresh forecast</button></aside>
 <aside class="elevation-panel glass" aria-label="Pressure level controls"><span class="eyebrow">ELEVATION</span><div class="levels" role="group" aria-label="Elevation"><button class="level" data-level="250" aria-pressed="false">250 hPa<small>UPPER AIR</small></button><button class="level" data-level="500" aria-pressed="false">500 hPa<small>MID TROPOSPHERE</small></button><button class="level" data-level="850" aria-pressed="false">850 hPa<small>LOWER AIR</small></button><button class="level" data-level="surface" aria-pressed="true">Surface<small>WIND AT 10 m</small></button></div></aside>
 <button id="recenter" class="recenter glass" aria-label="Recenter map on Pakistan" title="Recenter Pakistan">⌖</button><div class="map-hint">⌖ Click the map to inspect a location</div>
-<section class="legend glass" aria-label="Active weather color scale"><div class="legend-heading"><strong id="legend-title">Wind speed · knots</strong><span id="level-caption">Surface / 10 m</span></div><div id="legend-gradient" aria-hidden="true"></div><div id="legend-ticks" class="legend-ticks"></div><p class="source-note">Demo grid only · Temperature/RH at 2 m for the surface view · Pressure levels are illustrative.</p></section>
+<section class="legend glass" aria-label="Active weather color scale"><div class="legend-heading"><strong id="legend-title">Wind speed · knots</strong><span id="level-caption">Surface / 10 m</span></div><div id="legend-gradient" aria-hidden="true"></div><div id="legend-ticks" class="legend-ticks"></div><p class="source-note">ECMWF IFS 0.25° via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · 1° display mesh · Surface temperature/RH: 2 m, wind: 10 m. Blank areas indicate unavailable or below-terrain data.</p></section>
+<section class="forecast-timeline glass" aria-label="Forecast time controls"><div class="forecast-time-heading"><strong id="forecast-valid">Loading forecast times…</strong><span id="forecast-updated"></span></div><div class="forecast-time-controls"><button id="forecast-play" aria-pressed="false" disabled>▶︎ Play</button><input id="forecast-timeline" type="range" min="0" max="0" value="0" aria-label="Forecast valid hour" disabled><button id="forecast-now" disabled>Now</button><span id="forecast-step">—</span></div></section>
 <div id="map-status" class="map-status" role="status" aria-live="polite">Initializing the Pakistan weather studio…</div>
-<div id="picker" class="picker glass" role="dialog" aria-label="Weather at selected map location" aria-modal="false"><div class="picker-head"><div><strong>Weather at this point</strong><div id="picker-coordinates" class="picker-coordinates"></div></div><button id="picker-close" class="close" aria-label="Close weather picker">×</button></div><div class="picker-primary"><strong id="picker-primary-value">—</strong><span id="picker-primary-unit"></span></div><div class="picker-grid" aria-live="polite"><div class="picker-cell"><span>Temperature</span><strong id="picker-temperature">—</strong></div><div class="picker-cell"><span>Wind · from direction</span><strong id="picker-wind">—</strong></div><div class="picker-cell"><span>Relative humidity</span><strong id="picker-humidity">—</strong></div><div class="picker-cell"><span>Cloud cover</span><strong id="picker-cloud">—</strong></div></div><div class="picker-footer"><span id="picker-level"></span> · Simulated values<br>Bilinear interpolation of the mock grid</div></div>
+<div id="picker" class="picker glass" role="dialog" aria-label="Weather at selected map location" aria-modal="false"><div class="picker-head"><div><strong>Weather at this point</strong><div id="picker-coordinates" class="picker-coordinates"></div></div><button id="picker-close" class="close" aria-label="Close weather picker">×</button></div><div class="picker-primary"><strong id="picker-primary-value">—</strong><span id="picker-primary-unit"></span></div><div class="picker-grid" aria-live="polite"><div class="picker-cell"><span>Temperature</span><strong id="picker-temperature">—</strong></div><div class="picker-cell"><span>Wind · from direction</span><strong id="picker-wind">—</strong></div><div class="picker-cell"><span>Relative humidity</span><strong id="picker-humidity">—</strong></div><div class="picker-cell"><span>Total-column cloud cover</span><strong id="picker-cloud">—</strong></div></div><div class="picker-footer"><span id="picker-level"></span><br><span id="picker-time"></span> · Interpolated model forecast</div></div>
 <div id="map-error" class="map-error" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js" integrity="sha384-R02sHnzL8yl/uvLZvMsfgBOMBIOOHLpuLNo4dLuWQWFun1sxEWJej+SPwiGxaeGd" crossorigin="anonymous"></script>
 <script>
 'use strict';
 /* ======================================================================
- * 1. MOCK ECMWF-STYLE DATA
- * This deterministic grid is illustrative. No mock value is a live ECMWF
- * forecast. U is eastward wind, V northward wind, both in metres/second.
- * Every grid cell stores temperature (°C), RH (%), cloud (%), U and V.
+ * 1. REAL FORECAST DATA AND GEOGRAPHIC SAMPLING
+ * Shared snapshots contain only actual ECMWF IFS 0.25° values retrieved by
+ * scripts/sync-studio.py. There is deliberately no synthetic fallback.
+ * Wind components are interpolated before speed/direction are calculated.
+ * Cloud cover is total column, never mislabeled as a pressure-level product.
  * ====================================================================== */
-const KNOTS_PER_MS = 1.9438444924406;
-const GRID_SPEC = Object.freeze({west:60,east:78.5,south:23,north:38,columns:32,rows:27});
-const LEVELS = Object.freeze({
- surface:{label:'Surface / 10 m',cooling:0,speed:1},
- '850':{label:'850 hPa',cooling:10,speed:1.8},
- '500':{label:'500 hPa',cooling:35,speed:3.4},
- '250':{label:'250 hPa',cooling:68,speed:5.7}
-});
-const clamp = (value,low,high) => Math.max(low,Math.min(high,value));
-const lerp = (a,b,t) => a+(b-a)*t;
-function createMockDataset(){
- const dataset={model:'SYNTHETIC_ECMWF_STYLE_DEMO',generatedAt:new Date().toISOString(),grid:GRID_SPEC,levels:{}};
- for(const [level,settings] of Object.entries(LEVELS)){
-  const rows=[];
-  for(let y=0;y<GRID_SPEC.rows;y++){
-   const row=[];const lat=lerp(GRID_SPEC.south,GRID_SPEC.north,y/(GRID_SPEC.rows-1));
-   for(let x=0;x<GRID_SPEC.columns;x++){
-    const lon=lerp(GRID_SPEC.west,GRID_SPEC.east,x/(GRID_SPEC.columns-1));
-    // Smooth, deterministic fields create visible gradients and upper-air jets.
-    const wave=Math.sin((lon-65)*.48)+Math.cos((lat-29)*.42);
-    const jet=Math.exp(-Math.pow((lat-32.5)/3.5,2));
-    const u=(3.8+wave*2.5+jet*4.3)*settings.speed;
-    const v=(Math.sin((lon-68)*.5)*3.5-Math.cos((lat-30)*.6)*2)*settings.speed;
-    const temperature=35-(lat-25)*1.08+Math.sin((lon-66)*.6)*4-settings.cooling;
-    const humidity=clamp(43+Math.cos((lon-73)*.36)*23+Math.sin((lat-30)*.6)*17-settings.cooling*.17,7,100);
-    const cloudCover=clamp((humidity-28)*1.25+Math.sin(lon*.9+lat*.6)*15,0,100);
-    row.push({latitude:lat,longitude:lon,temperature,humidity,u,v,cloudCover});
-   }
-   rows.push(row);
-  }
-  dataset.levels[level]={pressure:level,rows};
- }
- return dataset;
+const KNOTS_PER_MS=1.9438444924406;
+const LEVELS=Object.freeze({surface:{label:'Surface / 10 m'},'850':{label:'850 hPa'},'500':{label:'500 hPa'},'250':{label:'250 hPa'}});
+const clamp=(value,low,high)=>Math.max(low,Math.min(high,value));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const finite=value=>typeof value==='number'&&Number.isFinite(value);
+function forecastLabel(stamp){return new Date(stamp).toLocaleString('en-GB',{timeZone:'Asia/Karachi',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' PKT';}
+function validateForecast(data){
+ if(data?.schema_version!==1||data.model!=='ecmwf_ifs025'||!Number.isFinite(Date.parse(data.retrieved_at)))throw Error('Invalid forecast source');
+ const g=data.grid;if(!g||g.columns<2||g.rows<2||g.columns>100||g.rows>100||![g.west,g.east,g.south,g.north].every(finite)||g.west>=g.east||g.south>=g.north)throw Error('Invalid geographic mesh');
+ if(!Array.isArray(data.times)||data.times.length<2||data.times.length>168||data.times.some((t,i)=>typeof t!=='string'||!t.endsWith('Z')||!Number.isFinite(Date.parse(t))||(i>0&&Date.parse(t)-Date.parse(data.times[i-1])!==3600000)))throw Error('Invalid forecast times');
+ const count=g.columns*g.rows,check=frames=>Array.isArray(frames)&&frames.length===data.times.length&&frames.every(row=>Array.isArray(row)&&row.length===count&&row.every(v=>v===null||finite(v)));
+ if(!check(data.cloud_cover))throw Error('Invalid cloud forecast');
+ for(const level of Object.keys(LEVELS))for(const field of ['temperature','humidity','u','v'])if(!check(data.levels?.[level]?.[field]))throw Error('Incomplete forecast fields');
+ if(data.units?.u!=='m/s'||data.units?.v!=='m/s'||data.units?.temperature!=='°C'||data.units?.humidity!=='%')throw Error('Unexpected forecast units');
+ return data;
 }
-const ECMWF_DEMO_GRID=createMockDataset();
-
-/* ======================================================================
- * 2. GRID SAMPLING AND COLOR RAMPS (pure functions; independent of the map)
- * U and V are interpolated before deriving speed and meteorological wind
- * direction. Values outside the Pakistan study rectangle are not invented.
- * ====================================================================== */
 class GridSampler{
- constructor(dataset){this.dataset=dataset;}
+ constructor(dataset=null,state={time:0}){this.dataset=dataset;this.state=state;}
  sample(lon,lat,level){
-  const g=this.dataset.grid;
-  if(!Number.isFinite(lon)||!Number.isFinite(lat)||lon<g.west||lon>g.east||lat<g.south||lat>g.north||!this.dataset.levels[level])return null;
+  const data=this.dataset;if(!data)return null;const g=data.grid,fields=data.levels[level],time=this.state.time;
+  if(!finite(lon)||!finite(lat)||lon<g.west||lon>g.east||lat<g.south||lat>g.north||!fields||!data.times[time])return null;
   const gx=(lon-g.west)/(g.east-g.west)*(g.columns-1),gy=(lat-g.south)/(g.north-g.south)*(g.rows-1);
-  const x=Math.min(g.columns-2,Math.floor(gx)),y=Math.min(g.rows-2,Math.floor(gy));
-  const fx=gx-x,fy=gy-y,rows=this.dataset.levels[level].rows;
-  const result={};
-  for(const key of ['temperature','humidity','u','v','cloudCover'])result[key]=lerp(lerp(rows[y][x][key],rows[y][x+1][key],fx),lerp(rows[y+1][x][key],rows[y+1][x+1][key],fx),fy);
-  result.windKnots=Math.hypot(result.u,result.v)*KNOTS_PER_MS;
-  // Meteorological direction is where wind comes FROM (clockwise from north).
-  result.direction=(Math.atan2(-result.u,-result.v)*180/Math.PI+360)%360;
-  return result;
+  const x=Math.min(g.columns-2,Math.floor(gx)),y=Math.min(g.rows-2,Math.floor(gy)),fx=gx-x,fy=gy-y;
+  const indices=[y*g.columns+x,y*g.columns+x+1,(y+1)*g.columns+x,(y+1)*g.columns+x+1];
+  const weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];
+  // Missing/below-ground cells stay missing, not zeros or extrapolated fields.
+  const interpolate=frames=>{const row=frames[time];let result=0;for(let i=0;i<4;i++){if(weights[i]<1e-12)continue;if(!finite(row[indices[i]]))return null;result+=weights[i]*row[indices[i]];}return result;};
+  const value={};for(const key of ['temperature','humidity','u','v'])value[key]=interpolate(fields[key]);
+  value.cloudCover=interpolate(data.cloud_cover);
+  value.windKnots=finite(value.u)&&finite(value.v)?Math.hypot(value.u,value.v)*KNOTS_PER_MS:null;
+  value.direction=value.windKnots>0.05?(Math.atan2(-value.u,-value.v)*180/Math.PI+360)%360:null;
+  return value;
  }
 }
 const PARAMETERS={
@@ -123,7 +108,7 @@ class RasterFieldLayer{
   const parameter=PARAMETERS[this.state.parameter],ramp=new ColorRamp(parameter.stops);
   for(let y=0;y<small.height;y++)for(let x=0;x<small.width;x++){
    const coordinate=[lerp(extent[0],extent[2],(x+.5)/small.width),lerp(extent[3],extent[1],(y+.5)/small.height)];
-   const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value)continue;
+   const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value||!finite(value[parameter.field]))continue;
    const color=ramp.color(value[parameter.field]),offset=(y*small.width+x)*4;
    image.data.set([...color,245],offset);
   }
@@ -152,21 +137,21 @@ class WindParticleLayer{
  spawn(){
   const [w,h]=this.map.getSize()||[1,1];for(let i=0;i<15;i++){
    const coordinate=this.map.getCoordinateFromPixel([Math.random()*w,Math.random()*h]);if(!coordinate)continue;
-   const [lon,lat]=ol.proj.toLonLat(coordinate);if(this.sampler.sample(lon,lat,this.state.level))return {coordinate,age:Math.random()*90};
+   const [lon,lat]=ol.proj.toLonLat(coordinate);const value=this.sampler.sample(lon,lat,this.state.level);if(value&&finite(value.u)&&finite(value.v))return {coordinate,age:Math.random()*90};
   }return null;
  }
  reset(){this.clear();const [w,h]=this.map.getSize()||[1,1],count=clamp(Math.round(w*h/1250),180,1100);this.particles=Array.from({length:count},()=>this.spawn()).filter(Boolean);}
  refresh(){
   cancelAnimationFrame(this.raf);this.raf=0;this.last=0;this.canvas.hidden=this.state.parameter!=='wind';
-  if(this.state.parameter==='wind'&&this.state.animate&&!document.hidden){this.reset();this.raf=requestAnimationFrame(t=>this.frame(t));}else this.clear();
+  if(this.state.parameter==='wind'&&this.state.animate&&this.sampler.dataset&&!document.hidden&&!this.state.suspended){this.reset();this.raf=requestAnimationFrame(t=>this.frame(t));}else this.clear();
  }
  frame(timestamp){
   const dt=this.last?Math.min((timestamp-this.last)/1000,.04):.016;this.last=timestamp;
   if(!this.moving){
-   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='destination-in';ctx.fillStyle='rgba(0,0,0,.91)';ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation='source-over';ctx.lineWidth=.9;ctx.strokeStyle='rgba(235,251,255,.64)';ctx.beginPath();
+   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='destination-in';ctx.fillStyle='rgba(0,0,0,.91)';ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation='source-over';ctx.lineWidth=1.1;ctx.strokeStyle='rgba(235,251,255,.82)';ctx.beginPath();
    this.particles=this.particles.map(p=>{
-    if(p.age++>110)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value)return this.spawn();
-    const factor=12000*dt/Math.max(.3,Math.cos(lat*Math.PI/180));const next=[p.coordinate[0]+value.u*factor,p.coordinate[1]+value.v*factor];
+    if(p.age++>110)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value||!finite(value.u)||!finite(value.v))return this.spawn();
+    const factor=16000*dt/Math.max(.3,Math.cos(lat*Math.PI/180));const next=[p.coordinate[0]+value.u*factor,p.coordinate[1]+value.v*factor];
     const start=this.map.getPixelFromCoordinate(p.coordinate),end=this.map.getPixelFromCoordinate(next);if(!start||!end||end[0]<0||end[0]>w||end[1]<0||end[1]>h)return this.spawn();
     ctx.moveTo(...start);ctx.lineTo(...end);p.coordinate=next;return p;
    }).filter(Boolean);ctx.stroke();
@@ -188,14 +173,16 @@ class WeatherPicker{
   document.getElementById('picker-close').addEventListener('click',()=>this.close());map.on('singleclick',event=>this.open(event.coordinate));
   map.getTargetElement().addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();this.open(map.getView().getCenter());}if(event.key==='Escape')this.close();});
  }
- open(coordinate){const [lon,lat]=ol.proj.toLonLat(coordinate);if(!this.sampler.sample(lon,lat,this.state.level)){document.getElementById('map-status').textContent='Select a point inside the Pakistan study grid (60–78.5°E, 23–38°N).';return;}this.coordinate=coordinate.slice();this.marker.setGeometry(new ol.geom.Point(coordinate));this.update();this.overlay.setPosition(coordinate);}
+ open(coordinate){const [lon,lat]=ol.proj.toLonLat(coordinate);if(!this.sampler.sample(lon,lat,this.state.level)){document.getElementById('map-status').textContent=this.sampler.dataset?'Select a point inside the forecast region (60–78°E, 23–38°N).':'Forecast data is unavailable. Press Refresh forecast to retry.';return;}this.coordinate=coordinate.slice();this.marker.setGeometry(new ol.geom.Point(coordinate));this.update();this.overlay.setPosition(coordinate);}
  close(){this.coordinate=null;this.overlay.setPosition(undefined);this.marker.setGeometry(undefined);}
  update(){
   if(!this.coordinate)return;const [lon,lat]=ol.proj.toLonLat(this.coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value)return;
   const set=(id,text)=>document.getElementById(id).textContent=text,parameter=PARAMETERS[this.state.parameter];
-  const cardinal=['N','NE','E','SE','S','SW','W','NW'][Math.round(value.direction/45)%8];
-  set('picker-coordinates',`${lat.toFixed(3)}° N, ${lon.toFixed(3)}° E`);set('picker-primary-value',value[parameter.field].toFixed(1));set('picker-primary-unit',parameter.unit);
-  set('picker-temperature',`${value.temperature.toFixed(1)} °C`);set('picker-wind',`${value.windKnots.toFixed(1)} kn · ${cardinal} ${Math.round(value.direction)}°`);set('picker-humidity',`${Math.round(value.humidity)}%`);set('picker-cloud',`${Math.round(value.cloudCover)}%`);set('picker-level',LEVELS[this.state.level].label);
+  const cardinal=finite(value.direction)?['N','NE','E','SE','S','SW','W','NW'][Math.round(value.direction/45)%8]:'';
+  const display=(v,suffix,digits=1)=>finite(v)?v.toFixed(digits)+suffix:'Unavailable';
+  set('picker-coordinates',`${lat.toFixed(3)}° N, ${lon.toFixed(3)}° E`);set('picker-primary-value',display(value[parameter.field],''));set('picker-primary-unit',parameter.unit);
+  set('picker-temperature',display(value.temperature,' °C'));set('picker-wind',display(value.windKnots,' kn')+(finite(value.direction)?` · ${cardinal} ${Math.round(value.direction)}°`:value.windKnots===0?' · calm':''));set('picker-humidity',display(value.humidity,'%',0));set('picker-cloud',display(value.cloudCover,'%',0));set('picker-level',LEVELS[this.state.level].label);set('picker-time',this.sampler.dataset?forecastLabel(this.sampler.dataset.times[this.state.time]):'No forecast');
+
  }
 }
 
@@ -206,11 +193,11 @@ class WeatherPicker{
  * ====================================================================== */
 class WeatherExplorer{
  constructor(){
-  this.state={parameter:'wind',level:'surface',animate:!matchMedia('(prefers-reduced-motion: reduce)').matches};
-  this.sampler=new GridSampler(ECMWF_DEMO_GRID);
+  this.state={parameter:'wind',level:'surface',time:0,suspended:false,animate:!matchMedia('(prefers-reduced-motion: reduce)').matches};
+  this.sampler=new GridSampler(null,this.state);this.player=null;this.request=null;
   const pakistanCenter=ol.proj.fromLonLat([69.3451,30.3753]);
   const tiles=new ol.source.XYZ({url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attributions:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',crossOrigin:'anonymous',maxZoom:18});
-  let tileWarning=false;tiles.on('tileloaderror',()=>{if(!tileWarning){tileWarning=true;document.getElementById('map-status').textContent='Basemap tiles unavailable. The colored demo grid remains usable.';}});
+  let tileWarning=false;tiles.on('tileloaderror',()=>{if(!tileWarning){tileWarning=true;document.getElementById('map-status').textContent='Basemap tiles unavailable. Forecast layers remain available independently of basemap tiles.';}});
   const basemap=new ol.layer.Tile({source:tiles});
   // Dark styling applies only to key-free OSM tiles, never to weather rasters.
   basemap.on('prerender',event=>{event.context.save();event.context.filter='grayscale(1) invert(1) brightness(.7) contrast(1.15)';});
@@ -222,13 +209,49 @@ class WeatherExplorer{
   document.getElementById('flow-toggle').addEventListener('click',()=>{this.state.animate=!this.state.animate;this.update();});
   document.getElementById('recenter').addEventListener('click',()=>this.map.getView().animate({center:pakistanCenter,zoom:5,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:450}));
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{this.state.animate=!event.matches;this.update();});
-  document.getElementById('map-status').textContent='Synthetic grid generated '+new Date(ECMWF_DEMO_GRID.generatedAt).toLocaleTimeString('en-GB',{timeZone:'UTC',hour:'2-digit',minute:'2-digit'})+' UTC · Illustrative only';this.update();
+  const byId=id=>document.getElementById(id);
+  byId('forecast-refresh').addEventListener('click',()=>this.load());
+  byId('forecast-timeline').addEventListener('input',()=>{this.stopPlayback();this.state.time=Number(byId('forecast-timeline').value);this.update();});
+  byId('forecast-now').addEventListener('click',()=>{this.stopPlayback();this.state.time=this.currentHour();this.update();});
+  byId('forecast-play').addEventListener('click',()=>{if(this.player){this.stopPlayback();return;}if(!this.sampler.dataset)return;byId('forecast-play').textContent='❚❚ Pause';byId('forecast-play').setAttribute('aria-pressed','true');this.player=setInterval(()=>{this.state.time=(this.state.time+1)%this.sampler.dataset.times.length;this.update();},1600);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stopPlayback();});
+  // The parent dashboard suspends hidden map panes as well as hidden tabs.
+  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='badal-studio-visibility')return;this.state.suspended=!event.data.visible;if(this.state.suspended)this.stopPlayback();this.particles.refresh();if(event.data.visible)this.map.updateSize();});
+  this.update();this.load();
+
+ }
+ stopPlayback(){clearInterval(this.player);this.player=null;document.getElementById('forecast-play').textContent='▶︎ Play';document.getElementById('forecast-play').setAttribute('aria-pressed','false');}
+ currentHour(){const times=this.sampler.dataset?.times||[];const i=times.findIndex(t=>Date.parse(t)>Date.now());return i<0?Math.max(0,times.length-1):Math.max(0,i-1);}
+ async load(){
+  this.stopPlayback();this.request?.abort();const request=new AbortController();this.request=request;
+  const button=document.getElementById('forecast-refresh'),badge=document.getElementById('forecast-badge'),status=document.getElementById('map-status');button.disabled=true;badge.textContent='LOADING ECMWF';status.textContent='Loading actual ECMWF IFS forecast fields…';
+  try{
+   const url=new URL('../studio-data/forecast.json',location.href);url.searchParams.set('refresh',Date.now());
+   const response=await fetch(url,{cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(25000)])});if(!response.ok)throw Error('Forecast snapshot unavailable');
+   const data=validateForecast(await response.json());if(Date.parse(data.times.at(-1))<Date.now()-3600000)throw Error('Forecast has expired');
+   this.sampler.dataset=data;this.state.time=this.currentHour();const age=(Date.now()-Date.parse(data.retrieved_at))/3600000;
+   badge.textContent=age>12?'OLDER ECMWF FORECAST':'ECMWF · FORECAST';badge.classList.toggle('older',age>12);
+   status.textContent=`ECMWF IFS 0.25° · 304 sampled cells · ${data.times.length} hourly forecasts. ${data.status==='cached'?'Latest refresh failed; previous actual forecast retained. ':''}${age>12?'Snapshot is over 12 hours old. ':''}Updated approximately every 6 hours; refresh reloads the latest published snapshot.`;
+   document.getElementById('forecast-updated').textContent='Fetched '+forecastLabel(data.retrieved_at);
+   this.update();
+  }catch(error){
+   if(request.signal.aborted)return;badge.textContent='FORECAST UNAVAILABLE';badge.classList.add('older');
+   // Previously retrieved real data may remain only while its valid times continue.
+   if(this.sampler.dataset&&Date.parse(this.sampler.dataset.times.at(-1))<Date.now()-3600000)this.sampler.dataset=null;
+   status.textContent=this.sampler.dataset?'Forecast refresh failed. Previously loaded actual forecasts remain visible; check the fetched and valid times.':'Forecast data could not be loaded or has expired. No weather values are shown. Press Refresh forecast to retry.';
+   if(!this.sampler.dataset)this.picker.close();this.update();
+  }finally{if(this.request===request)button.disabled=false;}
  }
  update(){
+  const dataset=this.sampler.dataset;
+  for(const id of ['forecast-timeline','forecast-play','forecast-now'])document.getElementById(id).disabled=!dataset;
+  document.getElementById('forecast-timeline').max=String(Math.max(0,(dataset?.times.length||1)-1));document.getElementById('forecast-timeline').value=String(this.state.time);
+  document.getElementById('forecast-valid').textContent=dataset?forecastLabel(dataset.times[this.state.time]):'Forecast time unavailable';
+  document.getElementById('forecast-step').textContent=dataset?`${this.state.time+1}/${dataset.times.length}`:'—';
   const parameter=PARAMETERS[this.state.parameter];document.querySelectorAll('[data-parameter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.parameter===this.state.parameter)));document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.level===this.state.level)));
   document.getElementById('legend-title').textContent=parameter.label+' · '+parameter.unit;document.getElementById('level-caption').textContent=LEVELS[this.state.level].label;document.getElementById('legend-gradient').style.background=new ColorRamp(parameter.stops).css();
   document.getElementById('legend-ticks').replaceChildren(...parameter.ticks.map(value=>{const span=document.createElement('span');span.textContent=value;return span;}));
-  const flow=document.getElementById('flow-toggle');flow.hidden=this.state.parameter!=='wind';flow.setAttribute('aria-pressed',String(this.state.animate));flow.textContent=this.state.animate?'❚❚ Pause wind flow':'▶ Resume wind flow';
+  const flow=document.getElementById('flow-toggle');flow.hidden=this.state.parameter!=='wind';flow.disabled=!dataset;flow.setAttribute('aria-pressed',String(this.state.animate));flow.textContent=this.state.animate?'❚❚ Pause wind flow':'▶︎ Resume wind flow';
   this.raster.refresh();this.particles.refresh();this.picker.update();
  }
 }
