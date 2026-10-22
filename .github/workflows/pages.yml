@@ -2,6 +2,8 @@ name: Deploy free GitHub Pages website
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17,47 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        id: pages
+      - name: Refresh public PMD radar catalogs
+        env:
+          PREVIOUS_RADAR_URL: ${{ steps.pages.outputs.base_url }}/radar-data/catalog.json
+        run: python3 scripts/sync-radar.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

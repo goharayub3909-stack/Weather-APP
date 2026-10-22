@@ -1,3 +1,4 @@
+import {initRadar} from './radar.js';
 import {cities} from './cities.js';
 import {forecastURL,weather,hourIndex,isNumber,aqiCategory,direction} from './weather.js';
 const $=id=>document.getElementById(id);
@@ -109,16 +110,4 @@ document.querySelectorAll('[data-layer]').forEach(button=>button.addEventListene
 $('load-map').addEventListener('click',()=>{mapLoaded=true;$('map-placeholder').hidden=true;$('weather-map').hidden=false;updateMap();});$('refresh').addEventListener('click',load);
 function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Karachi'}));text('clock',now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Karachi'})+' PKT · UTC+5');}tick();setInterval(tick,60000);favorites();updateMap();load();
 
-// Embed PMD itself: no scraping, image copying or inferred station switching.
-const pmdURL='https://radar.weather.gov.pk/jbirds?site=islamabad';
-$('load-pmd').addEventListener('click',()=>{
- $('pmd-placeholder').hidden=true;
- $('pmd-frame').hidden=false;
- $('pmd-frame').src=pmdURL;
- text('load-pmd','Reload Islamabad radar ↻');
- // Cross-origin iframe load events cannot establish that radar imagery rendered.
- text('pmd-status','PMD viewer requested. Use its controls and check the imagery timestamp. If it does not display, use the direct PMD link.');
-});
-$('pmd-frame').addEventListener('error',()=>{
- text('pmd-status','The PMD viewer could not be loaded here. Open the direct PMD radar link above.');
-});
+initRadar();
