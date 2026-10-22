@@ -154,7 +154,7 @@ function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',
 
 initRadar();
 initSatellite();
-initLightning({getLocation:()=>cities[selected]});
+initLightning();
 
 initObservations();
 initMapTabs();

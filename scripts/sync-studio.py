@@ -18,7 +18,7 @@ from urllib.request import Request, urlopen
 ENDPOINT='https://api.open-meteo.com/v1/forecast'
 GRID={'west':60,'east':78,'south':23,'north':38,'columns':19,'rows':16,'spacing_degrees':1}
 LEVELS=('surface','850','500','250')
-FIELDS=['temperature_2m','relative_humidity_2m','wind_speed_10m','wind_direction_10m','cloud_cover','surface_pressure']
+FIELDS=['temperature_2m','relative_humidity_2m','wind_speed_10m','wind_direction_10m','cloud_cover','surface_pressure','rain']
 for pressure in LEVELS[1:]:
     FIELDS.extend(f'{field}_{pressure}hPa' for field in ('temperature','relative_humidity','wind_speed','wind_direction'))
 
@@ -41,6 +41,7 @@ def build(points,coords,grid=GRID):
     count=len(coords)
     levels={level:{key:[[None]*count for _ in times] for key in ('temperature','humidity','u','v')} for level in LEVELS}
     clouds=[[None]*count for _ in times]
+    rain=[[None]*count for _ in times]
     for index,(point,(lat,lon)) in enumerate(zip(points,coords)):
         if abs(point.get('latitude',999)-lat)>.26 or abs(point.get('longitude',999)-lon)>.26:
             raise ValueError('Provider returned an unexpected model cell')
@@ -49,10 +50,11 @@ def build(points,coords,grid=GRID):
             raise ValueError('Inconsistent forecast times')
         for field in FIELDS:
             if len(hourly.get(field,[]))!=len(times): raise ValueError('Missing forecast field')
-            unit='m/s' if field.startswith('wind_speed') else '°' if field.startswith('wind_direction') else '°C' if field.startswith('temperature') else 'hPa' if field=='surface_pressure' else '%'
+            unit='m/s' if field.startswith('wind_speed') else '°' if field.startswith('wind_direction') else '°C' if field.startswith('temperature') else 'hPa' if field=='surface_pressure' else 'mm' if field=='rain' else '%'
             if units.get(field)!=unit: raise ValueError('Unexpected provider units')
         for t in range(len(times)):
             clouds[t][index]=number(hourly['cloud_cover'][t],0,100)
+            rain[t][index]=number(hourly['rain'][t],0,500)
             surface_pressure=number(hourly['surface_pressure'][t],100,1100)
             for level in LEVELS:
                 # Do not plot extrapolated pressure-level weather below ground.
@@ -70,11 +72,11 @@ def build(points,coords,grid=GRID):
                     fields['v'][t][index]=round(-speed*math.cos(angle),4)
     if any(not any(value is not None for row in levels[level]['u'] for value in row) for level in LEVELS):
         raise ValueError('A wind level has no actual forecast values')
-    return {'schema_version':1,'model':'ecmwf_ifs025','source':'ECMWF IFS via Open-Meteo','source_url':ENDPOINT,
+    return {'schema_version':2,'model':'ecmwf_ifs025','source':'ECMWF IFS via Open-Meteo','source_url':ENDPOINT,
             'retrieved_at':datetime.now(timezone.utc).isoformat(),'status':'updated','grid':grid,
-            'times':times,'levels':levels,'cloud_cover':clouds,
-            'units':{'temperature':'°C','humidity':'%','u':'m/s','v':'m/s','cloud_cover':'%'},
-            'notes':'1° display sampling of the 0.25° model. Cloud cover is total column, not pressure-level cloud. Below-terrain pressure levels are masked. Model initialization time is not supplied by this API.'}
+            'times':times,'levels':levels,'cloud_cover':clouds,'rain':rain,
+            'units':{'temperature':'°C','humidity':'%','u':'m/s','v':'m/s','cloud_cover':'%','rain':'mm'},
+            'notes':'1° display sampling of the 0.25° model. Rain is the surface hourly rain amount in mm. Cloud cover is total column, not pressure-level cloud. Below-terrain pressure levels are masked. Model initialization time is not supplied by this API.'}
 
 def get(url):
     for attempt in range(3):
@@ -86,7 +88,7 @@ def get(url):
             delay=min(40,max(2,int(error.headers.get('Retry-After','20'))));time.sleep(delay)
 
 def valid_previous(data):
-    return data.get('model')=='ecmwf_ifs025' and data.get('schema_version')==1 and data.get('times') and data.get('levels') and data.get('grid')==GRID
+    return data.get('model')=='ecmwf_ifs025' and data.get('schema_version')==2 and data.get('times') and data.get('levels') and data.get('grid')==GRID and isinstance(data.get('rain'),list)
 
 def sync(path):
     old=None
@@ -109,8 +111,8 @@ def sync(path):
             print('Studio: reused actual forecast snapshot; next upstream refresh after six hours.');return True
     try:
         coords=coordinates();points=[]
-        for start in range(0,len(coords),32):
-            batch=coords[start:start+32]
+        for start in range(0,len(coords),8):
+            batch=coords[start:start+8]
             query={'latitude':','.join(str(p[0]) for p in batch),'longitude':','.join(str(p[1]) for p in batch),
                    'hourly':','.join(FIELDS),'models':'ecmwf_ifs025','forecast_hours':48,
                    'wind_speed_unit':'ms','timezone':'UTC','cell_selection':'nearest'}
