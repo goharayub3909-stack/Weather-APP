@@ -55,3 +55,11 @@ else:
         example = value if isinstance(value,(int,float)) else value if isinstance(value,str) and len(value)<80 and not re.search(r'[A-Fa-f0-9]{24,}',value) else None
         columns.append({'index':i,'type':type(value).__name__,'example':example})
     print(json.dumps({'count':len(rows),'columns':columns,'payload_keys':list(payload.keys())}))
+for document in documents:
+    # Field labels/index definitions from static app modules, never bootstrap HTML.
+    if '__WW_BOOT__' in document: continue
+    mappings = re.findall(r'([A-Za-z][A-Za-z0-9_ ]{0,40})["\']?\s*:\s*(\d{1,3})\b', document)
+    if mappings: print(json.dumps({'index_definitions':mappings[:250]}))
+    lines = document.splitlines()
+    snippets = [line[:250] for line in lines if re.search(r'MetData|row\[|\b(?:index|label|field|title)\s*:',line) and not re.search(r'token|secret|password|__WW_BOOT__',line,re.I)]
+    if snippets: print(json.dumps({'field_usage':snippets[:100]}))
