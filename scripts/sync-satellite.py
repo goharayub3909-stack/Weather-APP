@@ -83,11 +83,12 @@ def parse_capabilities(raw):
         natural = bool(re.search(r'natural[\s_:-]+colou?r|true[\s_:-]*colou?r|rgb[_:-]natural(?:$|[_:-]|enhncd)', ' '.join((name, title)).lower()))
         # A layer must intersect Pakistan and have a supported geographic CRS.
         intersects = bounds and bounds[0] <= 77.5 and bounds[2] >= 60.5 and bounds[1] <= 37.5 and bounds[3] >= 23.5
-        if name and natural and intersects and any(c in crs for c in ('EPSG:3857', 'EPSG:4326', 'CRS:84')):
+        if name and (natural or name == 'msg_iodc:rgb_eview') and intersects and any(c in crs for c in ('EPSG:3857', 'EPSG:4326', 'CRS:84')):
             times = recent_times((dimension or {}).get('values', ''), (dimension or {}).get('default', ''))
             # Prefer Indian Ocean coverage for Pakistan, then layers covering all of Pakistan.
             full = bounds[0] <= 60.5 and bounds[2] >= 77.5 and bounds[1] <= 23.5 and bounds[3] >= 37.5
             score = (100 if any(x in description for x in ('iodc', 'indian ocean', '45.5', '45 degree')) else 0) + (30 if full else 0) + (10 if times else 0) + (5 if 'natural colour rgb' in title.lower() or 'natural color rgb' in title.lower() else 0)
+            if name == 'msg_iodc:rgb_eview': title = 'High-resolution visible RGB · IODC (coverage gaps possible)'
             layers.append({'name': name, 'title': title or name, 'abstract': abstract[:1200], 'bounds': bounds, 'crs': next(c for c in ('EPSG:3857', 'EPSG:4326', 'CRS:84') if c in crs), 'times': times, 'default_time': (dimension or {}).get('default', ''), 'time_advertised': bool(dimension), 'score': score})
         for child in node.findall('w:Layer', NS):
             visit(child, bounds, dimension, crs)
