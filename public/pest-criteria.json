@@ -1,0 +1,1126 @@
+{
+  "schema_version": 1,
+  "source": "User-supplied crop research",
+  "rules": [
+    {
+      "id": "wheat-yellow-stripe-rust",
+      "crop": "wheat",
+      "name": "Yellow Stripe Rust",
+      "pathogen": "Puccinia striiformis",
+      "temperature": [
+        10.0,
+        15.0
+      ],
+      "humidity": [
+        65.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "3",
+        "maximum": "23",
+        "optimum": "10-15",
+        "humidity": ">65",
+        "leafWetness": "4-6 hours",
+        "duration": "Stripe rust takes 10 to 14 days to complete cycle",
+        "weather": "Heavy dew or intermittent rains ,long cool, wet",
+        "stage": "vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 2"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-stem-rust",
+      "crop": "wheat",
+      "name": "Stem Rust",
+      "pathogen": "Puccinia graminis f.sp. Tritici",
+      "temperature": [
+        18.0,
+        29.0
+      ],
+      "humidity": [
+        65.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "15-20",
+        "maximum": "25-30",
+        "optimum": "18-29",
+        "humidity": ">65",
+        "leafWetness": "6-8 hours",
+        "duration": "Stem rust takes 7 to 15days",
+        "weather": "Heavy dew, Light rain, warm winter, wet",
+        "stage": "Late vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-leaf-brown-rust",
+      "crop": "wheat",
+      "name": "Leaf/brown Rust",
+      "pathogen": "Puccinia recondita / triticina",
+      "temperature": [
+        15.0,
+        22.0
+      ],
+      "humidity": [
+        65.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "15",
+        "maximum": "30",
+        "optimum": "15-22",
+        "humidity": ">65",
+        "leafWetness": "> 6hrs",
+        "duration": "7-15 days",
+        "weather": "Heavy dew, Light rain,warm winter , wet",
+        "stage": "Late vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-karnal-bunt",
+      "crop": "wheat",
+      "name": "Karnal Bunt",
+      "pathogen": "Tilletia indica",
+      "temperature": [
+        18.0,
+        24.0
+      ],
+      "humidity": [
+        70.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "10-15",
+        "maximum": "25-30",
+        "optimum": "18-24 Soil:17-21",
+        "humidity": ">70%",
+        "leafWetness": ">8hrs",
+        "duration": "10-14days",
+        "weather": "Mod winter, wet, freq rain, cloudy",
+        "stage": "Heading & Flowering"
+      },
+      "issues": [
+        "Source also requires soil temperature; this input is not supplied by the weather feed."
+      ],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 5"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-loose-smut",
+      "crop": "wheat",
+      "name": "Loose Smut",
+      "pathogen": "Ustilago tritici",
+      "temperature": [
+        16.0,
+        22.0
+      ],
+      "humidity": [
+        60.0,
+        85.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "15",
+        "maximum": "27",
+        "optimum": "16-22",
+        "humidity": "60-85%",
+        "leafWetness": "",
+        "duration": "4-5 days",
+        "weather": "Cool, wet, Rain , Dews",
+        "stage": "Heading & Flowering"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 6"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-powdery-mildew",
+      "crop": "wheat",
+      "name": "Powdery Mildew",
+      "pathogen": "Erysiphe graminis f. sp. Tritici",
+      "temperature": [
+        16.0,
+        22.0
+      ],
+      "humidity": [
+        90.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "10",
+        "maximum": "25",
+        "optimum": "16-22",
+        "humidity": ">90",
+        "leafWetness": "",
+        "duration": "4-5 days",
+        "weather": "Cool ,wet, dews",
+        "stage": "Vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 7"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "wheat-fusarium-head-blight",
+      "crop": "wheat",
+      "name": "Fusarium Head blight",
+      "pathogen": "Fusarium sp",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        85.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "15",
+        "maximum": "30",
+        "optimum": "25-30",
+        "humidity": ">85",
+        "leafWetness": "48-72hours",
+        "duration": "7-10days",
+        "weather": "Warm, moisture",
+        "stage": "After Flowering"
+      },
+      "issues": [],
+      "source": {
+        "file": "GSMA Wheat research final presentation.pptx",
+        "location": "Slide 3, table row 8"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-red-rot",
+      "crop": "sugarcane",
+      "name": "Red Rot",
+      "pathogen": "Colletotrichum falcatum",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        90.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "24",
+        "maximum": "33",
+        "optimum": "25-30",
+        "humidity": ">90",
+        "leafWetness": "-",
+        "duration": "3-4 days",
+        "weather": "Rainy Season, High Moisture",
+        "stage": "Yield formation stage"
+      },
+      "issues": [],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 2"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-whip-smut",
+      "crop": "sugarcane",
+      "name": "Whip Smut",
+      "pathogen": "Ustilago scitamineae",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        65.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "25",
+        "maximum": "30",
+        "optimum": "25-30",
+        "humidity": "65-100",
+        "leafWetness": "-",
+        "duration": "3-4 days",
+        "weather": "",
+        "stage": "Vegetative till ripening"
+      },
+      "issues": [],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-pokkah-boeng",
+      "crop": "sugarcane",
+      "name": "Pokkah Boeng",
+      "pathogen": "Fusarium moniliforme",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        70.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20",
+        "maximum": "40",
+        "optimum": "25-30",
+        "humidity": "70-100",
+        "leafWetness": "-",
+        "duration": "3-4 days",
+        "weather": "cloudy, drizzly , rainy season",
+        "stage": "All growing stages"
+      },
+      "issues": [],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-sugarcane-rust",
+      "crop": "sugarcane",
+      "name": "Sugarcane Rust",
+      "pathogen": "Puccinia melanocephala",
+      "temperature": [
+        20.0,
+        25.0
+      ],
+      "humidity": [
+        80.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "15-20",
+        "maximum": "30-34",
+        "optimum": "20-25",
+        "humidity": "80-100",
+        "leafWetness": "8hrs leaf wetness",
+        "duration": "3-4 days",
+        "weather": "",
+        "stage": "Vegetative stage"
+      },
+      "issues": [],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 5"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-sugarcane-pyrilla",
+      "crop": "sugarcane",
+      "name": "Sugarcane Pyrilla",
+      "pathogen": "Pyrilla perpusilla Walker",
+      "temperature": [
+        26.0,
+        30.0
+      ],
+      "humidity": [
+        75.0,
+        80.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20-27",
+        "maximum": "34-43",
+        "optimum": "26-30",
+        "humidity": "75-80",
+        "leafWetness": "-",
+        "duration": "3-4 days",
+        "weather": "heavy rainfall, intermittent drought periods, winds promote",
+        "stage": "Vegetative till end"
+      },
+      "issues": [],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 6"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "sugarcane-stem-borer",
+      "crop": "sugarcane",
+      "name": "Stem Borer",
+      "pathogen": "Chilo terrenellus",
+      "temperature": null,
+      "humidity": [
+        50.0,
+        70.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20-27",
+        "maximum": "24-30",
+        "optimum": "35-41",
+        "humidity": "50-70",
+        "leafWetness": "-",
+        "duration": "3-4 days",
+        "weather": "",
+        "stage": "Vegetative till end"
+      },
+      "issues": [
+        "Optimum exceeds the source maximum temperature; automatic screening disabled."
+      ],
+      "source": {
+        "file": "Sugarcane research final presentation.pptx",
+        "location": "Slide 3, table row 7"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "cotton-cotton-boll-rot",
+      "crop": "cotton",
+      "name": "Cotton Boll Rot",
+      "pathogen": "Fusarium moniliforme, Colletotrichum capsici, Aspergillus flavus, A. niger, Rhizopus nigricans, Nematospora nagpuri and Botryodiplodia sp.",
+      "temperature": [
+        24.0,
+        33.0
+      ],
+      "humidity": [
+        75.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "15",
+        "maximum": "37",
+        "optimum": "24-33",
+        "humidity": "75-100",
+        "leafWetness": "Long period with free moisture",
+        "duration": "5 to 7 days",
+        "weather": "Long wet period (5-7 days), During monsoon when cotton is exposed to rainfall and high humidity",
+        "stage": "Boll development"
+      },
+      "issues": [],
+      "source": {
+        "file": "cotton research final presentation.pptx",
+        "location": "Slide 3, table row 2"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "cotton-whitefly",
+      "crop": "cotton",
+      "name": "Whitefly",
+      "pathogen": "Bemisiatabaci (Genn.)",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        0,
+        65.0
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "20-30",
+        "maximum": "33-45",
+        "optimum": "25-30",
+        "humidity": "less then 65",
+        "leafWetness": "",
+        "duration": "5 to 7 days",
+        "weather": "1-2 mm rainfall and 5-6 km/h windspeed, dry environment, High wind speed",
+        "stage": "vegetative stage"
+      },
+      "issues": [],
+      "source": {
+        "file": "cotton research final presentation.pptx",
+        "location": "Slide 3, table row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "cotton-mealy-bug",
+      "crop": "cotton",
+      "name": "Mealy Bug",
+      "pathogen": "Phenacoccus solenopsis",
+      "temperature": [
+        28.0,
+        32.0
+      ],
+      "humidity": [
+        40.0,
+        90.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20",
+        "maximum": "35",
+        "optimum": "28-32",
+        "humidity": "40-90",
+        "leafWetness": "",
+        "duration": "5 to 7 days",
+        "weather": "High rainfall decreases the survival of the larvae.",
+        "stage": "vegetative stage"
+      },
+      "issues": [],
+      "source": {
+        "file": "cotton research final presentation.pptx",
+        "location": "Slide 3, table row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "cotton-pink-bollworm",
+      "crop": "cotton",
+      "name": "Pink Bollworm",
+      "pathogen": "Pectinophora gossypiella (Saunders)",
+      "temperature": [
+        25.0,
+        29.0
+      ],
+      "humidity": [
+        40.0,
+        70.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "22-24",
+        "maximum": "31-33",
+        "optimum": "27+-2",
+        "humidity": "40-70",
+        "leafWetness": "",
+        "duration": "5 to 7 days",
+        "weather": "High rainfall decreases the survival of the larvae.",
+        "stage": "Reproductive stage"
+      },
+      "issues": [],
+      "source": {
+        "file": "cotton research final presentation.pptx",
+        "location": "Slide 3, table row 5"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-pythium-stalk-rot-psr",
+      "crop": "maize",
+      "name": "Pythium stalk rot (PSR)",
+      "pathogen": "Pythium aphanidermatum (Eds) Fitz",
+      "temperature": [
+        30.0,
+        35.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "10",
+        "maximum": "40",
+        "optimum": "30-35",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "4-5days",
+        "weather": "High rainfall, wet condition",
+        "stage": "Flowering/Reproductive"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 2"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-smut-of-maize-common-smut",
+      "crop": "maize",
+      "name": "Smut of maize / common smut",
+      "pathogen": "Ustilago maydis",
+      "temperature": [
+        26.0,
+        34.0
+      ],
+      "humidity": null,
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "10",
+        "maximum": "38",
+        "optimum": "26-34",
+        "humidity": "",
+        "leafWetness": "6 hours of dew",
+        "duration": "4-5 days",
+        "weather": "Rain and humid weather for initial infection, then dry, sunny weather",
+        "stage": "Flowering/Reproductive"
+      },
+      "issues": [
+        "Humidity interval is not defined; source review required."
+      ],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-southern-leaf-bight-of-maize",
+      "crop": "maize",
+      "name": "Southern leaf bight of maize",
+      "pathogen": "Bipolaris maydis",
+      "temperature": [
+        24.0,
+        30.0
+      ],
+      "humidity": [
+        50.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "20",
+        "maximum": "35",
+        "optimum": "24-30",
+        "humidity": ">50",
+        "leafWetness": "7 hours",
+        "duration": "4-5days",
+        "weather": "warm , humid and damp condition",
+        "stage": "vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-northern-leaf-blight-of-maize",
+      "crop": "maize",
+      "name": "Northern Leaf blight of Maize",
+      "pathogen": "Exserohilum turcicum",
+      "temperature": [
+        17.0,
+        27.0
+      ],
+      "humidity": [
+        80.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "15",
+        "maximum": "30",
+        "optimum": "17-27",
+        "humidity": "80-100",
+        "leafWetness": "6-18hrs >6hrs dew",
+        "duration": "7days",
+        "weather": "6hrs moisture rain/dew wet and cool wet and cool Long periods of dew",
+        "stage": "vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 5"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-bacterial-erwinia-stalk-rot-esr",
+      "crop": "maize",
+      "name": "Bacterial/Erwinia stalk rot (ESR)",
+      "pathogen": "Erwinia chrysanthemi p. v. zeae",
+      "temperature": [
+        30.0,
+        35.0
+      ],
+      "humidity": [
+        70.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "30",
+        "maximum": "-",
+        "optimum": "30-35",
+        "humidity": ">70",
+        "leafWetness": "",
+        "duration": "4-5 days",
+        "weather": "high rainfall",
+        "stage": "Flowering/Reproductive"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 6"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-brown-spot",
+      "crop": "maize",
+      "name": "Brown spot",
+      "pathogen": "Physoderma maydis Miyake",
+      "temperature": [
+        24.0,
+        29.0
+      ],
+      "humidity": [
+        70.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "23",
+        "maximum": "30",
+        "optimum": "24-29",
+        "humidity": "70-100",
+        "leafWetness": "",
+        "duration": "4-5days",
+        "weather": "High humidity with temp ,continuous rainfall",
+        "stage": "vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 7"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-grey-leaf-spot",
+      "crop": "maize",
+      "name": "Grey leaf spot",
+      "pathogen": "Cercospora zeae -maydis",
+      "temperature": [
+        24.0,
+        29.0
+      ],
+      "humidity": [
+        90.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "20",
+        "maximum": "35",
+        "optimum": "24-29",
+        "humidity": ">90",
+        "leafWetness": "12 hrs 11-13 hrs dews",
+        "duration": "3-4 days",
+        "weather": "Prolonged periods of dew, fog, and cloudy weather",
+        "stage": "vegetative"
+      },
+      "issues": [],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 8"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "maize-fall-armyworm",
+      "crop": "maize",
+      "name": "Fall Armyworm",
+      "pathogen": "Spodoptera frugiperda",
+      "temperature": [
+        26.0,
+        30.0
+      ],
+      "humidity": null,
+      "humidityStrict": false,
+      "raw": {
+        "minimum": ">12",
+        "maximum": "40",
+        "optimum": "26-30",
+        "humidity": "80% RH (Best",
+        "leafWetness": "",
+        "duration": "",
+        "weather": "Average daily temperature 32°C (20 days)",
+        "stage": "Vegetative till end"
+      },
+      "issues": [
+        "Humidity interval is not defined; source review required."
+      ],
+      "source": {
+        "file": "(Maize research final presentation.pptx",
+        "location": "Slide 3, table row 9"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "potato-late-blight",
+      "crop": "potato",
+      "name": "Late Blight",
+      "pathogen": "Phytophthora infestans",
+      "temperature": null,
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "Night 5-12",
+        "maximum": "Day 15-23",
+        "optimum": "44854",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "Humidity for 90hrs and temp for 115 hrs winter rains occur raising the humidity to > 90% and cloudy or foggy days persist for 6-7 days",
+        "weather": "Cloudy weather with heavy dews or rains alternating with warm moist period favor for rapid development of disease.",
+        "stage": "All growing stages"
+      },
+      "issues": [
+        "Optimal temperature is missing or ambiguous; source review required.",
+        "Excel stored a temperature entry as a date serial; it was not converted into a temperature."
+      ],
+      "source": {
+        "file": "Conducive weather Paremeters (Potato)- raw data.xlsx",
+        "location": "Summary, row 2"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "potato-early-blight",
+      "crop": "potato",
+      "name": "Early Blight",
+      "pathogen": "Alternaria solani",
+      "temperature": [
+        24.0,
+        29.0
+      ],
+      "humidity": [
+        70.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "44850",
+        "maximum": "27-30",
+        "optimum": "24-29",
+        "humidity": ">70",
+        "leafWetness": "As few as 3 hours of continuous leaf wetness between 21 and 25 °C is sufficient for EB lesion formation",
+        "duration": "4-5 days",
+        "weather": "Rain,over irrigation, fog or dew are required Alternating wet and dry periods A long wet period",
+        "stage": "All growing stages"
+      },
+      "issues": [
+        "Excel stored a temperature entry as a date serial; it was not converted into a temperature."
+      ],
+      "source": {
+        "file": "Conducive weather Paremeters (Potato)- raw data.xlsx",
+        "location": "Summary, row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "potato-black-leg",
+      "crop": "potato",
+      "name": "Black leg",
+      "pathogen": "Pectobacterium and Dickeya (both formerly Erwinia",
+      "temperature": [
+        18.0,
+        26.0
+      ],
+      "humidity": [
+        70.0,
+        100
+      ],
+      "humidityStrict": true,
+      "raw": {
+        "minimum": "15",
+        "maximum": "28",
+        "optimum": "Air temperature 18-26°c soil temp 30°c or greater",
+        "humidity": ">70",
+        "leafWetness": "",
+        "duration": "4-5 days",
+        "weather": "Development is favoured by cool, wet conditions at planting followed by warmer weather nfections will increase after excessive rainfall./ wet weather",
+        "stage": "All growing stages"
+      },
+      "issues": [
+        "Source also requires soil temperature; this input is not supplied by the weather feed."
+      ],
+      "source": {
+        "file": "Conducive weather Paremeters (Potato)- raw data.xlsx",
+        "location": "Summary, row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-brown-spot",
+      "crop": "rice",
+      "name": "Brown Spot",
+      "pathogen": "Bipolaris oryzae",
+      "temperature": [
+        26.0,
+        30.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "16",
+        "maximum": "36",
+        "optimum": "26-30",
+        "humidity": "85-100",
+        "leafWetness": "10-36 hours",
+        "duration": "3 days",
+        "weather": "Cool summer and high leaf wetness + rain /wind can spread spores",
+        "stage": "Tillering to Mutarity"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 3"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-sheath-rot",
+      "crop": "rice",
+      "name": "Sheath Rot",
+      "pathogen": "Sarocladium oryzae",
+      "temperature": [
+        28.0,
+        30.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20",
+        "maximum": "32",
+        "optimum": "28-30",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "3 days",
+        "weather": "Rainy Condition",
+        "stage": "Panicle formation to Mature"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 4"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-sheath-blight",
+      "crop": "rice",
+      "name": "Sheath Blight",
+      "pathogen": "Rhizoctonia solani",
+      "temperature": [
+        28.0,
+        32.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "17",
+        "maximum": "36",
+        "optimum": "28-32",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "3 days",
+        "weather": "High and Frequent rains",
+        "stage": "Tillering to Mutarity"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 5"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-false-smut",
+      "crop": "rice",
+      "name": "False Smut",
+      "pathogen": "Ustilaginoidea virens",
+      "temperature": [
+        28.0,
+        32.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "25",
+        "maximum": "35",
+        "optimum": "28-32",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "3 days",
+        "weather": "Low rainfal, wind speed",
+        "stage": "Flowering stage to grain filling"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 6"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-rice-blast",
+      "crop": "rice",
+      "name": "Rice Blast",
+      "pathogen": "Magnaporthe oryzae",
+      "temperature": [
+        25.0,
+        28.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "19",
+        "maximum": "32",
+        "optimum": "25-28",
+        "humidity": "85-100",
+        "leafWetness": "10-36 hours",
+        "duration": "4-5 Days",
+        "weather": "frequent and prolonged periods of rain shower, Cooler temperature, Low soil moisture",
+        "stage": "All stages"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 7"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-bacterial-leaf-blight",
+      "crop": "rice",
+      "name": "Bacterial Leaf Blight",
+      "pathogen": "Xanthomonas oryzae",
+      "temperature": [
+        25.0,
+        34.0
+      ],
+      "humidity": [
+        70.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "21",
+        "maximum": "36",
+        "optimum": "25−34",
+        "humidity": "70-100",
+        "leafWetness": "",
+        "duration": "3 days",
+        "weather": "During heavy rain seasons with winds",
+        "stage": "Tillering to Flowering"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 8"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-bakanae",
+      "crop": "rice",
+      "name": "Bakanae",
+      "pathogen": "Gibberella fujikuroi",
+      "temperature": [
+        25.0,
+        30.0
+      ],
+      "humidity": [
+        90.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "20",
+        "maximum": "35",
+        "optimum": "25-30",
+        "humidity": "90-100",
+        "leafWetness": "",
+        "duration": "3 days",
+        "weather": "Soil moisture was more favourable to survival than dryor wet condition.",
+        "stage": "Tillering to Flowering"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 9"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    },
+    {
+      "id": "rice-bacterial-panicle-blight",
+      "crop": "rice",
+      "name": "Bacterial Panicle Blight",
+      "pathogen": "Burkholderia glumae",
+      "temperature": [
+        30.0,
+        35.0
+      ],
+      "humidity": [
+        85.0,
+        100.0
+      ],
+      "humidityStrict": false,
+      "raw": {
+        "minimum": "25",
+        "maximum": "40",
+        "optimum": "30-35",
+        "humidity": "85-100",
+        "leafWetness": "",
+        "duration": "3days",
+        "weather": "High temperatures in combinations with high humidity or frequent rain",
+        "stage": "Panicle Formation to Maturity"
+      },
+      "issues": [],
+      "source": {
+        "file": "Conducive Weather Parameters (Rice Diseases) raw data.xlsx",
+        "location": "Rice Disease, row 10"
+      },
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+    }
+  ],
+  "note": "Reference criteria and exploratory weather screens, not a validated infection/pest incidence or crop-loss model."
+}

@@ -33,3 +33,7 @@ test('terrain-aware interpolation preserves valid slopes without filling provide
  const mountain=sampler.sample(69.1,30,'850');assert.equal(mountain.belowTerrain,true);assert.equal(mountain.temperature,null);assert.equal(mountain.windKnots,null);
  box.dataset.surface_pressure[0][a]=1000;assert.equal(sampler.sample(69.5,30,'850').temperature,null,'a genuine provider gap stays missing');
 });
+
+test('finer rain grid aligns by actual timestamp and never fills a missing detailed cell',()=>{
+ const box=context(),rain=JSON.parse(readFileSync(new URL('../public/studio-data/rain.json',import.meta.url))),t=0;box.dataset.times[t]=rain.times[2];const state={time:t},sampler=new box.GridSampler(box.dataset,state);sampler.setRain(rain);const index=rain.times.indexOf(box.dataset.times[t]),node=(30-rain.grid.south)/.5*rain.grid.columns+(69-rain.grid.west)/.5;assert.equal(sampler.rainAt(69,30),rain.rain[index][node]);assert.equal(sampler.sample(69,30,'500').rain,rain.rain[index][node]);rain.rain[index][node]=null;assert.equal(sampler.rainAt(69,30),null);sampler.setRain(null);assert.equal(sampler.rainAt(69,30),actual.rain[t][(30-actual.grid.south)*actual.grid.columns+69-actual.grid.west]);
+});

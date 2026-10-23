@@ -1,5 +1,5 @@
-export const hourlyFields=['temperature_2m','apparent_temperature','relative_humidity_2m','dew_point_2m','precipitation','rain','snowfall','weather_code','cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','pressure_msl','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m','shortwave_radiation'];
-export const dailyFields=['weather_code','temperature_2m_max','temperature_2m_min','precipitation_sum','sunrise','sunset','daylight_duration'];
+export const hourlyFields=['temperature_2m','apparent_temperature','relative_humidity_2m','dew_point_2m','precipitation','rain','snowfall','weather_code','cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','pressure_msl','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m','shortwave_radiation','cape','showers','et0_fao_evapotranspiration'];
+export const dailyFields=['weather_code','temperature_2m_max','temperature_2m_min','precipitation_sum','sunrise','sunset','daylight_duration','et0_fao_evapotranspiration'];
 export function forecastURL(lat,lon){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<23||lat>38||lon<60||lon>78)throw Error('Choose a location in Pakistan.');
  const url=new URL('https://api.open-meteo.com/v1/forecast');

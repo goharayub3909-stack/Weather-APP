@@ -40,3 +40,14 @@ export function dailyCondition({amount,code,storm={}}){
  if([1,2,3].includes(code))return {icon:code===3?'cloud':'partly',label:code===3?'Overcast':'Partly cloudy',band};
  return {icon:'cloud',label:'Condition unavailable',band};
 }
+
+// ECMWF-only qualitative thunder wording. A simultaneous convection screen is
+// a possibility signal, never a calibrated thunderstorm probability.
+export function ecmwfDailyCondition({amount,code,hourly,date}){
+ const rows=(hourly?.time||[]).flatMap((t,i)=>t.startsWith(date)?[i]:[]);
+ const explicit=[95,96,99].includes(code)||rows.some(i=>[95,96,99].includes(hourly.weather_code?.[i]));
+ const convection=rows.some(i=>finite(hourly.cape?.[i])&&hourly.cape[i]>=500&&finite(hourly.showers?.[i])&&hourly.showers[i]>=.2);
+ if(!explicit&&!convection)return {...dailyCondition({amount,code}),thunder:false,reason:''};
+ const prefix=finite(amount)&&amount>=.2&&amount<=1?'Isolated ':finite(amount)&&amount>=2&&amount<=10?'Scattered ':'';
+ return {icon:'storm',label:prefix+(finite(amount)&&amount>=.2?'thunderstorm / rain chance':'thunderstorm chance'),band:rainBand(amount),thunder:true,reason:explicit?'ECMWF thunderstorm weather code':'ECMWF simultaneous instability and convective-rain screen · possibility only'};
+}

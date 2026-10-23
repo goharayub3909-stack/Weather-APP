@@ -40,6 +40,10 @@ jobs:
         env:
           PREVIOUS_STUDIO_URL: ${{ steps.pages.outputs.base_url }}/studio-data/forecast.json
         run: python3 scripts/sync-studio.py
+      - name: Refresh finer shared ECMWF rainfall display
+        env:
+          PREVIOUS_RAIN_URL: ${{ steps.pages.outputs.base_url }}/studio-data/rain.json
+        run: python3 scripts/sync-studio-rain.py
       - name: Validate application and forecast data handling
         run: |
           npm test

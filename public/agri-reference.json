@@ -1,0 +1,5458 @@
+{
+  "calendar": [
+    {
+      "crop": "potato",
+      "province": "Punjab",
+      "cycle": "Autumn Crop",
+      "dates": "15sep-20Oct",
+      "districts": "Plain areas :Okara, Sahiwal, kasur, Sialkot, Sheikhupura, Narowal, Lahore, Pakpattan, Jhang, Tobe Tek Singh, Gujranwala,Multan",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 3"
+    },
+    {
+      "crop": "potato",
+      "province": "Punjab",
+      "cycle": "Spring Crop",
+      "dates": "1st Jan-15feb",
+      "districts": "Not specified for this row",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 4"
+    },
+    {
+      "crop": "potato",
+      "province": "Punjab",
+      "cycle": "Summer crop",
+      "dates": "15April-May",
+      "districts": "Mountanious Areas: Jhelum",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 5"
+    },
+    {
+      "crop": "potato",
+      "province": "KPK",
+      "cycle": "Autumn Crop",
+      "dates": "15aug-15sep",
+      "districts": "Abbotabad, Mansehra",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 8"
+    },
+    {
+      "crop": "potato",
+      "province": "KPK",
+      "cycle": "Spring Crop",
+      "dates": "15 Jan-15feb",
+      "districts": "Plain areas of hazara Division,swat,chitral,nowshera",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 9"
+    },
+    {
+      "crop": "potato",
+      "province": "KPK",
+      "cycle": "Summer Crop",
+      "dates": "15april-15june",
+      "districts": "Kaghan Valley,chitral,swat, gilgit, sakardu, hunza",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 10"
+    },
+    {
+      "crop": "potato",
+      "province": "KPK",
+      "cycle": "Autumn Crop",
+      "dates": "5-15sep",
+      "districts": "swabi, Mardan.nowshera",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 11"
+    },
+    {
+      "crop": "potato",
+      "province": "Balochistan",
+      "cycle": "Spring Crop",
+      "dates": "15 Jan-15feb",
+      "districts": "Pishin, Kila Saaifulla and Kalat",
+      "source": "Potato Sowing dates & Districts.xlsx · Sheet1 · row 13"
+    },
+    {
+      "crop": "wheat",
+      "province": "Punjab ",
+      "cycle": "(After sugarcane & rice )",
+      "districts": "Faislabad, Toba tek sighn, Jhang, Gujranwala, Hafizabad, Sialkot, Mandi bahauadin,Narowal, Lahore, Shiekupura, Okara, kasur, Mianwali, Khushab, Sargodha, Bhakkar",
+      "dates": "25 Oct -20 Nov · 20 Nov- 5 dec · End of Dec",
+      "source": "Wheat sowing dates & districts.xlsx · row 4"
+    },
+    {
+      "crop": "wheat",
+      "province": "Punjab ",
+      "cycle": "After Cotton (Cotton Zone)",
+      "districts": "Multan, Lodhran, Vihari, Khanewal, Sahiwal, Pakpatan, Bahwalpur, Rahimyar Khan, Dera Ghazi Khan, Muzafar garh, rajanpur, layyah, faislabad, toba tek singh, jhang, okara , bhakkar",
+      "dates": "No date given in source row",
+      "source": "Wheat sowing dates & districts.xlsx · row 5"
+    },
+    {
+      "crop": "wheat",
+      "province": "Punjab ",
+      "cycle": "Arid Zone",
+      "districts": "Rawalpindi, Attock, Jhelum, Chakwal",
+      "dates": "Oct-15 Nov",
+      "source": "Wheat sowing dates & districts.xlsx · row 6"
+    },
+    {
+      "crop": "wheat",
+      "province": "Sindh",
+      "cycle": "South Sindh",
+      "districts": "sujawal, badin, Tharparkar, thatta, Tando Allah Yar, Tando Muhamad Khan, Hyderabad, Mirpurkhas, Umerkot, Matiri, Jamshoro, Sanghar",
+      "dates": "15th October to 15th November",
+      "source": "Wheat sowing dates & districts.xlsx · row 7"
+    },
+    {
+      "crop": "wheat",
+      "province": "Sindh",
+      "cycle": "North Sindh",
+      "districts": "Kashmore, jacobabad,shikarpur, ghotki,sukkur, khairpur, larkana,qambar, dadu, nowshero feroze, shaheed nazeebad",
+      "dates": "Whole month of Novemeber",
+      "source": "Wheat sowing dates & districts.xlsx · row 8"
+    },
+    {
+      "crop": "wheat",
+      "province": "KPK",
+      "cycle": "Regional sowing",
+      "districts": "Dera Ismail Khan, Swat, Charsada, Mardan, Swabi, Peshawar, Buner, Haripur, Lower Dir, Upper dir, Kurrum, Shnagla, Malakand, Tank, Bannu, Kohat, abbotabad, Lakki Marwat, Khyber, Chitral, Battgram",
+      "dates": "1 Nov-15 Nov · Late then 20 Nov can decrease Yield",
+      "source": "Wheat sowing dates & districts.xlsx · row 9"
+    },
+    {
+      "crop": "wheat",
+      "province": "Balochistan",
+      "cycle": "Regional sowing",
+      "districts": "Nasirabad, Jafferabad, Jalmagsi, Ghuzdar, Dera Bugti, Lasbela, Barkhan, Awaran, Kharan, Loralai, Kaachi, Kohlu, kila saifullah, Noshki, Chaaghi, Banjgur, Zhob, Kalat, Washuk, Mastung, Pishin, turbat, Quetta, Harnai",
+      "dates": "1Nov-30 Nov",
+      "source": "Wheat sowing dates & districts.xlsx · row 10"
+    }
+  ],
+  "wheatYieldHistory": [
+    {
+      "district": "PUNJAB",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 20.0
+        },
+        {
+          "season": "1991-92",
+          "value": 22.0
+        },
+        {
+          "season": "1992-93",
+          "value": 21.4
+        },
+        {
+          "season": "1993-94",
+          "value": 21.1
+        },
+        {
+          "season": "1994-95",
+          "value": 23.4
+        },
+        {
+          "season": "1995-96",
+          "value": 22.6
+        },
+        {
+          "season": "1996-97",
+          "value": 23.0
+        },
+        {
+          "season": "1997-98",
+          "value": 25.2
+        },
+        {
+          "season": "1998-99",
+          "value": 24.1
+        },
+        {
+          "season": "1999-00",
+          "value": 28.9
+        },
+        {
+          "season": "2000-01",
+          "value": 26.72
+        },
+        {
+          "season": "2001-02",
+          "value": 25.93
+        },
+        {
+          "season": "2002-03",
+          "value": 27.3
+        },
+        {
+          "season": "2003-04",
+          "value": 27.11
+        },
+        {
+          "season": "2004-05",
+          "value": 29.53
+        },
+        {
+          "season": "2005-06",
+          "value": 28.05
+        },
+        {
+          "season": "2006-07",
+          "value": 30.09
+        },
+        {
+          "season": "2007-08",
+          "value": 26.43
+        },
+        {
+          "season": "2008-09",
+          "value": 29.21
+        },
+        {
+          "season": "2009-10",
+          "value": 28.1
+        },
+        {
+          "season": "2010-11",
+          "value": 30.85
+        },
+        {
+          "season": "2011-12",
+          "value": 29.67
+        },
+        {
+          "season": "2012-13",
+          "value": 30.95
+        },
+        {
+          "season": "2013-14",
+          "value": 31.01
+        },
+        {
+          "season": "2014-15",
+          "value": 29.95
+        },
+        {
+          "season": "2015-16",
+          "value": 30.62
+        },
+        {
+          "season": "2016-17",
+          "value": 33.32
+        },
+        {
+          "season": "2017-18",
+          "value": 31.7
+        },
+        {
+          "season": "2018-19",
+          "value": 30.67
+        },
+        {
+          "season": "2019-20",
+          "value": 32.29
+        },
+        {
+          "season": "2020-21",
+          "value": 31.34
+        },
+        {
+          "season": "2021-22",
+          "value": 30.89
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Attock",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 14.8
+        },
+        {
+          "season": "1991-92",
+          "value": 15.1
+        },
+        {
+          "season": "1992-93",
+          "value": 14.0
+        },
+        {
+          "season": "1993-94",
+          "value": 11.8
+        },
+        {
+          "season": "1994-95",
+          "value": 13.2
+        },
+        {
+          "season": "1995-96",
+          "value": 15.8
+        },
+        {
+          "season": "1996-97",
+          "value": 11.1
+        },
+        {
+          "season": "1997-98",
+          "value": 18.6
+        },
+        {
+          "season": "1998-99",
+          "value": 16.6
+        },
+        {
+          "season": "1999-00",
+          "value": 15.9
+        },
+        {
+          "season": "2000-01",
+          "value": 7.4
+        },
+        {
+          "season": "2001-02",
+          "value": 8.5
+        },
+        {
+          "season": "2002-03",
+          "value": 16.5
+        },
+        {
+          "season": "2003-04",
+          "value": 14.5
+        },
+        {
+          "season": "2004-05",
+          "value": 20.2
+        },
+        {
+          "season": "2005-06",
+          "value": 18.1
+        },
+        {
+          "season": "2006-07",
+          "value": 22.0
+        },
+        {
+          "season": "2007-08",
+          "value": 13.8
+        },
+        {
+          "season": "2008-09",
+          "value": 18.5
+        },
+        {
+          "season": "2009-10",
+          "value": 10.6
+        },
+        {
+          "season": "2010-11",
+          "value": 17.6
+        },
+        {
+          "season": "2011-12",
+          "value": 11.7
+        },
+        {
+          "season": "2012-13",
+          "value": 11.5
+        },
+        {
+          "season": "2013-14",
+          "value": 14.9
+        },
+        {
+          "season": "2014-15",
+          "value": 18.8
+        },
+        {
+          "season": "2015-16",
+          "value": 19.4
+        },
+        {
+          "season": "2016-17",
+          "value": 14.7
+        },
+        {
+          "season": "2017-18",
+          "value": 16.0
+        },
+        {
+          "season": "2018-19",
+          "value": 20.6
+        },
+        {
+          "season": "2019-20",
+          "value": 17.8
+        },
+        {
+          "season": "2020-21",
+          "value": 17.9
+        },
+        {
+          "season": "2021-22",
+          "value": 17.2
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Rawalpindi",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 18.7
+        },
+        {
+          "season": "1991-92",
+          "value": 16.7
+        },
+        {
+          "season": "1992-93",
+          "value": 14.5
+        },
+        {
+          "season": "1993-94",
+          "value": 8.6
+        },
+        {
+          "season": "1994-95",
+          "value": 15.4
+        },
+        {
+          "season": "1995-96",
+          "value": 16.9
+        },
+        {
+          "season": "1996-97",
+          "value": 12.3
+        },
+        {
+          "season": "1997-98",
+          "value": 21.2
+        },
+        {
+          "season": "1998-99",
+          "value": 18.7
+        },
+        {
+          "season": "1999-00",
+          "value": 17.4
+        },
+        {
+          "season": "2000-01",
+          "value": 6.8
+        },
+        {
+          "season": "2001-02",
+          "value": 10.6
+        },
+        {
+          "season": "2002-03",
+          "value": 17.3
+        },
+        {
+          "season": "2003-04",
+          "value": 17.1
+        },
+        {
+          "season": "2004-05",
+          "value": 20.8
+        },
+        {
+          "season": "2005-06",
+          "value": 18.8
+        },
+        {
+          "season": "2006-07",
+          "value": 21.6
+        },
+        {
+          "season": "2007-08",
+          "value": 17.4
+        },
+        {
+          "season": "2008-09",
+          "value": 19.6
+        },
+        {
+          "season": "2009-10",
+          "value": 9.7
+        },
+        {
+          "season": "2010-11",
+          "value": 14.9
+        },
+        {
+          "season": "2011-12",
+          "value": 13.4
+        },
+        {
+          "season": "2012-13",
+          "value": 19.8
+        },
+        {
+          "season": "2013-14",
+          "value": 15.2
+        },
+        {
+          "season": "2014-15",
+          "value": 17.5
+        },
+        {
+          "season": "2015-16",
+          "value": 18.1
+        },
+        {
+          "season": "2016-17",
+          "value": 13.4
+        },
+        {
+          "season": "2017-18",
+          "value": 16.3
+        },
+        {
+          "season": "2018-19",
+          "value": 16.9
+        },
+        {
+          "season": "2019-20",
+          "value": 16.5
+        },
+        {
+          "season": "2020-21",
+          "value": 16.7
+        },
+        {
+          "season": "2021-22",
+          "value": 19.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Islamabad",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 18.1
+        },
+        {
+          "season": "1991-92",
+          "value": 16.2
+        },
+        {
+          "season": "1992-93",
+          "value": 14.1
+        },
+        {
+          "season": "1993-94",
+          "value": 7.6
+        },
+        {
+          "season": "1994-95",
+          "value": 15.2
+        },
+        {
+          "season": "1995-96",
+          "value": 16.7
+        },
+        {
+          "season": "1996-97",
+          "value": 12.0
+        },
+        {
+          "season": "1997-98",
+          "value": 20.8
+        },
+        {
+          "season": "1998-99",
+          "value": 18.3
+        },
+        {
+          "season": "1999-00",
+          "value": 16.8
+        },
+        {
+          "season": "2000-01",
+          "value": 6.3
+        },
+        {
+          "season": "2001-02",
+          "value": 10.1
+        },
+        {
+          "season": "2002-03",
+          "value": 17.0
+        },
+        {
+          "season": "2003-04",
+          "value": 16.5
+        },
+        {
+          "season": "2004-05",
+          "value": 19.9
+        },
+        {
+          "season": "2005-06",
+          "value": 16.5
+        },
+        {
+          "season": "2006-07",
+          "value": 21.9
+        },
+        {
+          "season": "2007-08",
+          "value": 16.5
+        },
+        {
+          "season": "2008-09",
+          "value": 18.0
+        },
+        {
+          "season": "2009-10",
+          "value": 9.1
+        },
+        {
+          "season": "2010-11",
+          "value": 16.0
+        },
+        {
+          "season": "2011-12",
+          "value": 13.2
+        },
+        {
+          "season": "2012-13",
+          "value": 18.2
+        },
+        {
+          "season": "2013-14",
+          "value": 15.0
+        },
+        {
+          "season": "2014-15",
+          "value": 17.9
+        },
+        {
+          "season": "2015-16",
+          "value": 17.9
+        },
+        {
+          "season": "2016-17",
+          "value": 12.5
+        },
+        {
+          "season": "2017-18",
+          "value": 16.1
+        },
+        {
+          "season": "2018-19",
+          "value": 14.2
+        },
+        {
+          "season": "2019-20",
+          "value": 17.3
+        },
+        {
+          "season": "2020-21",
+          "value": 15.9
+        },
+        {
+          "season": "2021-22",
+          "value": 18.4
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Jhelum",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 16.9
+        },
+        {
+          "season": "1991-92",
+          "value": 16.3
+        },
+        {
+          "season": "1992-93",
+          "value": 17.3
+        },
+        {
+          "season": "1993-94",
+          "value": 10.1
+        },
+        {
+          "season": "1994-95",
+          "value": 16.4
+        },
+        {
+          "season": "1995-96",
+          "value": 14.5
+        },
+        {
+          "season": "1996-97",
+          "value": 12.8
+        },
+        {
+          "season": "1997-98",
+          "value": 19.9
+        },
+        {
+          "season": "1998-99",
+          "value": 17.1
+        },
+        {
+          "season": "1999-00",
+          "value": 16.7
+        },
+        {
+          "season": "2000-01",
+          "value": 8.3
+        },
+        {
+          "season": "2001-02",
+          "value": 11.0
+        },
+        {
+          "season": "2002-03",
+          "value": 13.0
+        },
+        {
+          "season": "2003-04",
+          "value": 17.4
+        },
+        {
+          "season": "2004-05",
+          "value": 22.2
+        },
+        {
+          "season": "2005-06",
+          "value": 18.1
+        },
+        {
+          "season": "2006-07",
+          "value": 22.9
+        },
+        {
+          "season": "2007-08",
+          "value": 17.6
+        },
+        {
+          "season": "2008-09",
+          "value": 22.1
+        },
+        {
+          "season": "2009-10",
+          "value": 15.7
+        },
+        {
+          "season": "2010-11",
+          "value": 20.5
+        },
+        {
+          "season": "2011-12",
+          "value": 15.1
+        },
+        {
+          "season": "2012-13",
+          "value": 19.5
+        },
+        {
+          "season": "2013-14",
+          "value": 17.7
+        },
+        {
+          "season": "2014-15",
+          "value": 21.5
+        },
+        {
+          "season": "2015-16",
+          "value": 24.4
+        },
+        {
+          "season": "2016-17",
+          "value": 19.4
+        },
+        {
+          "season": "2017-18",
+          "value": 16.5
+        },
+        {
+          "season": "2018-19",
+          "value": 17.3
+        },
+        {
+          "season": "2019-20",
+          "value": 16.2
+        },
+        {
+          "season": "2020-21",
+          "value": 14.5
+        },
+        {
+          "season": "2021-22",
+          "value": 19.9
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Cahkwal",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 13.2
+        },
+        {
+          "season": "1991-92",
+          "value": 13.8
+        },
+        {
+          "season": "1992-93",
+          "value": 10.3
+        },
+        {
+          "season": "1993-94",
+          "value": 8.7
+        },
+        {
+          "season": "1994-95",
+          "value": 11.5
+        },
+        {
+          "season": "1995-96",
+          "value": 13.0
+        },
+        {
+          "season": "1996-97",
+          "value": 11.0
+        },
+        {
+          "season": "1997-98",
+          "value": 18.6
+        },
+        {
+          "season": "1998-99",
+          "value": 14.0
+        },
+        {
+          "season": "1999-00",
+          "value": 12.8
+        },
+        {
+          "season": "2000-01",
+          "value": 6.5
+        },
+        {
+          "season": "2001-02",
+          "value": 7.4
+        },
+        {
+          "season": "2002-03",
+          "value": 12.1
+        },
+        {
+          "season": "2003-04",
+          "value": 12.5
+        },
+        {
+          "season": "2004-05",
+          "value": 17.6
+        },
+        {
+          "season": "2005-06",
+          "value": 11.3
+        },
+        {
+          "season": "2006-07",
+          "value": 17.3
+        },
+        {
+          "season": "2007-08",
+          "value": 12.2
+        },
+        {
+          "season": "2008-09",
+          "value": 14.2
+        },
+        {
+          "season": "2009-10",
+          "value": 6.7
+        },
+        {
+          "season": "2010-11",
+          "value": 14.3
+        },
+        {
+          "season": "2011-12",
+          "value": 10.1
+        },
+        {
+          "season": "2012-13",
+          "value": 17.6
+        },
+        {
+          "season": "2013-14",
+          "value": 14.2
+        },
+        {
+          "season": "2014-15",
+          "value": 18.0
+        },
+        {
+          "season": "2015-16",
+          "value": 19.5
+        },
+        {
+          "season": "2016-17",
+          "value": 13.5
+        },
+        {
+          "season": "2017-18",
+          "value": 12.1
+        },
+        {
+          "season": "2018-19",
+          "value": 14.5
+        },
+        {
+          "season": "2019-20",
+          "value": 18.6
+        },
+        {
+          "season": "2020-21",
+          "value": 17.0
+        },
+        {
+          "season": "2021-22",
+          "value": 16.9
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Sargodha",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 22.6
+        },
+        {
+          "season": "1991-92",
+          "value": 23.4
+        },
+        {
+          "season": "1992-93",
+          "value": 22.2
+        },
+        {
+          "season": "1993-94",
+          "value": 22.7
+        },
+        {
+          "season": "1994-95",
+          "value": 23.6
+        },
+        {
+          "season": "1995-96",
+          "value": 24.8
+        },
+        {
+          "season": "1996-97",
+          "value": 22.2
+        },
+        {
+          "season": "1997-98",
+          "value": 23.7
+        },
+        {
+          "season": "1998-99",
+          "value": 22.7
+        },
+        {
+          "season": "1999-00",
+          "value": 27.4
+        },
+        {
+          "season": "2000-01",
+          "value": 27.0
+        },
+        {
+          "season": "2001-02",
+          "value": 27.6
+        },
+        {
+          "season": "2002-03",
+          "value": 28.9
+        },
+        {
+          "season": "2003-04",
+          "value": 26.8
+        },
+        {
+          "season": "2004-05",
+          "value": 29.6
+        },
+        {
+          "season": "2005-06",
+          "value": 27.4
+        },
+        {
+          "season": "2006-07",
+          "value": 28.6
+        },
+        {
+          "season": "2007-08",
+          "value": 25.7
+        },
+        {
+          "season": "2008-09",
+          "value": 28.9
+        },
+        {
+          "season": "2009-10",
+          "value": 24.3
+        },
+        {
+          "season": "2010-11",
+          "value": 28.0
+        },
+        {
+          "season": "2011-12",
+          "value": 28.9
+        },
+        {
+          "season": "2012-13",
+          "value": 29.7
+        },
+        {
+          "season": "2013-14",
+          "value": 25.1
+        },
+        {
+          "season": "2014-15",
+          "value": 25.0
+        },
+        {
+          "season": "2015-16",
+          "value": 27.0
+        },
+        {
+          "season": "2016-17",
+          "value": 30.3
+        },
+        {
+          "season": "2017-18",
+          "value": 30.0
+        },
+        {
+          "season": "2018-19",
+          "value": 28.2
+        },
+        {
+          "season": "2019-20",
+          "value": 29.2
+        },
+        {
+          "season": "2020-21",
+          "value": 30.1
+        },
+        {
+          "season": "2021-22",
+          "value": 28.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Khushab",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 12.4
+        },
+        {
+          "season": "1991-92",
+          "value": 13.2
+        },
+        {
+          "season": "1992-93",
+          "value": 12.4
+        },
+        {
+          "season": "1993-94",
+          "value": 13.1
+        },
+        {
+          "season": "1994-95",
+          "value": 15.4
+        },
+        {
+          "season": "1995-96",
+          "value": 15.5
+        },
+        {
+          "season": "1996-97",
+          "value": 15.3
+        },
+        {
+          "season": "1997-98",
+          "value": 19.1
+        },
+        {
+          "season": "1998-99",
+          "value": 18.4
+        },
+        {
+          "season": "1999-00",
+          "value": 15.8
+        },
+        {
+          "season": "2000-01",
+          "value": 16.0
+        },
+        {
+          "season": "2001-02",
+          "value": 15.2
+        },
+        {
+          "season": "2002-03",
+          "value": 18.4
+        },
+        {
+          "season": "2003-04",
+          "value": 18.9
+        },
+        {
+          "season": "2004-05",
+          "value": 21.4
+        },
+        {
+          "season": "2005-06",
+          "value": 22.8
+        },
+        {
+          "season": "2006-07",
+          "value": 21.4
+        },
+        {
+          "season": "2007-08",
+          "value": 17.2
+        },
+        {
+          "season": "2008-09",
+          "value": 19.3
+        },
+        {
+          "season": "2009-10",
+          "value": 20.9
+        },
+        {
+          "season": "2010-11",
+          "value": 21.8
+        },
+        {
+          "season": "2011-12",
+          "value": 18.3
+        },
+        {
+          "season": "2012-13",
+          "value": 20.8
+        },
+        {
+          "season": "2013-14",
+          "value": 18.0
+        },
+        {
+          "season": "2014-15",
+          "value": 20.1
+        },
+        {
+          "season": "2015-16",
+          "value": 21.4
+        },
+        {
+          "season": "2016-17",
+          "value": 23.2
+        },
+        {
+          "season": "2017-18",
+          "value": 22.3
+        },
+        {
+          "season": "2018-19",
+          "value": 19.2
+        },
+        {
+          "season": "2019-20",
+          "value": 20.4
+        },
+        {
+          "season": "2020-21",
+          "value": 22.8
+        },
+        {
+          "season": "2021-22",
+          "value": 20.9
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Mianwali",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 15.8
+        },
+        {
+          "season": "1991-92",
+          "value": 16.3
+        },
+        {
+          "season": "1992-93",
+          "value": 14.7
+        },
+        {
+          "season": "1993-94",
+          "value": 15.4
+        },
+        {
+          "season": "1994-95",
+          "value": 16.0
+        },
+        {
+          "season": "1995-96",
+          "value": 16.8
+        },
+        {
+          "season": "1996-97",
+          "value": 16.7
+        },
+        {
+          "season": "1997-98",
+          "value": 19.7
+        },
+        {
+          "season": "1998-99",
+          "value": 20.6
+        },
+        {
+          "season": "1999-00",
+          "value": 17.5
+        },
+        {
+          "season": "2000-01",
+          "value": 16.2
+        },
+        {
+          "season": "2001-02",
+          "value": 19.2
+        },
+        {
+          "season": "2002-03",
+          "value": 21.2
+        },
+        {
+          "season": "2003-04",
+          "value": 22.0
+        },
+        {
+          "season": "2004-05",
+          "value": 24.1
+        },
+        {
+          "season": "2005-06",
+          "value": 22.3
+        },
+        {
+          "season": "2006-07",
+          "value": 22.6
+        },
+        {
+          "season": "2007-08",
+          "value": 19.9
+        },
+        {
+          "season": "2008-09",
+          "value": 20.5
+        },
+        {
+          "season": "2009-10",
+          "value": 22.8
+        },
+        {
+          "season": "2010-11",
+          "value": 26.0
+        },
+        {
+          "season": "2011-12",
+          "value": 23.9
+        },
+        {
+          "season": "2012-13",
+          "value": 27.2
+        },
+        {
+          "season": "2013-14",
+          "value": 27.2
+        },
+        {
+          "season": "2014-15",
+          "value": 19.3
+        },
+        {
+          "season": "2015-16",
+          "value": 22.1
+        },
+        {
+          "season": "2016-17",
+          "value": 31.7
+        },
+        {
+          "season": "2017-18",
+          "value": 25.1
+        },
+        {
+          "season": "2018-19",
+          "value": 24.0
+        },
+        {
+          "season": "2019-20",
+          "value": 24.3
+        },
+        {
+          "season": "2020-21",
+          "value": 27.8
+        },
+        {
+          "season": "2021-22",
+          "value": 27.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Bhakkar",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 18.1
+        },
+        {
+          "season": "1991-92",
+          "value": 19.0
+        },
+        {
+          "season": "1992-93",
+          "value": 17.9
+        },
+        {
+          "season": "1993-94",
+          "value": 18.0
+        },
+        {
+          "season": "1994-95",
+          "value": 19.3
+        },
+        {
+          "season": "1995-96",
+          "value": 18.9
+        },
+        {
+          "season": "1996-97",
+          "value": 20.2
+        },
+        {
+          "season": "1997-98",
+          "value": 23.5
+        },
+        {
+          "season": "1998-99",
+          "value": 21.3
+        },
+        {
+          "season": "1999-00",
+          "value": 25.8
+        },
+        {
+          "season": "2000-01",
+          "value": 24.3
+        },
+        {
+          "season": "2001-02",
+          "value": 23.5
+        },
+        {
+          "season": "2002-03",
+          "value": 26.4
+        },
+        {
+          "season": "2003-04",
+          "value": 25.0
+        },
+        {
+          "season": "2004-05",
+          "value": 26.7
+        },
+        {
+          "season": "2005-06",
+          "value": 26.3
+        },
+        {
+          "season": "2006-07",
+          "value": 25.7
+        },
+        {
+          "season": "2007-08",
+          "value": 23.2
+        },
+        {
+          "season": "2008-09",
+          "value": 24.6
+        },
+        {
+          "season": "2009-10",
+          "value": 25.0
+        },
+        {
+          "season": "2010-11",
+          "value": 26.5
+        },
+        {
+          "season": "2011-12",
+          "value": 24.2
+        },
+        {
+          "season": "2012-13",
+          "value": 26.4
+        },
+        {
+          "season": "2013-14",
+          "value": 27.3
+        },
+        {
+          "season": "2014-15",
+          "value": 24.1
+        },
+        {
+          "season": "2015-16",
+          "value": 24.7
+        },
+        {
+          "season": "2016-17",
+          "value": 33.3
+        },
+        {
+          "season": "2017-18",
+          "value": 25.3
+        },
+        {
+          "season": "2018-19",
+          "value": 23.9
+        },
+        {
+          "season": "2019-20",
+          "value": 26.0
+        },
+        {
+          "season": "2020-21",
+          "value": 28.2
+        },
+        {
+          "season": "2021-22",
+          "value": 26.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Faisalabad",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 20.1
+        },
+        {
+          "season": "1991-92",
+          "value": 22.9
+        },
+        {
+          "season": "1992-93",
+          "value": 21.0
+        },
+        {
+          "season": "1993-94",
+          "value": 23.8
+        },
+        {
+          "season": "1994-95",
+          "value": 25.8
+        },
+        {
+          "season": "1995-96",
+          "value": 23.3
+        },
+        {
+          "season": "1996-97",
+          "value": 26.5
+        },
+        {
+          "season": "1997-98",
+          "value": 25.3
+        },
+        {
+          "season": "1998-99",
+          "value": 24.9
+        },
+        {
+          "season": "1999-00",
+          "value": 32.9
+        },
+        {
+          "season": "2000-01",
+          "value": 31.7
+        },
+        {
+          "season": "2001-02",
+          "value": 28.3
+        },
+        {
+          "season": "2002-03",
+          "value": 30.6
+        },
+        {
+          "season": "2003-04",
+          "value": 32.3
+        },
+        {
+          "season": "2004-05",
+          "value": 35.3
+        },
+        {
+          "season": "2005-06",
+          "value": 31.5
+        },
+        {
+          "season": "2006-07",
+          "value": 33.6
+        },
+        {
+          "season": "2007-08",
+          "value": 28.4
+        },
+        {
+          "season": "2008-09",
+          "value": 31.7
+        },
+        {
+          "season": "2009-10",
+          "value": 30.8
+        },
+        {
+          "season": "2010-11",
+          "value": 34.3
+        },
+        {
+          "season": "2011-12",
+          "value": 33.0
+        },
+        {
+          "season": "2012-13",
+          "value": 33.8
+        },
+        {
+          "season": "2013-14",
+          "value": 34.2
+        },
+        {
+          "season": "2014-15",
+          "value": 34.7
+        },
+        {
+          "season": "2015-16",
+          "value": 34.1
+        },
+        {
+          "season": "2016-17",
+          "value": 35.5
+        },
+        {
+          "season": "2017-18",
+          "value": 34.8
+        },
+        {
+          "season": "2018-19",
+          "value": 33.9
+        },
+        {
+          "season": "2019-20",
+          "value": 37.3
+        },
+        {
+          "season": "2020-21",
+          "value": 33.6
+        },
+        {
+          "season": "2021-22",
+          "value": 33.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "T.T. Singh",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 23.4
+        },
+        {
+          "season": "1991-92",
+          "value": 26.8
+        },
+        {
+          "season": "1992-93",
+          "value": 22.5
+        },
+        {
+          "season": "1993-94",
+          "value": 26.2
+        },
+        {
+          "season": "1994-95",
+          "value": 27.9
+        },
+        {
+          "season": "1995-96",
+          "value": 24.0
+        },
+        {
+          "season": "1996-97",
+          "value": 25.4
+        },
+        {
+          "season": "1997-98",
+          "value": 29.0
+        },
+        {
+          "season": "1998-99",
+          "value": 28.0
+        },
+        {
+          "season": "1999-00",
+          "value": 35.6
+        },
+        {
+          "season": "2000-01",
+          "value": 30.9
+        },
+        {
+          "season": "2001-02",
+          "value": 30.7
+        },
+        {
+          "season": "2002-03",
+          "value": 31.3
+        },
+        {
+          "season": "2003-04",
+          "value": 30.7
+        },
+        {
+          "season": "2004-05",
+          "value": 32.5
+        },
+        {
+          "season": "2005-06",
+          "value": 31.5
+        },
+        {
+          "season": "2006-07",
+          "value": 31.9
+        },
+        {
+          "season": "2007-08",
+          "value": 31.5
+        },
+        {
+          "season": "2008-09",
+          "value": 32.6
+        },
+        {
+          "season": "2009-10",
+          "value": 30.4
+        },
+        {
+          "season": "2010-11",
+          "value": 37.3
+        },
+        {
+          "season": "2011-12",
+          "value": 33.8
+        },
+        {
+          "season": "2012-13",
+          "value": 35.7
+        },
+        {
+          "season": "2013-14",
+          "value": 35.9
+        },
+        {
+          "season": "2014-15",
+          "value": 35.8
+        },
+        {
+          "season": "2015-16",
+          "value": 36.6
+        },
+        {
+          "season": "2016-17",
+          "value": 38.2
+        },
+        {
+          "season": "2017-18",
+          "value": 36.7
+        },
+        {
+          "season": "2018-19",
+          "value": 36.5
+        },
+        {
+          "season": "2019-20",
+          "value": 38.0
+        },
+        {
+          "season": "2020-21",
+          "value": 35.1
+        },
+        {
+          "season": "2021-22",
+          "value": 33.8
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Jhang",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 21.2
+        },
+        {
+          "season": "1991-92",
+          "value": 23.3
+        },
+        {
+          "season": "1992-93",
+          "value": 22.4
+        },
+        {
+          "season": "1993-94",
+          "value": 23.4
+        },
+        {
+          "season": "1994-95",
+          "value": 24.3
+        },
+        {
+          "season": "1995-96",
+          "value": 28.0
+        },
+        {
+          "season": "1996-97",
+          "value": 23.4
+        },
+        {
+          "season": "1997-98",
+          "value": 24.8
+        },
+        {
+          "season": "1998-99",
+          "value": 24.4
+        },
+        {
+          "season": "1999-00",
+          "value": 27.4
+        },
+        {
+          "season": "2000-01",
+          "value": 27.6
+        },
+        {
+          "season": "2001-02",
+          "value": 26.7
+        },
+        {
+          "season": "2002-03",
+          "value": 28.1
+        },
+        {
+          "season": "2003-04",
+          "value": 28.9
+        },
+        {
+          "season": "2004-05",
+          "value": 31.2
+        },
+        {
+          "season": "2005-06",
+          "value": 31.1
+        },
+        {
+          "season": "2006-07",
+          "value": 33.5
+        },
+        {
+          "season": "2007-08",
+          "value": 28.1
+        },
+        {
+          "season": "2008-09",
+          "value": 30.4
+        },
+        {
+          "season": "2009-10",
+          "value": 29.6
+        },
+        {
+          "season": "2010-11",
+          "value": 31.8
+        },
+        {
+          "season": "2011-12",
+          "value": 30.7
+        },
+        {
+          "season": "2012-13",
+          "value": 32.2
+        },
+        {
+          "season": "2013-14",
+          "value": 33.1
+        },
+        {
+          "season": "2014-15",
+          "value": 33.3
+        },
+        {
+          "season": "2015-16",
+          "value": 31.4
+        },
+        {
+          "season": "2016-17",
+          "value": 34.5
+        },
+        {
+          "season": "2017-18",
+          "value": 34.2
+        },
+        {
+          "season": "2018-19",
+          "value": 34.0
+        },
+        {
+          "season": "2019-20",
+          "value": 32.4
+        },
+        {
+          "season": "2020-21",
+          "value": 33.5
+        },
+        {
+          "season": "2021-22",
+          "value": 32.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Chiniot",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "2009-10",
+          "value": 29.7
+        },
+        {
+          "season": "2010-11",
+          "value": 33.7
+        },
+        {
+          "season": "2011-12",
+          "value": 33.4
+        },
+        {
+          "season": "2012-13",
+          "value": 33.8
+        },
+        {
+          "season": "2013-14",
+          "value": 34.1
+        },
+        {
+          "season": "2014-15",
+          "value": 31.5
+        },
+        {
+          "season": "2015-16",
+          "value": 31.8
+        },
+        {
+          "season": "2016-17",
+          "value": 33.2
+        },
+        {
+          "season": "2017-18",
+          "value": 32.3
+        },
+        {
+          "season": "2018-19",
+          "value": 31.4
+        },
+        {
+          "season": "2019-20",
+          "value": 34.2
+        },
+        {
+          "season": "2020-21",
+          "value": 33.7
+        },
+        {
+          "season": "2021-22",
+          "value": 34.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Gujrat",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 17.1
+        },
+        {
+          "season": "1991-92",
+          "value": 18.7
+        },
+        {
+          "season": "1992-93",
+          "value": 18.1
+        },
+        {
+          "season": "1993-94",
+          "value": 17.0
+        },
+        {
+          "season": "1994-95",
+          "value": 20.1
+        },
+        {
+          "season": "1995-96",
+          "value": 18.5
+        },
+        {
+          "season": "1996-97",
+          "value": 17.6
+        },
+        {
+          "season": "1997-98",
+          "value": 20.5
+        },
+        {
+          "season": "1998-99",
+          "value": 19.2
+        },
+        {
+          "season": "1999-00",
+          "value": 21.2
+        },
+        {
+          "season": "2000-01",
+          "value": 12.1
+        },
+        {
+          "season": "2001-02",
+          "value": 15.1
+        },
+        {
+          "season": "2002-03",
+          "value": 18.5
+        },
+        {
+          "season": "2003-04",
+          "value": 19.5
+        },
+        {
+          "season": "2004-05",
+          "value": 21.5
+        },
+        {
+          "season": "2005-06",
+          "value": 20.7
+        },
+        {
+          "season": "2006-07",
+          "value": 21.5
+        },
+        {
+          "season": "2007-08",
+          "value": 17.6
+        },
+        {
+          "season": "2008-09",
+          "value": 20.2
+        },
+        {
+          "season": "2009-10",
+          "value": 15.7
+        },
+        {
+          "season": "2010-11",
+          "value": 20.7
+        },
+        {
+          "season": "2011-12",
+          "value": 19.1
+        },
+        {
+          "season": "2012-13",
+          "value": 20.9
+        },
+        {
+          "season": "2013-14",
+          "value": 19.4
+        },
+        {
+          "season": "2014-15",
+          "value": 16.7
+        },
+        {
+          "season": "2015-16",
+          "value": 18.4
+        },
+        {
+          "season": "2016-17",
+          "value": 20.0
+        },
+        {
+          "season": "2017-18",
+          "value": 21.9
+        },
+        {
+          "season": "2018-19",
+          "value": 17.2
+        },
+        {
+          "season": "2019-20",
+          "value": 20.7
+        },
+        {
+          "season": "2020-21",
+          "value": 22.8
+        },
+        {
+          "season": "2021-22",
+          "value": 20.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "M.B.Din",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1993-94",
+          "value": 24.2
+        },
+        {
+          "season": "1994-95",
+          "value": 23.5
+        },
+        {
+          "season": "1995-96",
+          "value": 21.8
+        },
+        {
+          "season": "1996-97",
+          "value": 22.0
+        },
+        {
+          "season": "1997-98",
+          "value": 25.8
+        },
+        {
+          "season": "1998-99",
+          "value": 24.3
+        },
+        {
+          "season": "1999-00",
+          "value": 32.3
+        },
+        {
+          "season": "2000-01",
+          "value": 27.6
+        },
+        {
+          "season": "2001-02",
+          "value": 29.3
+        },
+        {
+          "season": "2002-03",
+          "value": 30.1
+        },
+        {
+          "season": "2003-04",
+          "value": 27.0
+        },
+        {
+          "season": "2004-05",
+          "value": 29.1
+        },
+        {
+          "season": "2005-06",
+          "value": 30.3
+        },
+        {
+          "season": "2006-07",
+          "value": 28.6
+        },
+        {
+          "season": "2007-08",
+          "value": 27.8
+        },
+        {
+          "season": "2008-09",
+          "value": 29.3
+        },
+        {
+          "season": "2009-10",
+          "value": 27.9
+        },
+        {
+          "season": "2010-11",
+          "value": 28.3
+        },
+        {
+          "season": "2011-12",
+          "value": 29.6
+        },
+        {
+          "season": "2012-13",
+          "value": 30.8
+        },
+        {
+          "season": "2013-14",
+          "value": 28.2
+        },
+        {
+          "season": "2014-15",
+          "value": 26.5
+        },
+        {
+          "season": "2015-16",
+          "value": 27.9
+        },
+        {
+          "season": "2016-17",
+          "value": 33.9
+        },
+        {
+          "season": "2017-18",
+          "value": 30.6
+        },
+        {
+          "season": "2018-19",
+          "value": 28.2
+        },
+        {
+          "season": "2019-20",
+          "value": 30.4
+        },
+        {
+          "season": "2020-21",
+          "value": 30.4
+        },
+        {
+          "season": "2021-22",
+          "value": 28.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Sialkot",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 17.1
+        },
+        {
+          "season": "1991-92",
+          "value": 19.1
+        },
+        {
+          "season": "1992-93",
+          "value": 21.3
+        },
+        {
+          "season": "1993-94",
+          "value": 21.4
+        },
+        {
+          "season": "1994-95",
+          "value": 22.0
+        },
+        {
+          "season": "1995-96",
+          "value": 22.4
+        },
+        {
+          "season": "1996-97",
+          "value": 22.1
+        },
+        {
+          "season": "1997-98",
+          "value": 23.5
+        },
+        {
+          "season": "1998-99",
+          "value": 24.8
+        },
+        {
+          "season": "1999-00",
+          "value": 28.7
+        },
+        {
+          "season": "2000-01",
+          "value": 24.9
+        },
+        {
+          "season": "2001-02",
+          "value": 25.4
+        },
+        {
+          "season": "2002-03",
+          "value": 25.7
+        },
+        {
+          "season": "2003-04",
+          "value": 25.9
+        },
+        {
+          "season": "2004-05",
+          "value": 28.0
+        },
+        {
+          "season": "2005-06",
+          "value": 29.7
+        },
+        {
+          "season": "2006-07",
+          "value": 27.6
+        },
+        {
+          "season": "2007-08",
+          "value": 27.2
+        },
+        {
+          "season": "2008-09",
+          "value": 27.9
+        },
+        {
+          "season": "2009-10",
+          "value": 23.5
+        },
+        {
+          "season": "2010-11",
+          "value": 28.7
+        },
+        {
+          "season": "2011-12",
+          "value": 31.5
+        },
+        {
+          "season": "2012-13",
+          "value": 32.5
+        },
+        {
+          "season": "2013-14",
+          "value": 32.7
+        },
+        {
+          "season": "2014-15",
+          "value": 18.6
+        },
+        {
+          "season": "2015-16",
+          "value": 26.6
+        },
+        {
+          "season": "2016-17",
+          "value": 27.8
+        },
+        {
+          "season": "2017-18",
+          "value": 29.6
+        },
+        {
+          "season": "2018-19",
+          "value": 27.6
+        },
+        {
+          "season": "2019-20",
+          "value": 24.7
+        },
+        {
+          "season": "2020-21",
+          "value": 29.1
+        },
+        {
+          "season": "2021-22",
+          "value": 25.2
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Narowal",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1991-92",
+          "value": 19.2
+        },
+        {
+          "season": "1992-93",
+          "value": 21.3
+        },
+        {
+          "season": "1993-94",
+          "value": 16.8
+        },
+        {
+          "season": "1994-95",
+          "value": 19.1
+        },
+        {
+          "season": "1995-96",
+          "value": 19.9
+        },
+        {
+          "season": "1996-97",
+          "value": 20.3
+        },
+        {
+          "season": "1997-98",
+          "value": 22.1
+        },
+        {
+          "season": "1998-99",
+          "value": 19.2
+        },
+        {
+          "season": "1999-00",
+          "value": 19.6
+        },
+        {
+          "season": "2000-01",
+          "value": 16.7
+        },
+        {
+          "season": "2001-02",
+          "value": 17.9
+        },
+        {
+          "season": "2002-03",
+          "value": 21.4
+        },
+        {
+          "season": "2003-04",
+          "value": 24.8
+        },
+        {
+          "season": "2004-05",
+          "value": 26.9
+        },
+        {
+          "season": "2005-06",
+          "value": 24.2
+        },
+        {
+          "season": "2006-07",
+          "value": 25.1
+        },
+        {
+          "season": "2007-08",
+          "value": 22.1
+        },
+        {
+          "season": "2008-09",
+          "value": 21.2
+        },
+        {
+          "season": "2009-10",
+          "value": 19.9
+        },
+        {
+          "season": "2010-11",
+          "value": 25.4
+        },
+        {
+          "season": "2011-12",
+          "value": 24.0
+        },
+        {
+          "season": "2012-13",
+          "value": 26.4
+        },
+        {
+          "season": "2013-14",
+          "value": 26.8
+        },
+        {
+          "season": "2014-15",
+          "value": 19.1
+        },
+        {
+          "season": "2015-16",
+          "value": 22.6
+        },
+        {
+          "season": "2016-17",
+          "value": 26.5
+        },
+        {
+          "season": "2017-18",
+          "value": 28.4
+        },
+        {
+          "season": "2018-19",
+          "value": 23.6
+        },
+        {
+          "season": "2019-20",
+          "value": 23.3
+        },
+        {
+          "season": "2020-21",
+          "value": 26.7
+        },
+        {
+          "season": "2021-22",
+          "value": 22.9
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Gujranwala",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 22.6
+        },
+        {
+          "season": "1991-92",
+          "value": 22.6
+        },
+        {
+          "season": "1992-93",
+          "value": 22.7
+        },
+        {
+          "season": "1993-94",
+          "value": 23.6
+        },
+        {
+          "season": "1994-95",
+          "value": 24.8
+        },
+        {
+          "season": "1995-96",
+          "value": 24.0
+        },
+        {
+          "season": "1996-97",
+          "value": 25.0
+        },
+        {
+          "season": "1997-98",
+          "value": 25.5
+        },
+        {
+          "season": "1998-99",
+          "value": 25.8
+        },
+        {
+          "season": "1999-00",
+          "value": 32.0
+        },
+        {
+          "season": "2000-01",
+          "value": 30.8
+        },
+        {
+          "season": "2001-02",
+          "value": 29.4
+        },
+        {
+          "season": "2002-03",
+          "value": 30.2
+        },
+        {
+          "season": "2003-04",
+          "value": 31.4
+        },
+        {
+          "season": "2004-05",
+          "value": 34.2
+        },
+        {
+          "season": "2005-06",
+          "value": 32.3
+        },
+        {
+          "season": "2006-07",
+          "value": 32.6
+        },
+        {
+          "season": "2007-08",
+          "value": 32.8
+        },
+        {
+          "season": "2008-09",
+          "value": 34.6
+        },
+        {
+          "season": "2009-10",
+          "value": 34.9
+        },
+        {
+          "season": "2010-11",
+          "value": 34.1
+        },
+        {
+          "season": "2011-12",
+          "value": 37.8
+        },
+        {
+          "season": "2012-13",
+          "value": 34.3
+        },
+        {
+          "season": "2013-14",
+          "value": 34.4
+        },
+        {
+          "season": "2014-15",
+          "value": 29.5
+        },
+        {
+          "season": "2015-16",
+          "value": 32.1
+        },
+        {
+          "season": "2016-17",
+          "value": 32.5
+        },
+        {
+          "season": "2017-18",
+          "value": 34.3
+        },
+        {
+          "season": "2018-19",
+          "value": 28.7
+        },
+        {
+          "season": "2019-20",
+          "value": 34.2
+        },
+        {
+          "season": "2020-21",
+          "value": 32.1
+        },
+        {
+          "season": "2021-22",
+          "value": 30.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Hafizabad",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1993-94",
+          "value": 23.8
+        },
+        {
+          "season": "1994-95",
+          "value": 25.0
+        },
+        {
+          "season": "1995-96",
+          "value": 24.0
+        },
+        {
+          "season": "1996-97",
+          "value": 25.1
+        },
+        {
+          "season": "1997-98",
+          "value": 23.0
+        },
+        {
+          "season": "1998-99",
+          "value": 23.2
+        },
+        {
+          "season": "1999-00",
+          "value": 30.6
+        },
+        {
+          "season": "2000-01",
+          "value": 28.9
+        },
+        {
+          "season": "2001-02",
+          "value": 27.8
+        },
+        {
+          "season": "2002-03",
+          "value": 29.8
+        },
+        {
+          "season": "2003-04",
+          "value": 28.1
+        },
+        {
+          "season": "2004-05",
+          "value": 30.1
+        },
+        {
+          "season": "2005-06",
+          "value": 30.1
+        },
+        {
+          "season": "2006-07",
+          "value": 30.3
+        },
+        {
+          "season": "2007-08",
+          "value": 31.1
+        },
+        {
+          "season": "2008-09",
+          "value": 31.2
+        },
+        {
+          "season": "2009-10",
+          "value": 27.8
+        },
+        {
+          "season": "2010-11",
+          "value": 34.5
+        },
+        {
+          "season": "2011-12",
+          "value": 33.5
+        },
+        {
+          "season": "2012-13",
+          "value": 33.0
+        },
+        {
+          "season": "2013-14",
+          "value": 33.5
+        },
+        {
+          "season": "2014-15",
+          "value": 33.2
+        },
+        {
+          "season": "2015-16",
+          "value": 33.3
+        },
+        {
+          "season": "2016-17",
+          "value": 36.8
+        },
+        {
+          "season": "2017-18",
+          "value": 37.7
+        },
+        {
+          "season": "2018-19",
+          "value": 32.4
+        },
+        {
+          "season": "2019-20",
+          "value": 31.0
+        },
+        {
+          "season": "2020-21",
+          "value": 36.4
+        },
+        {
+          "season": "2021-22",
+          "value": 33.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Sheikhupura",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 19.5
+        },
+        {
+          "season": "1991-92",
+          "value": 23.1
+        },
+        {
+          "season": "1992-93",
+          "value": 21.7
+        },
+        {
+          "season": "1993-94",
+          "value": 21.6
+        },
+        {
+          "season": "1994-95",
+          "value": 24.4
+        },
+        {
+          "season": "1995-96",
+          "value": 23.1
+        },
+        {
+          "season": "1996-97",
+          "value": 24.9
+        },
+        {
+          "season": "1997-98",
+          "value": 24.9
+        },
+        {
+          "season": "1998-99",
+          "value": 24.8
+        },
+        {
+          "season": "1999-00",
+          "value": 29.2
+        },
+        {
+          "season": "2000-01",
+          "value": 31.9
+        },
+        {
+          "season": "2001-02",
+          "value": 28.9
+        },
+        {
+          "season": "2002-03",
+          "value": 28.0
+        },
+        {
+          "season": "2003-04",
+          "value": 29.6
+        },
+        {
+          "season": "2004-05",
+          "value": 31.5
+        },
+        {
+          "season": "2005-06",
+          "value": 31.5
+        },
+        {
+          "season": "2006-07",
+          "value": 28.8
+        },
+        {
+          "season": "2007-08",
+          "value": 26.7
+        },
+        {
+          "season": "2008-09",
+          "value": 29.0
+        },
+        {
+          "season": "2009-10",
+          "value": 27.2
+        },
+        {
+          "season": "2010-11",
+          "value": 33.0
+        },
+        {
+          "season": "2011-12",
+          "value": 31.1
+        },
+        {
+          "season": "2012-13",
+          "value": 33.1
+        },
+        {
+          "season": "2013-14",
+          "value": 33.2
+        },
+        {
+          "season": "2014-15",
+          "value": 34.8
+        },
+        {
+          "season": "2015-16",
+          "value": 31.2
+        },
+        {
+          "season": "2016-17",
+          "value": 34.4
+        },
+        {
+          "season": "2017-18",
+          "value": 35.1
+        },
+        {
+          "season": "2018-19",
+          "value": 32.7
+        },
+        {
+          "season": "2019-20",
+          "value": 35.1
+        },
+        {
+          "season": "2020-21",
+          "value": 33.2
+        },
+        {
+          "season": "2021-22",
+          "value": 30.6
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Nankana Sb",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "2005-06",
+          "value": 31.6
+        },
+        {
+          "season": "2006-07",
+          "value": 32.3
+        },
+        {
+          "season": "2007-08",
+          "value": 30.8
+        },
+        {
+          "season": "2008-09",
+          "value": 32.2
+        },
+        {
+          "season": "2009-10",
+          "value": 28.7
+        },
+        {
+          "season": "2010-11",
+          "value": 32.5
+        },
+        {
+          "season": "2011-12",
+          "value": 33.9
+        },
+        {
+          "season": "2012-13",
+          "value": 33.6
+        },
+        {
+          "season": "2013-14",
+          "value": 33.7
+        },
+        {
+          "season": "2014-15",
+          "value": 36.1
+        },
+        {
+          "season": "2015-16",
+          "value": 34.5
+        },
+        {
+          "season": "2016-17",
+          "value": 37.1
+        },
+        {
+          "season": "2017-18",
+          "value": 35.2
+        },
+        {
+          "season": "2018-19",
+          "value": 34.6
+        },
+        {
+          "season": "2019-20",
+          "value": 36.3
+        },
+        {
+          "season": "2020-21",
+          "value": 37.8
+        },
+        {
+          "season": "2021-22",
+          "value": 34.5
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Lahore",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 26.6
+        },
+        {
+          "season": "1991-92",
+          "value": 29.6
+        },
+        {
+          "season": "1992-93",
+          "value": 28.9
+        },
+        {
+          "season": "1993-94",
+          "value": 28.4
+        },
+        {
+          "season": "1994-95",
+          "value": 26.0
+        },
+        {
+          "season": "1995-96",
+          "value": 25.4
+        },
+        {
+          "season": "1996-97",
+          "value": 26.9
+        },
+        {
+          "season": "1997-98",
+          "value": 24.0
+        },
+        {
+          "season": "1998-99",
+          "value": 28.0
+        },
+        {
+          "season": "1999-00",
+          "value": 34.8
+        },
+        {
+          "season": "2000-01",
+          "value": 31.3
+        },
+        {
+          "season": "2001-02",
+          "value": 30.4
+        },
+        {
+          "season": "2002-03",
+          "value": 28.9
+        },
+        {
+          "season": "2003-04",
+          "value": 28.7
+        },
+        {
+          "season": "2004-05",
+          "value": 31.6
+        },
+        {
+          "season": "2005-06",
+          "value": 29.5
+        },
+        {
+          "season": "2006-07",
+          "value": 28.5
+        },
+        {
+          "season": "2007-08",
+          "value": 26.6
+        },
+        {
+          "season": "2008-09",
+          "value": 27.1
+        },
+        {
+          "season": "2009-10",
+          "value": 27.8
+        },
+        {
+          "season": "2010-11",
+          "value": 31.1
+        },
+        {
+          "season": "2011-12",
+          "value": 32.5
+        },
+        {
+          "season": "2012-13",
+          "value": 33.4
+        },
+        {
+          "season": "2013-14",
+          "value": 31.7
+        },
+        {
+          "season": "2014-15",
+          "value": 29.7
+        },
+        {
+          "season": "2015-16",
+          "value": 32.3
+        },
+        {
+          "season": "2016-17",
+          "value": 34.2
+        },
+        {
+          "season": "2017-18",
+          "value": 33.8
+        },
+        {
+          "season": "2018-19",
+          "value": 34.2
+        },
+        {
+          "season": "2019-20",
+          "value": 39.1
+        },
+        {
+          "season": "2020-21",
+          "value": 32.5
+        },
+        {
+          "season": "2021-22",
+          "value": 34.8
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Kasur",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 24.4
+        },
+        {
+          "season": "1991-92",
+          "value": 25.4
+        },
+        {
+          "season": "1992-93",
+          "value": 23.6
+        },
+        {
+          "season": "1993-94",
+          "value": 25.0
+        },
+        {
+          "season": "1994-95",
+          "value": 26.4
+        },
+        {
+          "season": "1995-96",
+          "value": 25.5
+        },
+        {
+          "season": "1996-97",
+          "value": 26.9
+        },
+        {
+          "season": "1997-98",
+          "value": 27.0
+        },
+        {
+          "season": "1998-99",
+          "value": 27.1
+        },
+        {
+          "season": "1999-00",
+          "value": 32.8
+        },
+        {
+          "season": "2000-01",
+          "value": 32.9
+        },
+        {
+          "season": "2001-02",
+          "value": 28.8
+        },
+        {
+          "season": "2002-03",
+          "value": 28.1
+        },
+        {
+          "season": "2003-04",
+          "value": 27.0
+        },
+        {
+          "season": "2004-05",
+          "value": 31.8
+        },
+        {
+          "season": "2005-06",
+          "value": 30.5
+        },
+        {
+          "season": "2006-07",
+          "value": 32.8
+        },
+        {
+          "season": "2007-08",
+          "value": 29.3
+        },
+        {
+          "season": "2008-09",
+          "value": 32.2
+        },
+        {
+          "season": "2009-10",
+          "value": 29.4
+        },
+        {
+          "season": "2010-11",
+          "value": 33.5
+        },
+        {
+          "season": "2011-12",
+          "value": 33.6
+        },
+        {
+          "season": "2012-13",
+          "value": 32.5
+        },
+        {
+          "season": "2013-14",
+          "value": 32.6
+        },
+        {
+          "season": "2014-15",
+          "value": 33.3
+        },
+        {
+          "season": "2015-16",
+          "value": 31.4
+        },
+        {
+          "season": "2016-17",
+          "value": 34.7
+        },
+        {
+          "season": "2017-18",
+          "value": 34.1
+        },
+        {
+          "season": "2018-19",
+          "value": 31.3
+        },
+        {
+          "season": "2019-20",
+          "value": 39.4
+        },
+        {
+          "season": "2020-21",
+          "value": 35.4
+        },
+        {
+          "season": "2021-22",
+          "value": 31.6
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Okara",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 26.5
+        },
+        {
+          "season": "1991-92",
+          "value": 29.7
+        },
+        {
+          "season": "1992-93",
+          "value": 25.3
+        },
+        {
+          "season": "1993-94",
+          "value": 28.9
+        },
+        {
+          "season": "1994-95",
+          "value": 28.3
+        },
+        {
+          "season": "1995-96",
+          "value": 27.0
+        },
+        {
+          "season": "1996-97",
+          "value": 29.0
+        },
+        {
+          "season": "1997-98",
+          "value": 32.3
+        },
+        {
+          "season": "1998-99",
+          "value": 33.1
+        },
+        {
+          "season": "1999-00",
+          "value": 38.5
+        },
+        {
+          "season": "2000-01",
+          "value": 36.4
+        },
+        {
+          "season": "2001-02",
+          "value": 35.2
+        },
+        {
+          "season": "2002-03",
+          "value": 37.2
+        },
+        {
+          "season": "2003-04",
+          "value": 36.7
+        },
+        {
+          "season": "2004-05",
+          "value": 36.9
+        },
+        {
+          "season": "2005-06",
+          "value": 34.8
+        },
+        {
+          "season": "2006-07",
+          "value": 38.0
+        },
+        {
+          "season": "2007-08",
+          "value": 34.4
+        },
+        {
+          "season": "2008-09",
+          "value": 37.0
+        },
+        {
+          "season": "2009-10",
+          "value": 36.9
+        },
+        {
+          "season": "2010-11",
+          "value": 38.8
+        },
+        {
+          "season": "2011-12",
+          "value": 38.5
+        },
+        {
+          "season": "2012-13",
+          "value": 38.7
+        },
+        {
+          "season": "2013-14",
+          "value": 38.9
+        },
+        {
+          "season": "2014-15",
+          "value": 37.6
+        },
+        {
+          "season": "2015-16",
+          "value": 35.0
+        },
+        {
+          "season": "2016-17",
+          "value": 37.6
+        },
+        {
+          "season": "2017-18",
+          "value": 34.5
+        },
+        {
+          "season": "2018-19",
+          "value": 35.7
+        },
+        {
+          "season": "2019-20",
+          "value": 39.5
+        },
+        {
+          "season": "2020-21",
+          "value": 38.1
+        },
+        {
+          "season": "2021-22",
+          "value": 38.2
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Sahiwal",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 24.7
+        },
+        {
+          "season": "1991-92",
+          "value": 29.2
+        },
+        {
+          "season": "1992-93",
+          "value": 24.2
+        },
+        {
+          "season": "1993-94",
+          "value": 26.9
+        },
+        {
+          "season": "1994-95",
+          "value": 29.9
+        },
+        {
+          "season": "1995-96",
+          "value": 27.4
+        },
+        {
+          "season": "1996-97",
+          "value": 31.1
+        },
+        {
+          "season": "1997-98",
+          "value": 31.6
+        },
+        {
+          "season": "1998-99",
+          "value": 28.7
+        },
+        {
+          "season": "1999-00",
+          "value": 35.7
+        },
+        {
+          "season": "2000-01",
+          "value": 33.7
+        },
+        {
+          "season": "2001-02",
+          "value": 33.8
+        },
+        {
+          "season": "2002-03",
+          "value": 33.6
+        },
+        {
+          "season": "2003-04",
+          "value": 31.3
+        },
+        {
+          "season": "2004-05",
+          "value": 31.7
+        },
+        {
+          "season": "2005-06",
+          "value": 29.7
+        },
+        {
+          "season": "2006-07",
+          "value": 33.1
+        },
+        {
+          "season": "2007-08",
+          "value": 29.2
+        },
+        {
+          "season": "2008-09",
+          "value": 33.4
+        },
+        {
+          "season": "2009-10",
+          "value": 32.7
+        },
+        {
+          "season": "2010-11",
+          "value": 35.2
+        },
+        {
+          "season": "2011-12",
+          "value": 33.7
+        },
+        {
+          "season": "2012-13",
+          "value": 33.9
+        },
+        {
+          "season": "2013-14",
+          "value": 34.7
+        },
+        {
+          "season": "2014-15",
+          "value": 33.0
+        },
+        {
+          "season": "2015-16",
+          "value": 34.0
+        },
+        {
+          "season": "2016-17",
+          "value": 38.4
+        },
+        {
+          "season": "2017-18",
+          "value": 37.6
+        },
+        {
+          "season": "2018-19",
+          "value": 35.4
+        },
+        {
+          "season": "2019-20",
+          "value": 38.4
+        },
+        {
+          "season": "2020-21",
+          "value": 35.8
+        },
+        {
+          "season": "2021-22",
+          "value": 34.5
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Pakpattan",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1991-92",
+          "value": 29.2
+        },
+        {
+          "season": "1992-93",
+          "value": 24.2
+        },
+        {
+          "season": "1993-94",
+          "value": 28.3
+        },
+        {
+          "season": "1994-95",
+          "value": 29.9
+        },
+        {
+          "season": "1995-96",
+          "value": 27.6
+        },
+        {
+          "season": "1996-97",
+          "value": 31.1
+        },
+        {
+          "season": "1997-98",
+          "value": 33.3
+        },
+        {
+          "season": "1998-99",
+          "value": 33.1
+        },
+        {
+          "season": "1999-00",
+          "value": 42.1
+        },
+        {
+          "season": "2000-01",
+          "value": 39.9
+        },
+        {
+          "season": "2001-02",
+          "value": 37.4
+        },
+        {
+          "season": "2002-03",
+          "value": 36.5
+        },
+        {
+          "season": "2003-04",
+          "value": 35.8
+        },
+        {
+          "season": "2004-05",
+          "value": 36.1
+        },
+        {
+          "season": "2005-06",
+          "value": 34.8
+        },
+        {
+          "season": "2006-07",
+          "value": 36.7
+        },
+        {
+          "season": "2007-08",
+          "value": 33.7
+        },
+        {
+          "season": "2008-09",
+          "value": 37.1
+        },
+        {
+          "season": "2009-10",
+          "value": 39.1
+        },
+        {
+          "season": "2010-11",
+          "value": 40.9
+        },
+        {
+          "season": "2011-12",
+          "value": 36.5
+        },
+        {
+          "season": "2012-13",
+          "value": 37.9
+        },
+        {
+          "season": "2013-14",
+          "value": 38.5
+        },
+        {
+          "season": "2014-15",
+          "value": 36.5
+        },
+        {
+          "season": "2015-16",
+          "value": 37.1
+        },
+        {
+          "season": "2016-17",
+          "value": 38.3
+        },
+        {
+          "season": "2017-18",
+          "value": 37.6
+        },
+        {
+          "season": "2018-19",
+          "value": 38.1
+        },
+        {
+          "season": "2019-20",
+          "value": 40.7
+        },
+        {
+          "season": "2020-21",
+          "value": 36.9
+        },
+        {
+          "season": "2021-22",
+          "value": 34.9
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Multan",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 20.2
+        },
+        {
+          "season": "1991-92",
+          "value": 21.0
+        },
+        {
+          "season": "1992-93",
+          "value": 24.8
+        },
+        {
+          "season": "1993-94",
+          "value": 21.1
+        },
+        {
+          "season": "1994-95",
+          "value": 24.7
+        },
+        {
+          "season": "1995-96",
+          "value": 22.3
+        },
+        {
+          "season": "1996-97",
+          "value": 24.3
+        },
+        {
+          "season": "1997-98",
+          "value": 28.2
+        },
+        {
+          "season": "1998-99",
+          "value": 23.7
+        },
+        {
+          "season": "1999-00",
+          "value": 28.1
+        },
+        {
+          "season": "2000-01",
+          "value": 27.8
+        },
+        {
+          "season": "2001-02",
+          "value": 27.0
+        },
+        {
+          "season": "2002-03",
+          "value": 27.5
+        },
+        {
+          "season": "2003-04",
+          "value": 26.5
+        },
+        {
+          "season": "2004-05",
+          "value": 29.7
+        },
+        {
+          "season": "2005-06",
+          "value": 27.7
+        },
+        {
+          "season": "2006-07",
+          "value": 30.9
+        },
+        {
+          "season": "2007-08",
+          "value": 25.2
+        },
+        {
+          "season": "2008-09",
+          "value": 32.0
+        },
+        {
+          "season": "2009-10",
+          "value": 27.2
+        },
+        {
+          "season": "2010-11",
+          "value": 30.5
+        },
+        {
+          "season": "2011-12",
+          "value": 28.2
+        },
+        {
+          "season": "2012-13",
+          "value": 31.5
+        },
+        {
+          "season": "2013-14",
+          "value": 32.0
+        },
+        {
+          "season": "2014-15",
+          "value": 32.8
+        },
+        {
+          "season": "2015-16",
+          "value": 32.8
+        },
+        {
+          "season": "2016-17",
+          "value": 35.2
+        },
+        {
+          "season": "2017-18",
+          "value": 34.8
+        },
+        {
+          "season": "2018-19",
+          "value": 33.8
+        },
+        {
+          "season": "2019-20",
+          "value": 36.9
+        },
+        {
+          "season": "2020-21",
+          "value": 34.5
+        },
+        {
+          "season": "2021-22",
+          "value": 36.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Lodhran",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1991-92",
+          "value": 21.0
+        },
+        {
+          "season": "1992-93",
+          "value": 24.8
+        },
+        {
+          "season": "1993-94",
+          "value": 25.6
+        },
+        {
+          "season": "1994-95",
+          "value": 24.7
+        },
+        {
+          "season": "1995-96",
+          "value": 22.5
+        },
+        {
+          "season": "1996-97",
+          "value": 25.6
+        },
+        {
+          "season": "1997-98",
+          "value": 27.0
+        },
+        {
+          "season": "1998-99",
+          "value": 26.8
+        },
+        {
+          "season": "1999-00",
+          "value": 31.4
+        },
+        {
+          "season": "2000-01",
+          "value": 28.1
+        },
+        {
+          "season": "2001-02",
+          "value": 27.4
+        },
+        {
+          "season": "2002-03",
+          "value": 29.9
+        },
+        {
+          "season": "2003-04",
+          "value": 28.9
+        },
+        {
+          "season": "2004-05",
+          "value": 28.3
+        },
+        {
+          "season": "2005-06",
+          "value": 27.2
+        },
+        {
+          "season": "2006-07",
+          "value": 32.1
+        },
+        {
+          "season": "2007-08",
+          "value": 28.0
+        },
+        {
+          "season": "2008-09",
+          "value": 34.9
+        },
+        {
+          "season": "2009-10",
+          "value": 32.1
+        },
+        {
+          "season": "2010-11",
+          "value": 33.9
+        },
+        {
+          "season": "2011-12",
+          "value": 32.6
+        },
+        {
+          "season": "2012-13",
+          "value": 34.4
+        },
+        {
+          "season": "2013-14",
+          "value": 35.5
+        },
+        {
+          "season": "2014-15",
+          "value": 33.9
+        },
+        {
+          "season": "2015-16",
+          "value": 36.7
+        },
+        {
+          "season": "2016-17",
+          "value": 42.1
+        },
+        {
+          "season": "2017-18",
+          "value": 37.0
+        },
+        {
+          "season": "2018-19",
+          "value": 36.7
+        },
+        {
+          "season": "2019-20",
+          "value": 36.5
+        },
+        {
+          "season": "2020-21",
+          "value": 34.2
+        },
+        {
+          "season": "2021-22",
+          "value": 38.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Khanewal",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 20.1
+        },
+        {
+          "season": "1991-92",
+          "value": 23.0
+        },
+        {
+          "season": "1992-93",
+          "value": 22.5
+        },
+        {
+          "season": "1993-94",
+          "value": 24.0
+        },
+        {
+          "season": "1994-95",
+          "value": 27.4
+        },
+        {
+          "season": "1995-96",
+          "value": 25.5
+        },
+        {
+          "season": "1996-97",
+          "value": 26.6
+        },
+        {
+          "season": "1997-98",
+          "value": 29.4
+        },
+        {
+          "season": "1998-99",
+          "value": 26.3
+        },
+        {
+          "season": "1999-00",
+          "value": 39.0
+        },
+        {
+          "season": "2000-01",
+          "value": 36.1
+        },
+        {
+          "season": "2001-02",
+          "value": 30.8
+        },
+        {
+          "season": "2002-03",
+          "value": 29.6
+        },
+        {
+          "season": "2003-04",
+          "value": 29.4
+        },
+        {
+          "season": "2004-05",
+          "value": 33.5
+        },
+        {
+          "season": "2005-06",
+          "value": 30.7
+        },
+        {
+          "season": "2006-07",
+          "value": 34.2
+        },
+        {
+          "season": "2007-08",
+          "value": 29.1
+        },
+        {
+          "season": "2008-09",
+          "value": 33.8
+        },
+        {
+          "season": "2009-10",
+          "value": 32.7
+        },
+        {
+          "season": "2010-11",
+          "value": 33.5
+        },
+        {
+          "season": "2011-12",
+          "value": 31.8
+        },
+        {
+          "season": "2012-13",
+          "value": 33.7
+        },
+        {
+          "season": "2013-14",
+          "value": 34.4
+        },
+        {
+          "season": "2014-15",
+          "value": 34.2
+        },
+        {
+          "season": "2015-16",
+          "value": 34.9
+        },
+        {
+          "season": "2016-17",
+          "value": 40.8
+        },
+        {
+          "season": "2017-18",
+          "value": 37.6
+        },
+        {
+          "season": "2018-19",
+          "value": 33.9
+        },
+        {
+          "season": "2019-20",
+          "value": 35.7
+        },
+        {
+          "season": "2020-21",
+          "value": 33.8
+        },
+        {
+          "season": "2021-22",
+          "value": 37.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Vehari",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 22.8
+        },
+        {
+          "season": "1991-92",
+          "value": 27.7
+        },
+        {
+          "season": "1992-93",
+          "value": 24.4
+        },
+        {
+          "season": "1993-94",
+          "value": 25.2
+        },
+        {
+          "season": "1994-95",
+          "value": 28.7
+        },
+        {
+          "season": "1995-96",
+          "value": 26.1
+        },
+        {
+          "season": "1996-97",
+          "value": 28.8
+        },
+        {
+          "season": "1997-98",
+          "value": 30.2
+        },
+        {
+          "season": "1998-99",
+          "value": 28.6
+        },
+        {
+          "season": "1999-00",
+          "value": 37.5
+        },
+        {
+          "season": "2000-01",
+          "value": 33.9
+        },
+        {
+          "season": "2001-02",
+          "value": 29.6
+        },
+        {
+          "season": "2002-03",
+          "value": 29.4
+        },
+        {
+          "season": "2003-04",
+          "value": 28.0
+        },
+        {
+          "season": "2004-05",
+          "value": 30.6
+        },
+        {
+          "season": "2005-06",
+          "value": 28.9
+        },
+        {
+          "season": "2006-07",
+          "value": 31.8
+        },
+        {
+          "season": "2007-08",
+          "value": 30.1
+        },
+        {
+          "season": "2008-09",
+          "value": 31.3
+        },
+        {
+          "season": "2009-10",
+          "value": 31.3
+        },
+        {
+          "season": "2010-11",
+          "value": 34.2
+        },
+        {
+          "season": "2011-12",
+          "value": 34.8
+        },
+        {
+          "season": "2012-13",
+          "value": 35.5
+        },
+        {
+          "season": "2013-14",
+          "value": 35.9
+        },
+        {
+          "season": "2014-15",
+          "value": 35.7
+        },
+        {
+          "season": "2015-16",
+          "value": 35.5
+        },
+        {
+          "season": "2016-17",
+          "value": 36.5
+        },
+        {
+          "season": "2017-18",
+          "value": 35.4
+        },
+        {
+          "season": "2018-19",
+          "value": 33.2
+        },
+        {
+          "season": "2019-20",
+          "value": 37.7
+        },
+        {
+          "season": "2020-21",
+          "value": 35.3
+        },
+        {
+          "season": "2021-22",
+          "value": 35.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Muzaffargarh",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 17.3
+        },
+        {
+          "season": "1991-92",
+          "value": 21.8
+        },
+        {
+          "season": "1992-93",
+          "value": 22.3
+        },
+        {
+          "season": "1993-94",
+          "value": 17.8
+        },
+        {
+          "season": "1994-95",
+          "value": 20.8
+        },
+        {
+          "season": "1995-96",
+          "value": 21.5
+        },
+        {
+          "season": "1996-97",
+          "value": 22.3
+        },
+        {
+          "season": "1997-98",
+          "value": 25.8
+        },
+        {
+          "season": "1998-99",
+          "value": 23.5
+        },
+        {
+          "season": "1999-00",
+          "value": 27.8
+        },
+        {
+          "season": "2000-01",
+          "value": 26.5
+        },
+        {
+          "season": "2001-02",
+          "value": 24.2
+        },
+        {
+          "season": "2002-03",
+          "value": 25.6
+        },
+        {
+          "season": "2003-04",
+          "value": 25.7
+        },
+        {
+          "season": "2004-05",
+          "value": 28.4
+        },
+        {
+          "season": "2005-06",
+          "value": 27.4
+        },
+        {
+          "season": "2006-07",
+          "value": 29.5
+        },
+        {
+          "season": "2007-08",
+          "value": 25.7
+        },
+        {
+          "season": "2008-09",
+          "value": 29.4
+        },
+        {
+          "season": "2009-10",
+          "value": 29.5
+        },
+        {
+          "season": "2010-11",
+          "value": 31.4
+        },
+        {
+          "season": "2011-12",
+          "value": 29.8
+        },
+        {
+          "season": "2012-13",
+          "value": 30.4
+        },
+        {
+          "season": "2013-14",
+          "value": 30.5
+        },
+        {
+          "season": "2014-15",
+          "value": 30.3
+        },
+        {
+          "season": "2015-16",
+          "value": 31.3
+        },
+        {
+          "season": "2016-17",
+          "value": 34.5
+        },
+        {
+          "season": "2017-18",
+          "value": 34.1
+        },
+        {
+          "season": "2018-19",
+          "value": 33.3
+        },
+        {
+          "season": "2019-20",
+          "value": 34.1
+        },
+        {
+          "season": "2020-21",
+          "value": 31.9
+        },
+        {
+          "season": "2021-22",
+          "value": 30.7
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Layyah",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 16.4
+        },
+        {
+          "season": "1991-92",
+          "value": 18.4
+        },
+        {
+          "season": "1992-93",
+          "value": 19.0
+        },
+        {
+          "season": "1993-94",
+          "value": 19.1
+        },
+        {
+          "season": "1994-95",
+          "value": 21.0
+        },
+        {
+          "season": "1995-96",
+          "value": 20.1
+        },
+        {
+          "season": "1996-97",
+          "value": 18.1
+        },
+        {
+          "season": "1997-98",
+          "value": 22.9
+        },
+        {
+          "season": "1998-99",
+          "value": 19.5
+        },
+        {
+          "season": "1999-00",
+          "value": 23.5
+        },
+        {
+          "season": "2000-01",
+          "value": 24.0
+        },
+        {
+          "season": "2001-02",
+          "value": 21.9
+        },
+        {
+          "season": "2002-03",
+          "value": 23.1
+        },
+        {
+          "season": "2003-04",
+          "value": 25.2
+        },
+        {
+          "season": "2004-05",
+          "value": 30.7
+        },
+        {
+          "season": "2005-06",
+          "value": 28.8
+        },
+        {
+          "season": "2006-07",
+          "value": 28.9
+        },
+        {
+          "season": "2007-08",
+          "value": 23.6
+        },
+        {
+          "season": "2008-09",
+          "value": 27.5
+        },
+        {
+          "season": "2009-10",
+          "value": 27.7
+        },
+        {
+          "season": "2010-11",
+          "value": 30.6
+        },
+        {
+          "season": "2011-12",
+          "value": 25.8
+        },
+        {
+          "season": "2012-13",
+          "value": 28.4
+        },
+        {
+          "season": "2013-14",
+          "value": 29.4
+        },
+        {
+          "season": "2014-15",
+          "value": 27.6
+        },
+        {
+          "season": "2015-16",
+          "value": 27.4
+        },
+        {
+          "season": "2016-17",
+          "value": 33.0
+        },
+        {
+          "season": "2017-18",
+          "value": 26.5
+        },
+        {
+          "season": "2018-19",
+          "value": 28.4
+        },
+        {
+          "season": "2019-20",
+          "value": 30.7
+        },
+        {
+          "season": "2020-21",
+          "value": 28.6
+        },
+        {
+          "season": "2021-22",
+          "value": 30.3
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "D.G.khan",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 21.2
+        },
+        {
+          "season": "1991-92",
+          "value": 23.2
+        },
+        {
+          "season": "1992-93",
+          "value": 23.4
+        },
+        {
+          "season": "1993-94",
+          "value": 21.3
+        },
+        {
+          "season": "1994-95",
+          "value": 21.2
+        },
+        {
+          "season": "1995-96",
+          "value": 20.8
+        },
+        {
+          "season": "1996-97",
+          "value": 21.2
+        },
+        {
+          "season": "1997-98",
+          "value": 24.6
+        },
+        {
+          "season": "1998-99",
+          "value": 24.4
+        },
+        {
+          "season": "1999-00",
+          "value": 29.0
+        },
+        {
+          "season": "2000-01",
+          "value": 30.1
+        },
+        {
+          "season": "2001-02",
+          "value": 31.3
+        },
+        {
+          "season": "2002-03",
+          "value": 28.4
+        },
+        {
+          "season": "2003-04",
+          "value": 25.2
+        },
+        {
+          "season": "2004-05",
+          "value": 27.2
+        },
+        {
+          "season": "2005-06",
+          "value": 28.4
+        },
+        {
+          "season": "2006-07",
+          "value": 29.1
+        },
+        {
+          "season": "2007-08",
+          "value": 27.5
+        },
+        {
+          "season": "2008-09",
+          "value": 25.2
+        },
+        {
+          "season": "2009-10",
+          "value": 27.3
+        },
+        {
+          "season": "2010-11",
+          "value": 28.7
+        },
+        {
+          "season": "2011-12",
+          "value": 28.8
+        },
+        {
+          "season": "2012-13",
+          "value": 30.9
+        },
+        {
+          "season": "2013-14",
+          "value": 31.6
+        },
+        {
+          "season": "2014-15",
+          "value": 32.4
+        },
+        {
+          "season": "2015-16",
+          "value": 30.0
+        },
+        {
+          "season": "2016-17",
+          "value": 34.9
+        },
+        {
+          "season": "2017-18",
+          "value": 32.9
+        },
+        {
+          "season": "2018-19",
+          "value": 31.1
+        },
+        {
+          "season": "2019-20",
+          "value": 33.7
+        },
+        {
+          "season": "2020-21",
+          "value": 32.9
+        },
+        {
+          "season": "2021-22",
+          "value": 32.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Rajanpur",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 22.4
+        },
+        {
+          "season": "1991-92",
+          "value": 24.8
+        },
+        {
+          "season": "1992-93",
+          "value": 25.4
+        },
+        {
+          "season": "1993-94",
+          "value": 19.3
+        },
+        {
+          "season": "1994-95",
+          "value": 21.5
+        },
+        {
+          "season": "1995-96",
+          "value": 21.9
+        },
+        {
+          "season": "1996-97",
+          "value": 20.1
+        },
+        {
+          "season": "1997-98",
+          "value": 24.9
+        },
+        {
+          "season": "1998-99",
+          "value": 24.8
+        },
+        {
+          "season": "1999-00",
+          "value": 27.7
+        },
+        {
+          "season": "2000-01",
+          "value": 24.6
+        },
+        {
+          "season": "2001-02",
+          "value": 28.2
+        },
+        {
+          "season": "2002-03",
+          "value": 26.9
+        },
+        {
+          "season": "2003-04",
+          "value": 25.6
+        },
+        {
+          "season": "2004-05",
+          "value": 28.5
+        },
+        {
+          "season": "2005-06",
+          "value": 26.9
+        },
+        {
+          "season": "2006-07",
+          "value": 31.1
+        },
+        {
+          "season": "2007-08",
+          "value": 25.3
+        },
+        {
+          "season": "2008-09",
+          "value": 27.8
+        },
+        {
+          "season": "2009-10",
+          "value": 29.3
+        },
+        {
+          "season": "2010-11",
+          "value": 29.7
+        },
+        {
+          "season": "2011-12",
+          "value": 25.6
+        },
+        {
+          "season": "2012-13",
+          "value": 28.1
+        },
+        {
+          "season": "2013-14",
+          "value": 28.3
+        },
+        {
+          "season": "2014-15",
+          "value": 30.6
+        },
+        {
+          "season": "2015-16",
+          "value": 31.5
+        },
+        {
+          "season": "2016-17",
+          "value": 36.8
+        },
+        {
+          "season": "2017-18",
+          "value": 32.8
+        },
+        {
+          "season": "2018-19",
+          "value": 32.9
+        },
+        {
+          "season": "2019-20",
+          "value": 37.5
+        },
+        {
+          "season": "2020-21",
+          "value": 34.4
+        },
+        {
+          "season": "2021-22",
+          "value": 35.1
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Bahawalpur",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 19.1
+        },
+        {
+          "season": "1991-92",
+          "value": 22.3
+        },
+        {
+          "season": "1992-93",
+          "value": 24.0
+        },
+        {
+          "season": "1993-94",
+          "value": 20.6
+        },
+        {
+          "season": "1994-95",
+          "value": 22.6
+        },
+        {
+          "season": "1995-96",
+          "value": 21.3
+        },
+        {
+          "season": "1996-97",
+          "value": 25.8
+        },
+        {
+          "season": "1997-98",
+          "value": 23.8
+        },
+        {
+          "season": "1998-99",
+          "value": 25.2
+        },
+        {
+          "season": "1999-00",
+          "value": 30.9
+        },
+        {
+          "season": "2000-01",
+          "value": 26.4
+        },
+        {
+          "season": "2001-02",
+          "value": 25.6
+        },
+        {
+          "season": "2002-03",
+          "value": 29.2
+        },
+        {
+          "season": "2003-04",
+          "value": 25.6
+        },
+        {
+          "season": "2004-05",
+          "value": 29.5
+        },
+        {
+          "season": "2005-06",
+          "value": 28.0
+        },
+        {
+          "season": "2006-07",
+          "value": 31.6
+        },
+        {
+          "season": "2007-08",
+          "value": 28.0
+        },
+        {
+          "season": "2008-09",
+          "value": 32.5
+        },
+        {
+          "season": "2009-10",
+          "value": 30.6
+        },
+        {
+          "season": "2010-11",
+          "value": 34.1
+        },
+        {
+          "season": "2011-12",
+          "value": 34.6
+        },
+        {
+          "season": "2012-13",
+          "value": 32.5
+        },
+        {
+          "season": "2013-14",
+          "value": 32.8
+        },
+        {
+          "season": "2014-15",
+          "value": 33.0
+        },
+        {
+          "season": "2015-16",
+          "value": 35.0
+        },
+        {
+          "season": "2016-17",
+          "value": 36.9
+        },
+        {
+          "season": "2017-18",
+          "value": 34.9
+        },
+        {
+          "season": "2018-19",
+          "value": 32.7
+        },
+        {
+          "season": "2019-20",
+          "value": 35.9
+        },
+        {
+          "season": "2020-21",
+          "value": 33.7
+        },
+        {
+          "season": "2021-22",
+          "value": 36.0
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "R.Y.Khan",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 18.8
+        },
+        {
+          "season": "1991-92",
+          "value": 21.1
+        },
+        {
+          "season": "1992-93",
+          "value": 22.7
+        },
+        {
+          "season": "1993-94",
+          "value": 19.2
+        },
+        {
+          "season": "1994-95",
+          "value": 26.2
+        },
+        {
+          "season": "1995-96",
+          "value": 22.4
+        },
+        {
+          "season": "1996-97",
+          "value": 24.4
+        },
+        {
+          "season": "1997-98",
+          "value": 26.1
+        },
+        {
+          "season": "1998-99",
+          "value": 24.8
+        },
+        {
+          "season": "1999-00",
+          "value": 30.0
+        },
+        {
+          "season": "2000-01",
+          "value": 25.9
+        },
+        {
+          "season": "2001-02",
+          "value": 25.6
+        },
+        {
+          "season": "2002-03",
+          "value": 26.5
+        },
+        {
+          "season": "2003-04",
+          "value": 28.9
+        },
+        {
+          "season": "2004-05",
+          "value": 29.8
+        },
+        {
+          "season": "2005-06",
+          "value": 27.6
+        },
+        {
+          "season": "2006-07",
+          "value": 32.7
+        },
+        {
+          "season": "2007-08",
+          "value": 26.0
+        },
+        {
+          "season": "2008-09",
+          "value": 29.4
+        },
+        {
+          "season": "2009-10",
+          "value": 29.8
+        },
+        {
+          "season": "2010-11",
+          "value": 33.8
+        },
+        {
+          "season": "2011-12",
+          "value": 33.7
+        },
+        {
+          "season": "2012-13",
+          "value": 36.1
+        },
+        {
+          "season": "2013-14",
+          "value": 36.5
+        },
+        {
+          "season": "2014-15",
+          "value": 34.2
+        },
+        {
+          "season": "2015-16",
+          "value": 35.6
+        },
+        {
+          "season": "2016-17",
+          "value": 37.0
+        },
+        {
+          "season": "2017-18",
+          "value": 32.2
+        },
+        {
+          "season": "2018-19",
+          "value": 34.5
+        },
+        {
+          "season": "2019-20",
+          "value": 37.8
+        },
+        {
+          "season": "2020-21",
+          "value": 35.4
+        },
+        {
+          "season": "2021-22",
+          "value": 37.5
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    },
+    {
+      "district": "Bahawalnagar",
+      "unit": "maund/acre (source unit)",
+      "series": [
+        {
+          "season": "1990-91",
+          "value": 18.6
+        },
+        {
+          "season": "1991-92",
+          "value": 19.0
+        },
+        {
+          "season": "1992-93",
+          "value": 20.0
+        },
+        {
+          "season": "1993-94",
+          "value": 19.5
+        },
+        {
+          "season": "1994-95",
+          "value": 24.3
+        },
+        {
+          "season": "1995-96",
+          "value": 22.6
+        },
+        {
+          "season": "1996-97",
+          "value": 21.3
+        },
+        {
+          "season": "1997-98",
+          "value": 23.4
+        },
+        {
+          "season": "1998-99",
+          "value": 22.0
+        },
+        {
+          "season": "1999-00",
+          "value": 27.1
+        },
+        {
+          "season": "2000-01",
+          "value": 25.3
+        },
+        {
+          "season": "2001-02",
+          "value": 23.4
+        },
+        {
+          "season": "2002-03",
+          "value": 26.7
+        },
+        {
+          "season": "2003-04",
+          "value": 27.8
+        },
+        {
+          "season": "2004-05",
+          "value": 29.4
+        },
+        {
+          "season": "2005-06",
+          "value": 26.9
+        },
+        {
+          "season": "2006-07",
+          "value": 32.8
+        },
+        {
+          "season": "2007-08",
+          "value": 27.8
+        },
+        {
+          "season": "2008-09",
+          "value": 31.0
+        },
+        {
+          "season": "2009-10",
+          "value": 32.5
+        },
+        {
+          "season": "2010-11",
+          "value": 33.9
+        },
+        {
+          "season": "2011-12",
+          "value": 31.9
+        },
+        {
+          "season": "2012-13",
+          "value": 32.4
+        },
+        {
+          "season": "2013-14",
+          "value": 32.9
+        },
+        {
+          "season": "2014-15",
+          "value": 34.1
+        },
+        {
+          "season": "2015-16",
+          "value": 33.1
+        },
+        {
+          "season": "2016-17",
+          "value": 35.4
+        },
+        {
+          "season": "2017-18",
+          "value": 33.3
+        },
+        {
+          "season": "2018-19",
+          "value": 35.2
+        },
+        {
+          "season": "2019-20",
+          "value": 40.3
+        },
+        {
+          "season": "2020-21",
+          "value": 37.6
+        },
+        {
+          "season": "2021-22",
+          "value": 36.0
+        }
+      ],
+      "source": "Wheat insurance parameters.xlsx · Wheat annual yield trend"
+    }
+  ],
+  "wheatWeatherResearch": [
+    {
+      "stage": "Sowing/Emergence",
+      "parameter": "Temperature (°C)",
+      "lower": "10 (7.1)",
+      "upper": "30 (75)",
+      "optimal": "Max 26-33; Min 10-17",
+      "impact": "Poor germination below 10°C; Poor sprouting above 30°C",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 7"
+    },
+    {
+      "stage": "Sowing/Emergence",
+      "parameter": "Humidity (%)",
+      "lower": "<30",
+      "upper": ">90",
+      "optimal": "Max 88-92; Min 35-38",
+      "impact": "Poor sprouting with low humidity; Risk of fungal diseases with high humidity",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 8"
+    },
+    {
+      "stage": "Sowing/Emergence",
+      "parameter": "Rainfall (mm)",
+      "lower": "<5 (50)",
+      "upper": ">50 (0)",
+      "optimal": "0-1 mm in (0) days",
+      "impact": "Insufficient moisture with low rainfall; Risk of waterlogging with high rainfall",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 9"
+    },
+    {
+      "stage": "Vegetative Stage",
+      "parameter": "Temperature (°C)",
+      "lower": "5 (29.4)",
+      "upper": "26 (75.2)",
+      "optimal": "Max 16-27; Min 4-12",
+      "impact": "Slow growth below 10°C; Heat stress above 25°C",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 14"
+    },
+    {
+      "stage": "Vegetative Stage",
+      "parameter": "Humidity (%)",
+      "lower": "<30",
+      "upper": ">95",
+      "optimal": "Max 93-96; Min 38-61",
+      "impact": "Reduced growth with low humidity; Risk of foliar diseases with high humidity",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 15"
+    },
+    {
+      "stage": "Vegetative Stage",
+      "parameter": "Rainfall (mm)",
+      "lower": "<5 (80)",
+      "upper": ">40 (0)",
+      "optimal": "0-38 mm (0-2 days)",
+      "impact": "Insufficient water with low rainfall; Risk of waterlogging with high rainfall",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 16"
+    },
+    {
+      "stage": "Anthesis Stage",
+      "parameter": "Temperature (°C)",
+      "lower": "5 (23.7)",
+      "upper": "30 (66.1)",
+      "optimal": "Max 16-23; Min 5-10",
+      "impact": "Reduced pollination and grain set below 15°C; Poor pollination above 30°C",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 21"
+    },
+    {
+      "stage": "Anthesis Stage",
+      "parameter": "Humidity (%)",
+      "lower": "<40",
+      "upper": ">95",
+      "optimal": "Max 94-95; Min 54-62",
+      "impact": "Risk of fungal diseases with high humidity",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 22"
+    },
+    {
+      "stage": "Anthesis Stage",
+      "parameter": "Rainfall (mm)",
+      "lower": "<10 (60)",
+      "upper": ">50 (0)",
+      "optimal": "0-43 mm (0-2 days)",
+      "impact": "Insufficient water with low rainfall; Risk of waterlogging with high rainfall",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 23"
+    },
+    {
+      "stage": "Anthesis Stage",
+      "parameter": "Wind Speed (km/h)",
+      "lower": null,
+      "upper": null,
+      "optimal": ">53; >70; >77; >95",
+      "impact": "Wheat lodging from low to severe",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 24"
+    },
+    {
+      "stage": "Grain Filling Stage",
+      "parameter": "Temperature (°C)",
+      "lower": "10 (14.4)",
+      "upper": "35 (59.9)",
+      "optimal": "Max 21-30; Min 8-15",
+      "impact": "Poor grain filling below 15°C; Poor grain development above 35°C",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 29"
+    },
+    {
+      "stage": "Grain Filling Stage",
+      "parameter": "Humidity (%)",
+      "lower": "<30",
+      "upper": ">90",
+      "optimal": "Max 90-93; Min 45-52",
+      "impact": "Risk of fungal infections with high humidity",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 30"
+    },
+    {
+      "stage": "Grain Filling Stage",
+      "parameter": "Rainfall (mm)",
+      "lower": "<10 (10)",
+      "upper": ">50 (40)",
+      "optimal": "0-26 mm (0-2 days)",
+      "impact": "Insufficient water with low rainfall; Risk of waterlogging with high rainfall",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 31"
+    },
+    {
+      "stage": "Grain Filling Stage",
+      "parameter": "Wind Speed (km/h)",
+      "lower": null,
+      "upper": null,
+      "optimal": ">53; >70; >77; >95",
+      "impact": "Wheat lodging from low to severe",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 32"
+    },
+    {
+      "stage": "Maturity Stage",
+      "parameter": "Temperature (°C)",
+      "lower": "15 (7.7)",
+      "upper": "35 (49.4)",
+      "optimal": "Max 29-36; Min 14-20",
+      "impact": "Poor grain quality and reduced yield below 20°C; Heat stress above 35°C",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 37"
+    },
+    {
+      "stage": "Maturity Stage",
+      "parameter": "Humidity (%)",
+      "lower": "<30",
+      "upper": ">90",
+      "optimal": "Max 70-88; Min 27-40",
+      "impact": "Risk of sprouting or mold with high humidity",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 38"
+    },
+    {
+      "stage": "Maturity Stage",
+      "parameter": "Wind Speed (km/h)",
+      "lower": null,
+      "upper": null,
+      "optimal": ">53; >70; >77; >95",
+      "impact": "Wheat lodging from low to severe",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 39"
+    },
+    {
+      "stage": "Maturity Stage",
+      "parameter": "Rainfall (mm)",
+      "lower": "<10 (10)",
+      "upper": ">50 (20)",
+      "optimal": "0-15 mm (0-2 days)",
+      "impact": "Insufficient water with low rainfall; Risk of waterlogging with high rainfall",
+      "source": "Wheat insurance parameters.xlsx · Research parameters · row 40"
+    }
+  ],
+  "climate": [
+    {
+      "source": "Wheat insurance parameters.xlsx · Climate",
+      "rows": [
+        {
+          "A": "Sargodha rainfall averages (1981-2010)",
+          "E": "Sargodha Temp averages (1981-2010)"
+        },
+        {
+          "A": "Jan",
+          "B": "18.7",
+          "E": "Jan",
+          "F": "18.600000000000001",
+          "G": "4.9000000000000004"
+        },
+        {
+          "A": "Feb",
+          "B": "28.3",
+          "E": "Feb",
+          "F": "22.4",
+          "G": "8.1999999999999993"
+        },
+        {
+          "A": "Mar",
+          "B": "38.5",
+          "E": "Mar",
+          "F": "27.6",
+          "G": "13.7"
+        },
+        {
+          "A": "Apr",
+          "B": "37.1",
+          "E": "Apr",
+          "F": "34.1",
+          "G": "19.399999999999999"
+        },
+        {
+          "A": "May",
+          "B": "28.9",
+          "E": "May",
+          "F": "39.6",
+          "G": "24.5"
+        },
+        {
+          "A": "Jun",
+          "B": "56.1",
+          "E": "Jun",
+          "F": "40.700000000000003",
+          "G": "27.2"
+        },
+        {
+          "A": "Jul",
+          "B": "131.6",
+          "E": "Jul",
+          "F": "37.700000000000003",
+          "G": "27.7"
+        },
+        {
+          "A": "Aug",
+          "B": "94.1",
+          "E": "Aug",
+          "F": "36.6",
+          "G": "27.2"
+        },
+        {
+          "A": "Sep",
+          "B": "56.1",
+          "E": "Sep",
+          "F": "35.700000000000003",
+          "G": "24.8"
+        },
+        {
+          "A": "Oct",
+          "B": "12",
+          "E": "Oct",
+          "F": "32.799999999999997",
+          "G": "18.7"
+        },
+        {
+          "A": "Nov",
+          "B": "4.4000000000000004",
+          "E": "Nov",
+          "F": "26.9",
+          "G": "11.5"
+        },
+        {
+          "A": "Dec",
+          "B": "8.6999999999999993",
+          "E": "Dec",
+          "F": "21.6",
+          "G": "6.2"
+        }
+      ]
+    },
+    {
+      "source": "Crops Insurance Data (2).xlsx · Climate",
+      "rows": [
+        {
+          "A": "Narowal Rainfall Averages (2019-2024)",
+          "E": "Gujrat Rainfall Averages (2013-2024)",
+          "H": "Sialkot Rainfall Averages (2012-2024)"
+        },
+        {
+          "A": "Month",
+          "B": "Avrg Rain Accumulation",
+          "E": "Month",
+          "F": "Avrg Rain Accumulation",
+          "H": "Month",
+          "I": "Avrg Rain Accumulation"
+        },
+        {
+          "A": "Jan",
+          "B": "67.376666666666651",
+          "E": "Jan",
+          "F": "51.342727272727274",
+          "H": "Jan",
+          "I": "48.593846153846165"
+        },
+        {
+          "A": "Feb",
+          "B": "41.31",
+          "E": "Feb",
+          "F": "24.264545454545452",
+          "H": "Feb",
+          "I": "42.363076923076925"
+        },
+        {
+          "A": "Mar",
+          "B": "47.029999999999994",
+          "E": "Mar",
+          "F": "52.300000000000004",
+          "H": "Mar",
+          "I": "65.543846153846161"
+        },
+        {
+          "A": "Apr",
+          "B": "35.905000000000001",
+          "E": "Apr",
+          "F": "39.164166666666667",
+          "H": "Apr",
+          "I": "49.598461538461542"
+        },
+        {
+          "A": "May",
+          "B": "31.486666666666665",
+          "E": "May",
+          "F": "19.14",
+          "H": "May",
+          "I": "23.153076923076924"
+        },
+        {
+          "A": "Jun",
+          "B": "85.644999999999996",
+          "E": "Jun",
+          "F": "67.344166666666652",
+          "H": "Jun",
+          "I": "68.924615384615393"
+        },
+        {
+          "A": "Jul",
+          "B": "248.23999999999998",
+          "E": "Jul",
+          "F": "232.25249999999997",
+          "H": "Jul",
+          "I": "330.8315384615384"
+        },
+        {
+          "A": "Aug",
+          "B": "198.50166666666667",
+          "E": "Aug",
+          "F": "140.26249999999999",
+          "H": "Aug",
+          "I": "249.06307692307689"
+        },
+        {
+          "A": "Sep",
+          "B": "99.194999999999993",
+          "E": "Sep",
+          "F": "79.794166666666655",
+          "H": "Sep",
+          "I": "121.12230769230769"
+        },
+        {
+          "A": "Oct",
+          "B": "40.005000000000003",
+          "E": "Oct",
+          "F": "16.869166666666665",
+          "H": "Oct",
+          "I": "29.333846153846153"
+        },
+        {
+          "A": "Nov",
+          "B": "19.02",
+          "E": "Nov",
+          "F": "12.327500000000001",
+          "H": "Nov",
+          "I": "12.954615384615384"
+        },
+        {
+          "A": "Dec",
+          "B": "16.239999999999998",
+          "E": "Dec",
+          "F": "5.975833333333334",
+          "H": "Dec",
+          "I": "12.566923076923077"
+        }
+      ]
+    }
+  ],
+  "note": "Research reference data, not a locally calibrated insurance probability, payout rule or field yield forecast. Personal contacts, profile statistics and original workbooks are not published."
+}

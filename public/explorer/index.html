@@ -22,8 +22,8 @@
 @media(max-width:650px){.particle-option{font-size:8px;gap:4px}.parameter-button svg{width:18px;height:18px}}
 @media(max-height:600px),(max-width:650px){.panel h1,.panel>.eyebrow{display:none}.panel{top:70px;padding:12px}.parameter-list{grid-template-columns:1fr 1fr;gap:5px}.parameter-button{flex-direction:column;justify-content:center;padding:5px;gap:4px;font-size:9px}.parameter-button svg{width:17px;height:17px}.flow-button{padding:6px;margin-top:7px}.particle-option{font-size:8px;margin-top:7px}.elevation-panel{top:70px}}
 /* Compact scrollable pressure list and always-visible, touch-size zoom tools. */
-.elevation-panel{max-height:min(280px,calc(100% - 385px));display:flex;flex-direction:column;padding:10px 8px}.elevation-panel>.eyebrow{flex-shrink:0;margin-bottom:7px}.levels{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;gap:2px}.level{padding:7px 3px;flex-shrink:0;font-size:11px}.level small{display:none}.map-tools{position:absolute;z-index:25;right:22px;bottom:265px;display:flex;gap:6px}.map-tools button{position:static;width:40px;height:40px;border-radius:10px;font-size:24px;color:var(--text)}#coverage-report{color:#c9dceb}.legend{padding-bottom:10px}.picker-footer #picker-availability{color:#ffe0a3}
-@media(max-width:650px){.map-tools{right:13px}.map-tools button{width:36px;height:36px}.elevation-panel{max-height:min(260px,calc(100% - 385px))}.level{padding:7px 2px}.legend .source-note{font-size:7px}}
+.elevation-panel{max-height:min(280px,calc(100% - 400px));display:flex;flex-direction:column;padding:10px 8px}.elevation-panel>.eyebrow{flex-shrink:0;margin-bottom:7px}.levels{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;gap:2px}.level{padding:7px 3px;flex-shrink:0;font-size:11px}.level small{display:none}.map-tools{position:absolute;z-index:25;right:22px;bottom:275px;display:flex;gap:6px}.map-tools button{position:static;width:40px;height:40px;border-radius:10px;font-size:24px;color:var(--text)}#coverage-report{color:#c9dceb}.legend{padding-bottom:10px}.picker-footer #picker-availability{color:#ffe0a3}
+@media(max-width:650px){.map-tools{right:13px}.map-tools button{width:36px;height:36px}.elevation-panel{max-height:min(260px,calc(100% - 400px))}.level{padding:7px 2px}.legend .source-note{font-size:7px}}
 </style>
 </head>
 <body>
@@ -32,7 +32,7 @@
 <aside class="panel glass" aria-label="Weather parameter controls"><span class="eyebrow">EXPLORE THE ATMOSPHERE</span><h1>Choose your view.</h1><div class="parameter-list" role="group" aria-label="Weather parameter"><button class="parameter-button" data-parameter="wind" aria-pressed="true"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/></svg></span><span>Wind</span></button><button class="parameter-button" data-parameter="temperature" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 7v10"/></svg></span><span>Temperature</span></button><button class="parameter-button" data-parameter="humidity" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/></svg></span><span>Humidity</span></button><button class="parameter-button" data-parameter="rain" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 14a3.5 3.5 0 1 1 .8-6.9 5 5 0 0 1 9.5.9A3 3 0 1 1 17 14H5Z"/><path d="m7 17-1 3m6-3-1 3m6-3-1 3"/></svg></span><span>Rain</span></button></div><button id="flow-toggle" class="flow-button" aria-pressed="true">❚❚ Pause wind flow</button><label id="rain-particle-option" class="particle-option"><input id="rain-particles-toggle" type="checkbox" checked> Surface rain particles</label><p class="panel-note">Actual ECMWF fields. White trails follow forecast wind. Blue rain streaks appear only where surface rain is forecast. Particle motion is accelerated for display.</p><button id="forecast-refresh" class="flow-button" type="button">↻ Refresh forecast</button></aside>
 <aside class="elevation-panel glass" aria-label="Pressure level controls"><span class="eyebrow" title="Scroll for more pressure levels">LEVEL ↕</span><div class="levels" role="group" aria-label="Pressure level"><button class="level" data-level="200" aria-pressed="false">200 hPa<small>UPPER AIR</small></button><button class="level" data-level="250" aria-pressed="false">250 hPa<small>UPPER AIR</small></button><button class="level" data-level="300" aria-pressed="false">300 hPa<small>UPPER AIR</small></button><button class="level" data-level="500" aria-pressed="false">500 hPa<small>MID AIR</small></button><button class="level" data-level="700" aria-pressed="false">700 hPa<small>MID AIR</small></button><button class="level" data-level="850" aria-pressed="false">850 hPa<small>LOWER AIR</small></button><button class="level" data-level="925" aria-pressed="false">925 hPa<small>LOWER AIR</small></button><button class="level" data-level="surface" aria-pressed="true">Surface<small>WIND AT 10 m</small></button></div></aside>
 <div class="map-tools" role="group" aria-label="Map zoom and position"><button id="zoom-in" class="glass" aria-label="Zoom in" title="Zoom in">+</button><button id="zoom-out" class="glass" aria-label="Zoom out" title="Zoom out">−</button><button id="recenter" class="recenter glass" aria-label="Recenter map on Pakistan" title="Recenter Pakistan">⌖</button></div><div class="map-hint">⌖ Click the map to inspect a location</div>
-<section class="legend glass" aria-label="Active weather color scale"><div class="legend-heading"><strong id="legend-title">Wind speed · knots</strong><span id="level-caption">Surface / 10 m</span></div><div id="legend-gradient" aria-hidden="true"></div><div id="legend-ticks" class="legend-ticks"></div><p class="source-note">ECMWF IFS 0.25° via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · 1° display mesh · Surface temperature/RH: 2 m, wind: 10 m. Pressure levels have variable height above sea level.<br><span id="coverage-report" role="status"></span></p></section>
+<section class="legend glass" aria-label="Active weather color scale"><div class="legend-heading"><strong id="legend-title">Wind speed · knots</strong><span id="level-caption">Surface / 10 m</span></div><div id="legend-gradient" aria-hidden="true"></div><div id="legend-ticks" class="legend-ticks"></div><p class="source-note">ECMWF IFS 0.25° via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · 1° display mesh · Surface temperature/RH: 2 m, wind: 10 m. Pressure levels have variable height above sea level.<br><span id="coverage-report" role="status"></span><br><span id="rain-detail-note"></span></p></section>
 <section class="forecast-timeline glass" aria-label="Forecast time controls"><div class="forecast-time-heading"><strong id="forecast-valid">Loading forecast times…</strong><span id="forecast-updated"></span></div><div class="forecast-time-controls"><button id="forecast-play" aria-pressed="false" disabled>▶︎ Play</button><input id="forecast-timeline" type="range" min="0" max="0" value="0" aria-label="Forecast valid hour" disabled><button id="forecast-now" disabled>Now</button><span id="forecast-step">—</span></div></section>
 <div id="map-status" class="map-status" role="status" aria-live="polite">Initializing the Pakistan weather studio…</div>
 <div id="picker" class="picker glass" role="dialog" aria-label="Weather at selected map location" aria-modal="false"><div class="picker-head"><div><strong>Weather at this point</strong><div id="picker-coordinates" class="picker-coordinates"></div></div><button id="picker-close" class="close" aria-label="Close weather picker">×</button></div><div class="picker-primary"><strong id="picker-primary-value">—</strong><span id="picker-primary-unit"></span></div><div class="picker-grid" aria-live="polite"><div class="picker-cell"><span>Temperature</span><strong id="picker-temperature">—</strong></div><div class="picker-cell"><span>Wind · from direction</span><strong id="picker-wind">—</strong></div><div class="picker-cell"><span>Relative humidity</span><strong id="picker-humidity">—</strong></div><div class="picker-cell"><span>Total-column cloud cover</span><strong id="picker-cloud">—</strong></div><div class="picker-cell rain-reading"><span>Surface rain · forecast hour</span><strong id="picker-rain">—</strong></div></div><div class="picker-footer"><span id="picker-level"></span><br><span id="picker-height"></span><br><span id="picker-availability"></span><br><span id="picker-time"></span> · Interpolated model forecast</div></div>
@@ -63,8 +63,20 @@ function validateForecast(data){
  if(data.units?.u!=='m/s'||data.units?.v!=='m/s'||data.units?.temperature!=='°C'||data.units?.humidity!=='%'||data.units?.rain!=='mm'||data.units?.height!=='m'||data.units?.surface_pressure!=='hPa')throw Error('Unexpected forecast units');
  return data;
 }
+function validateRain(data){
+ const g=data?.grid;if(data?.schema_version!==1||data.model!=='ecmwf_ifs025'||data.units!=='mm'||!g||g.columns!==37||g.rows!==31||g.west!==60||g.east!==78||g.south!==23||g.north!==38||data.times?.length!==72||data.rain?.length!==72)throw Error('Invalid detailed rain forecast');
+ if(!Number.isFinite(Date.parse(data.retrieved_at))||data.times.some((t,i)=>!t.endsWith('Z')||!Number.isFinite(Date.parse(t))||(i&&Date.parse(t)-Date.parse(data.times[i-1])!==3600000))||data.rain.some(row=>row.length!==g.columns*g.rows||row.some(v=>v!==null&&(!finite(v)||v<0||v>500))))throw Error('Invalid rain cells / hour axis');return data;
+}
 class GridSampler{
  constructor(dataset=null,state={time:0}){this.dataset=dataset;this.state=state;}
+ setRain(data){this.rainDetail=data;this.rainTimes=new Map((data?.times||[]).map((t,i)=>[t,i]));}
+ rainAt(lon,lat){
+  const base=this.dataset;if(!base)return null;const stamp=base.times[this.state.time],index=this.rainTimes?.get(stamp),detail=this.rainDetail&&index!==undefined;
+  const d=detail?this.rainDetail:base,g=d.grid,t=detail?index:this.state.time;
+  if(lon<g.west||lon>g.east||lat<g.south||lat>g.north||!finite(lon)||!finite(lat))return null;
+  const gx=(lon-g.west)/(g.east-g.west)*(g.columns-1),gy=(lat-g.south)/(g.north-g.south)*(g.rows-1),x=Math.min(g.columns-2,Math.floor(gx)),y=Math.min(g.rows-2,Math.floor(gy)),fx=gx-x,fy=gy-y,indices=[y*g.columns+x,y*g.columns+x+1,(y+1)*g.columns+x,(y+1)*g.columns+x+1],weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];let amount=0;
+  for(let i=0;i<4;i++){if(weights[i]<1e-12)continue;const v=d.rain[t]?.[indices[i]];if(!finite(v))return null;amount+=weights[i]*v;}return amount;
+ }
  sample(lon,lat,level){
   const data=this.dataset;if(!data)return null;const g=data.grid,fields=data.levels[level],time=this.state.time;
   if(!finite(lon)||!finite(lat)||lon<g.west||lon>g.east||lat<g.south||lat>g.north||!fields||!data.times[time])return null;
@@ -79,14 +91,14 @@ class GridSampler{
   const value={surfacePressure:interpolate(data.surface_pressure)};
   value.belowTerrain=level!=='surface'&&finite(value.surfacePressure)&&Number(level)>value.surfacePressure;
   for(const key of ['temperature','humidity','u','v','height'])value[key]=value.belowTerrain?null:interpolate(fields[key],true);
-  value.cloudCover=interpolate(data.cloud_cover);value.rain=interpolate(data.rain);
+  value.cloudCover=interpolate(data.cloud_cover);value.rain=this.rainAt(lon,lat);
   value.windKnots=finite(value.u)&&finite(value.v)?Math.hypot(value.u,value.v)*KNOTS_PER_MS:null;
   value.direction=value.windKnots>0.05?(Math.atan2(-value.u,-value.v)*180/Math.PI+360)%360:null;
   return value;
  }
 }
 const PARAMETERS={
- rain:{label:'Rainfall',unit:'mm / hour',field:'rain',ticks:[0,.2,1,3,10,20],stops:[[0,[85,126,162]],[.2,[78,174,219]],[1,[55,194,162]],[3,[143,209,105]],[8,[246,208,72]],[15,[239,109,68]],[30,[187,57,151]]]},
+ rain:{label:'Hourly rain',unit:'mm',field:'rain',ticks:[0,.2,1,3,10,20,40],stops:[[0,[75,119,166]],[.2,[72,151,211]],[.5,[56,188,199]],[1,[65,202,163]],[3,[126,213,106]],[6,[218,220,83]],[10,[250,192,75]],[20,[245,113,79]],[30,[224,73,117]],[40,[172,68,179]]]},
  wind:{label:'Wind speed',unit:'knots',field:'windKnots',ticks:[0,20,40,60,80,100,140],stops:[[0,[123,190,242]],[18,[48,164,169]],[38,[67,183,99]],[65,[238,224,75]],[95,[242,90,64]],[140,[201,45,145]]]},
  temperature:{label:'Temperature',unit:'°C',field:'temperature',ticks:[-70,-50,-30,-10,10,30,50],stops:[[-70,[33,35,112]],[-35,[40,87,181]],[-10,[35,164,177]],[12,[78,174,105]],[30,[235,211,72]],[50,[178,37,44]]]},
  humidity:{label:'Relative humidity',unit:'%',field:'humidity',ticks:[0,20,40,60,80,100],stops:[[0,[167,145,124]],[20,[189,191,173]],[42,[156,203,143]],[64,[67,157,166]],[82,[36,89,147]],[100,[16,39,91]]]}
@@ -115,14 +127,15 @@ class RasterFieldLayer{
  }
  render(extent,resolution,pixelRatio,size){
   const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(size[0]));canvas.height=Math.max(1,Math.round(size[1]));
-  const small=document.createElement('canvas');small.width=Math.max(1,Math.ceil(canvas.width/5));small.height=Math.max(1,Math.ceil(canvas.height/5));
+  const small=document.createElement('canvas');small.width=Math.max(1,Math.ceil(canvas.width/(this.state.parameter==='rain'?2.5:5)));small.height=Math.max(1,Math.ceil(canvas.height/(this.state.parameter==='rain'?2.5:5)));
   const ctx=small.getContext('2d'),image=ctx.createImageData(small.width,small.height);
   const parameter=PARAMETERS[this.state.parameter],ramp=new ColorRamp(parameter.stops);
   for(let y=0;y<small.height;y++)for(let x=0;x<small.width;x++){
    const coordinate=[lerp(extent[0],extent[2],(x+.5)/small.width),lerp(extent[3],extent[1],(y+.5)/small.height)];
-   const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value||!finite(value[parameter.field])||(this.state.parameter==='rain'&&value.rain<.05))continue;
-   const color=ramp.color(value[parameter.field]),offset=(y*small.width+x)*4;
-   image.data.set([...color,this.state.parameter==='rain'?220:245],offset);
+   const [lon,lat]=ol.proj.toLonLat(coordinate),amount=this.state.parameter==='rain'?this.sampler.rainAt(lon,lat):this.sampler.sample(lon,lat,this.state.level)?.[parameter.field];if(!finite(amount)||(this.state.parameter==='rain'&&amount<.01))continue;
+   const color=ramp.color(amount),offset=(y*small.width+x)*4;
+   // Fade trace rain continuously; do not draw a hard rectangular wet/dry edge.
+   image.data.set([...color,this.state.parameter==='rain'?Math.round(235*clamp(amount/.2,0,1)):245],offset);
   }
   ctx.putImageData(image,0,0);const output=canvas.getContext('2d');output.imageSmoothingEnabled=true;output.imageSmoothingQuality='high';output.drawImage(small,0,0,canvas.width,canvas.height);return canvas;
  }
@@ -191,30 +204,30 @@ class WindParticleLayer{
 class RainParticleLayer extends WindParticleLayer{
  constructor(map,sampler,state){super(map,sampler,state);this.canvas.classList.add('rain-particles');}
  displayed(){return super.displayed()&&this.state.showRain;}
- targetCount(){const [w,h]=this.map.getSize()||[1,1];return clamp(Math.round(w*h/1800),100,700);}
+ targetCount(){const [w,h]=this.map.getSize()||[1,1];return clamp(Math.round(w*h/1250),140,1100);}
  spawn(){
   const [w,h]=this.map.getSize()||[1,1];for(let i=0;i<30;i++){
    const coordinate=this.map.getCoordinateFromPixel([Math.random()*w,Math.random()*h]);if(!coordinate)continue;const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,'surface');
    // No decorative rain in dry or missing cells: amount controls density.
-   if(value&&finite(value.rain)&&value.rain>=.05&&Math.random()<clamp(value.rain/3,.12,1))return {coordinate,age:Math.random()*2};
+   if(value&&finite(value.rain)&&value.rain>=.05&&Math.random()<clamp(value.rain/3,.12,1))return {coordinate,age:Math.random()*2,lifetime:2.2+Math.random()*1.8};
   }return null;
  }
  frame(timestamp){
   this.raf=0;if(!this.active()){this.clear();return;}
-  const dt=this.last?Math.min((timestamp-this.last)/1000,.05):1/60;this.last=timestamp;this.clear();
+  const dt=this.last?Math.min((timestamp-this.last)/1000,.05):1/60;this.last=timestamp;const fade=this.ctx;fade.globalCompositeOperation='destination-in';fade.fillStyle=`rgba(0,0,0,${Math.pow(.45,dt*60)})`;fade.fillRect(0,0,...this.map.getSize());fade.globalCompositeOperation='source-over';
   if(!this.moving){
    // Replace particles that expired outside valid cells, including sparse rain.
    for(let n=0,missing=Math.min(8,this.targetCount()-this.particles.length);n<missing;n++){const fresh=this.spawn();if(fresh)this.particles.push(fresh);}
-   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='source-over';ctx.strokeStyle='rgba(166,226,255,.92)';ctx.lineWidth=1.35;ctx.beginPath();
+   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='source-over';ctx.lineCap='round';
    this.particles=this.particles.map(p=>{
-    p.age+=dt;if(p.age>2.5)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,'surface');if(!value||!finite(value.rain)||value.rain<.05)return this.spawn();
+    p.age+=dt;if(p.age>p.lifetime)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,'surface');if(!value||!finite(value.rain)||value.rain<.05)return this.spawn();
     const start=this.map.getPixelFromCoordinate(p.coordinate);if(!start)return this.spawn();
     // Falling streaks are a qualitative rain effect, not predicted drop paths.
-    const drift=clamp((finite(value.u)?value.u:0)*2,-35,35),fall=75+Math.min(value.rain,20)*4,next=[start[0]+drift*dt,start[1]+fall*dt],length=5+Math.min(value.rain,10)*.6;
+    const drift=clamp((finite(value.u)?value.u:0)*3,-55,55),fall=65+Math.min(value.rain,20)*6,next=[start[0]+drift*dt,start[1]+fall*dt],length=3+Math.min(value.rain,15)*.55;
     if(next[0]<0||next[0]>w||next[1]<0||next[1]>h)return this.spawn();const coordinate=this.map.getCoordinateFromPixel(next);if(!coordinate)return this.spawn();
     const [nextLon,nextLat]=ol.proj.toLonLat(coordinate),nextValue=this.sampler.sample(nextLon,nextLat,'surface');if(!nextValue||!finite(nextValue.rain)||nextValue.rain<.05)return this.spawn();
-    ctx.moveTo(next[0]-drift/fall*length,next[1]-length);ctx.lineTo(...next);p.coordinate=coordinate;return p;
-   }).filter(Boolean);ctx.stroke();
+    const intensity=clamp(value.rain/10,0,1),life=Math.sin(Math.PI*clamp(p.age/p.lifetime,0,1));ctx.strokeStyle=`rgba(${Math.round(155+80*intensity)},${Math.round(220+25*intensity)},255,${(.35+.6*intensity)*Math.max(.2,life)})`;ctx.lineWidth=.85+.9*intensity;ctx.beginPath();ctx.moveTo(next[0]-drift/fall*length,next[1]-length);ctx.lineTo(...next);ctx.stroke();p.coordinate=coordinate;return p;
+   }).filter(Boolean);
   }
   this.raf=requestAnimationFrame(t=>this.frame(t));
  }
@@ -289,9 +302,10 @@ class WeatherExplorer{
   const button=document.getElementById('forecast-refresh'),badge=document.getElementById('forecast-badge'),status=document.getElementById('map-status');button.disabled=true;badge.textContent='LOADING ECMWF';status.textContent='Loading actual ECMWF IFS forecast fields…';
   try{
    const url=new URL('../studio-data/forecast.json',location.href);url.searchParams.set('refresh',Date.now());
+   const rainURL=new URL('../studio-data/rain.json',location.href);rainURL.searchParams.set('refresh',Date.now());const detailPromise=fetch(rainURL,{cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(25000)])}).then(async r=>{if(!r.ok)throw Error();return validateRain(await r.json());}).catch(()=>null);
    const response=await fetch(url,{cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(25000)])});if(!response.ok)throw Error('Forecast snapshot unavailable');
    const data=validateForecast(await response.json());if(Date.parse(data.times.at(-1))<Date.now()-3600000)throw Error('Forecast has expired');
-   this.sampler.dataset=data;this.state.time=this.currentHour();const age=(Date.now()-Date.parse(data.retrieved_at))/3600000;
+   this.sampler.dataset=data;this.sampler.setRain(await detailPromise);if(request.signal.aborted)return;this.state.time=this.currentHour();const age=(Date.now()-Date.parse(data.retrieved_at))/3600000;
    badge.textContent=age>12?'OLDER ECMWF FORECAST':'ECMWF · FORECAST';badge.classList.toggle('older',age>12);
    status.textContent=`ECMWF IFS 0.25° · 304 sampled cells · ${data.times.length} hourly forecasts. ${data.status==='cached'?'Latest refresh failed; previous actual forecast retained. ':''}${age>12?'Snapshot is over 12 hours old. ':''}Updated approximately every 6 hours; refresh reloads the latest published snapshot.`;
    document.getElementById('forecast-updated').textContent='Fetched '+forecastLabel(data.retrieved_at);
@@ -314,6 +328,7 @@ class WeatherExplorer{
   document.getElementById('legend-title').textContent=parameter.label+' · '+parameter.unit;document.getElementById('level-caption').textContent=this.state.parameter==='rain'?'Surface · hourly rain amount':LEVELS[this.state.level].label;document.getElementById('legend-gradient').style.background=new ColorRamp(parameter.stops).css();
   document.getElementById('legend-ticks').replaceChildren(...parameter.ticks.map(value=>{const span=document.createElement('span');span.textContent=value;return span;}));
   const flow=document.getElementById('flow-toggle');flow.hidden=!['wind','rain'].includes(this.state.parameter);flow.disabled=!dataset;flow.setAttribute('aria-pressed',String(this.state.animate));flow.textContent=this.state.animate?'❚❚ Pause particles':'▶︎ Resume particles';
+  document.getElementById('rain-detail-note').textContent=this.sampler.rainDetail&&this.sampler.rainTimes.has(dataset?.times[this.state.time])?'Rain: 0.5° display mesh (1,147 real samples) · native model 0.25° · fetched '+forecastLabel(this.sampler.rainDetail.retrieved_at):'Rain: 1° display mesh · finer snapshot unavailable for this hour.';
   document.getElementById('rain-particle-option').hidden=!['wind','rain'].includes(this.state.parameter);document.getElementById('rain-particles-toggle').checked=this.state.showRain;
   if(dataset){
    const row=dataset.levels[this.state.level],pressures=dataset.surface_pressure[this.state.time];let valid=0,below=0,missing=0;

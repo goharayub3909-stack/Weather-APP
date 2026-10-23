@@ -54,7 +54,7 @@ def sanitize(rows, perm, feed_time=None):
                        'temperature':numeric(row[5],-90,65),'humidity':numeric(row[73],0,100),
                        'wind_speed':numeric(row[91],0,500),'wind_direction':numeric(row[92],0,360),
                        'wind_gust_10min':numeric(row[95],0,500),'dew_point':numeric(row[25],-100,65),
-                       'heat_index':numeric(row[41],-100,90),'wind_chill':numeric(row[49],-120,70),
+                       'wet_bulb':numeric(row[33],-90,65),'heat_index':numeric(row[41],-100,90),'wind_chill':numeric(row[49],-120,70),
                        'solar_radiation':numeric(row[86],0,2000),'uv_index':numeric(row[81],0,30),
                        'visibility':numeric(row[164],0,200000) if len(row)>164 else None,
                        'pressure':numeric(row[127],300,1100),

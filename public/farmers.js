@@ -1,3 +1,4 @@
+import {initAgriDSS} from './agri-dss.js';
 import {CROPS,ZONES,activity,approximateZone,pakistanMonth,seasonName} from './farm-data.js';
 import {analyseFarm,farmTime} from './farm-advice.js';
 import {icon} from './icons.js';
@@ -7,6 +8,7 @@ const number=(v,unit)=>typeof v==='number'&&Number.isFinite(v)?Number(v.toFixed(
 function element(tag,className,text){const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;}
 function glyph(name){const e=element('span','farm-glyph');e.innerHTML=icon(name);return e;}
 export function initFarmers(){
+ const dss=initAgriDSS();
  let state={place:['Islamabad',33.69,73.05],forecast:null,supplemental:null,status:'loading',retrievedAt:null},showAll=false;
  const preferences={crop:'all',stage:'auto',zone:'auto'};
  try{const saved=JSON.parse(localStorage.getItem('badal-farm-preferences'));if(saved){if(saved.crop==='all'||CROPS.some(c=>c.id===saved.crop))preferences.crop=saved.crop;if(['auto','sowing','growing','flowering','harvest'].includes(saved.stage))preferences.stage=saved.stage;if(saved.zone==='auto'||ZONES[saved.zone])preferences.zone=saved.zone;}}catch{}
@@ -39,6 +41,7 @@ export function initFarmers(){
   $('farm-place').textContent=state.place[0];$('farm-season').textContent=seasonName(month,zone);
   $('farm-zone-note').textContent=(preferences.zone==='auto'?'Approximate area from coordinates: ':'Your chosen guide area: ')+ZONES[zone]+'. Adjust this guide for local altitude and planting dates.';
   $('farm-crop-context').textContent=crop?crop.name+' · '+(preferences.stage==='auto'?calendar.label:$('farm-stage').selectedOptions[0].textContent)+(calendar.suitable?'':' · using your selected crop despite the regional guide'): 'General field advice for seasonal crops. Select your actual crop and stage for a closer fit.';
+  dss.update({...state,crop,stage,zone});
   const result=analyseFarm({...state,crop,stage,now}),loaded=state.status==='ready'&&result.available;
   $('farm-data-status').textContent=loaded?`ECMWF IFS 0.25° via Open-Meteo · ${farmTime(result.start)} to ${farmTime(result.end)} · fetched ${state.retrievedAt?farmTime(state.retrievedAt):'time unavailable'}.`:(state.status==='loading'?'Loading this location’s forecast…':state.status==='error'?'Weather forecast unavailable. Press Refresh above to try again.':result.reason);
   $('farm-quality').hidden=!loaded;$('farm-quality').textContent=loaded?(result.complete?'Next 24 hours: complete core fields.':'Some next-24-hour fields are missing; partial values are shown and missing rain never becomes zero.')+` Complete core fields in ${result.complete72}/72 model hours; absent inputs stay unknown.`:'';
