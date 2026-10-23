@@ -71,3 +71,15 @@ for doc in documents:
             selected.update(range(max(0,i-1),min(len(lines),i+2)))
     safe=[lines[i][:300] for i in sorted(selected) if not re.search(r'token|secret|password|__WW_BOOT__|apiKey',lines[i],re.I)]
     if safe: print(json.dumps({'measurement_mapping':safe[:180]}))
+# Focused rain/pressure selectors: the generic preview can end before rainfall.
+for doc in documents:
+    if '__WW_BOOT__' in doc: continue
+    lines=doc.splitlines();selected=set()
+    for i,line in enumerate(lines):
+        if re.search(r"case\s+['\"](?:rainfall|rain_rate|pressure)['\"]",line):
+            selected.update(range(max(0,i-2),min(len(lines),i+125)))
+    safe=[lines[i][:220] for i in sorted(selected) if not re.search(r'token|secret|password|apiKey',lines[i],re.I)]
+    if safe: print(json.dumps({'rain_pressure_mapping':safe}))
+if 'payload' in globals():
+    value=payload.get('lastUpdateTime')
+    print(json.dumps({'feed_time_label':value[:100] if isinstance(value,str) else None}))
