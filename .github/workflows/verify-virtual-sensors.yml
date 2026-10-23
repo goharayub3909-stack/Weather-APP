@@ -1,0 +1,14 @@
+name: Review public virtual sensor reference
+on: workflow_dispatch
+permissions:
+  contents: read
+  checks: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve public METOS virtual sensor reference
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/inspect-virtual-sensors.py
