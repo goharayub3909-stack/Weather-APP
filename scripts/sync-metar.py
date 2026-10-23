@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 
 def sanitize(rows):
     stations = {}
-    keys = ('icaoId','obsTime','temp','dewp','wdir','wspd','wgst','altim','rawOb','lat','lon','name','clouds')
+    keys = ('icaoId','obsTime','temp','dewp','wdir','wspd','wgst','altim','rawOb','lat','lon','name','clouds','wxString')
     for row in rows:
         code = row.get('icaoId', '')
         if not code.startswith('OP') or len(code) != 4: continue

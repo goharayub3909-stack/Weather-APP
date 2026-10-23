@@ -9,7 +9,7 @@ import json
 import math
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlencode, urljoin, urlsplit
 from urllib.request import build_opener, HTTPCookieProcessor, Request, urlopen
@@ -19,7 +19,23 @@ ORIGIN='https://forecasting.weatherwalay.com'
 def numeric(value, low, high):
     return value if type(value) in (int,float) and math.isfinite(value) and low <= value <= high else None
 
-def sanitize(rows, perm):
+def observation_time(raw,feed_time=None):
+    if not isinstance(raw,str): return None,None
+    if re.fullmatch(r'\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)',raw):
+        try:return datetime.fromisoformat(raw.replace('Z','+00:00')).isoformat(),'Explicit provider timestamp'
+        except ValueError:return None,None
+    # The site is explicitly PKT. A yearless display label can be aligned to
+    # the authenticated feed's full timestamp only within a bounded 48h window.
+    if not isinstance(feed_time,str):return None,None
+    try:
+        anchor=datetime.fromisoformat(feed_time.replace('Z','+00:00')).astimezone(timezone(timedelta(hours=5)))
+        for year in (anchor.year,anchor.year-1,anchor.year+1):
+            stamp=datetime.strptime(raw.strip().upper()+f' {year}','%I:%M %p, %d %B %Y').replace(tzinfo=anchor.tzinfo)
+            if -300<=(anchor-stamp).total_seconds()<=48*3600:return stamp.isoformat(),'PKT interpretation; year aligned to feed timestamp'
+    except (ValueError,TypeError):pass
+    return None,None
+
+def sanitize(rows, perm, feed_time=None):
     if not isinstance(perm,list) or sorted(perm)!=list(range(len(perm))) or len(perm)<162:
         raise ValueError('Unsupported station schema')
     result=[]
@@ -33,13 +49,24 @@ def sanitize(rows, perm):
         # Neighboring IMD observations are outside this Pakistan station layer.
         if 'IMD' in source.upper(): continue
         raw_time=row[161] if isinstance(row[161],str) else None
-        observed_at=None
-        if raw_time and re.fullmatch(r'\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)',raw_time):
-            try: observed_at=datetime.fromisoformat(raw_time.replace('Z','+00:00')).isoformat()
-            except ValueError: pass
+        observed_at,basis=observation_time(raw_time,feed_time)
         result.append({'id':str(row[0])[:60],'name':row[1][:120],'lat':lat,'lon':lon,'network':source,
                        'temperature':numeric(row[5],-90,65),'humidity':numeric(row[73],0,100),
                        'wind_speed':numeric(row[91],0,500),'wind_direction':numeric(row[92],0,360),
+                       'wind_gust_10min':numeric(row[95],0,500),'dew_point':numeric(row[25],-100,65),
+                       'heat_index':numeric(row[41],-100,90),'wind_chill':numeric(row[49],-120,70),
+                       'solar_radiation':numeric(row[86],0,2000),'uv_index':numeric(row[81],0,30),
+                       'visibility':numeric(row[164],0,200000) if len(row)>164 else None,
+                       'pressure':numeric(row[127],300,1100),
+                       'rain_24h':numeric(row[105],0,5000),'rain_daily':numeric(row[106],0,5000),
+                       'rain_monthly':numeric(row[107],0,30000),'rain_yearly':numeric(row[108],0,100000),
+                       'rain_monsoon':numeric(row[109],0,30000),'rain_rate':numeric(row[121],0,3000),
+                       'rain_rate_instant':numeric(row[122],0,3000),'rain_rate_max':numeric(row[123],0,3000),
+                       'rain_rate_max_label':str(row[124])[:100] if row[124] is not None else None,
+                       'rain_daily_period':'02:00–02:00 PKT (provider day)' if source.upper()=='PMD' else '00:00–00:00 PKT (provider day)',
+                       'rain_24h_period':'08:00–08:00 PKT' if source.upper()=='PMD' else '24 hours before station sync',
+                       'rain_24h_observed_label':str(row[13])[:100] if source.upper()=='PMD' and row[13] is not None else raw_time,
+                       'observed_time_basis':basis,
                        'observed_at':observed_at,'observed_label':raw_time[:100] if raw_time else None})
     return result
 
@@ -57,10 +84,11 @@ def retrieve():
     boot=json.loads(match.group(1));endpoint=urljoin(ORIGIN,boot.get('endpoint','/feed/current'))
     if urlsplit(endpoint).hostname!='forecasting.weatherwalay.com': raise ValueError('Unexpected endpoint')
     response=opener.open(Request(endpoint,headers={'X-Requested-With':'XMLHttpRequest','X-WW-Token':boot.get('token','')}),timeout=40)
-    payload=json.loads(response.read(20_000_000));stations=sanitize(payload.get('rows',[]),boot.get('perm',[]))
+    payload=json.loads(response.read(20_000_000));stations=sanitize(payload.get('rows',[]),boot.get('perm',[]),payload.get('lastUpdateTime'))
     if not stations: raise ValueError('No valid station observations')
     return {'source':'WeatherWalay realtime','retrieved_at':datetime.now(timezone.utc).isoformat(),'status':'updated',
-            'time_note':'Provider display times may omit year/timezone. No year or timezone is inferred.',
+            'time_note':'Yearless station labels use PKT and are aligned to the authenticated feed timestamp only within 48 hours; time basis is recorded per station. Download time does not establish observation freshness.',
+            'rain_note':'Weekly totals are not supplied. Daily: PMD 02–02 PKT, AWS 00–00 PKT; last 24h: PMD 08–08, AWS rolling before sync. Monthly/yearly/monsoon are provider totals, not normals or departures.',
             'stations':stations}
 
 if __name__=='__main__':
