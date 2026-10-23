@@ -43,11 +43,30 @@ export function dailyCondition({amount,code,storm={}}){
 
 // ECMWF-only qualitative thunder wording. A simultaneous convection screen is
 // a possibility signal, never a calibrated thunderstorm probability.
-export function ecmwfDailyCondition({amount,code,hourly,date}){
- const rows=(hourly?.time||[]).flatMap((t,i)=>t.startsWith(date)?[i]:[]);
- const explicit=[95,96,99].includes(code)||rows.some(i=>[95,96,99].includes(hourly.weather_code?.[i]));
- const convection=rows.some(i=>finite(hourly.cape?.[i])&&hourly.cape[i]>=500&&finite(hourly.showers?.[i])&&hourly.showers[i]>=.2);
- if(!explicit&&!convection)return {...dailyCondition({amount,code}),thunder:false,reason:''};
+export function ecmwfDailyCondition({amount,code,hourly,date,backend=null,now=Date.now()}){
+ const local=thunderEvidence(hourly,date),remote=backend&&(backend.weatherThunder||(backend.lightningThunder&&Number.isFinite(Date.parse(backend.lightning_valid_until))&&Date.parse(backend.lightning_valid_until)>=now)),explicit=[95,96,99].includes(code)||local.explicit;
+ const snow=[71,73,75,77,85,86].includes(code);
+ if([96,99].includes(code)||local.hail||backend?.hail)return {icon:'hail',label:'Thunderstorms with hail possible',band:rainBand(amount),thunder:true,reason:'Explicit ECMWF hail weather code'};
+ if(snow&&!explicit)return {icon:'snow',label:[85,86].includes(code)?'Snow showers':'Snow',band:rainBand(amount),thunder:false,reason:'ECMWF snow weather code'};
+ if([56,57,66,67].includes(code)&&!explicit)return {icon:'rain',label:'Freezing rain possible',band:rainBand(amount),thunder:false,reason:'ECMWF freezing precipitation weather code'};
+ if(!explicit&&!local.weatherThunder&&!remote){const base=dailyCondition({amount,code});if(base.band.rain)base.label=amount<=1?'Isolated rain chances':amount<=10&&amount>=2?'Scattered rain chances':amount<2?'Rain chances':'Rain expected';return {...base,thunder:false,reason:''};}
  const prefix=finite(amount)&&amount>=.2&&amount<=1?'Isolated ':finite(amount)&&amount>=2&&amount<=10?'Scattered ':'';
- return {icon:'storm',label:prefix+(finite(amount)&&amount>=.2?'thunderstorm / rain chance':'thunderstorm chance'),band:rainBand(amount),thunder:true,reason:explicit?'ECMWF thunderstorm weather code':'ECMWF simultaneous instability and convective-rain screen · possibility only'};
+ return {icon:'storm',label:prefix+'thunderstorm chances',band:rainBand(amount),thunder:true,reason:remote?'Backend · '+backend.reason:local.reason};
+}
+
+// K index uses actual model temperature / humidity at 850, 700 and 500 hPa.
+// Below-terrain 850 hPa points cannot contribute a sounding diagnostic.
+export function kIndex(hourly,i){
+ const get=k=>hourly?.[k]?.[i],t850=get('temperature_850hPa'),t700=get('temperature_700hPa'),t500=get('temperature_500hPa'),rh850=get('relative_humidity_850hPa'),rh700=get('relative_humidity_700hPa'),surface=get('surface_pressure');
+ if(![t850,t700,t500,rh850,rh700,surface].every(finite)||surface<850||rh850<=0||rh850>100||rh700<=0||rh700>100)return null;
+ const dew=(t,rh)=>{const a=Math.log(rh/100)+17.625*t/(243.04+t);return 243.04*a/(17.625-a);};
+ return (t850-t500)+dew(t850,rh850)-(t700-dew(t700,rh700));
+}
+export function thunderEvidence(hourly,date){
+ const rows=(hourly?.time||[]).flatMap((t,i)=>t.startsWith(date)?[i]:[]);
+ let explicit=false,hail=false,ingredients=false,maximumK=null,valid=0;
+ for(const i of rows){const code=hourly.weather_code?.[i],cape=hourly.cape?.[i],showers=hourly.showers?.[i],k=kIndex(hourly,i);if(finite(code))valid++;if([95,96,99].includes(code))explicit=true;if([96,99].includes(code))hail=true;if(k!==null)maximumK=maximumK===null?k:Math.max(maximumK,k);
+  if(finite(cape)&&finite(showers)&&((cape>=500&&showers>=.2&&(k===null||k>=20))||(cape>=200&&showers>=.5&&k!==null&&k>=30)))ingredients=true;
+ }
+ return {weatherThunder:explicit||ingredients,explicit,hail,ingredients,kIndexMax:maximumK,validHours:valid,reason:explicit?'ECMWF thunderstorm weather code':ingredients?'ECMWF simultaneous CAPE / convective rain, with K-index moisture screening where above terrain':'No supported convective trigger'};
 }

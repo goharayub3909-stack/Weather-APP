@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {validateSoilFeed} from './public/soil-sensors.js';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, extname } from 'node:path';
@@ -11,6 +12,12 @@ export function createServer(fetcher = fetch) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    if(url.pathname==='/sensor-data/config.json'&&process.env.SOIL_SENSOR_FEED_URL){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({schema_version:1,feed:'../api/soil-sensors'}));}
+    if(url.pathname==='/api/soil-sensors'){
+      res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
+      if(!process.env.SOIL_SENSOR_FEED_URL)return res.end(JSON.stringify({schema_version:1,status:'not_configured',devices:[]}));
+      try{const target=new URL(process.env.SOIL_SENSOR_FEED_URL);if(target.protocol!=='https:')throw Error();const headers=process.env.SOIL_SENSOR_API_KEY?{Authorization:'Bearer '+process.env.SOIL_SENSOR_API_KEY}:{};const upstream=await fetcher(target,{headers,signal:AbortSignal.timeout(10000)});if(!upstream.ok)throw Error();return res.end(JSON.stringify(validateSoilFeed(await upstream.json())));}catch{res.writeHead(502);return res.end(JSON.stringify({error:'Soil sensor bridge unavailable; no readings inferred.'}));}
+    }
     if (url.pathname === '/api/forecast') {
       res.setHeader('Content-Type', 'application/json');
       let target;
@@ -33,11 +40,11 @@ export function createServer(fetcher = fetch) {
     }
     const files = { '/explorer/': ['explorer/index.html','text/html'], '/explorer/index.html': ['explorer/index.html','text/html'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/cities.js': ['cities.js', 'text/javascript'], '/weather.js': ['weather.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
     let file = files[url.pathname];
-    if (['/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js','/geolocation.js','/icons.js','/storms.js','/farmers.js','/farm-data.js','/farm-advice.js','/current-weather.js','/agri-dss.js','/agri-models.js','/farm-satellite.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
-    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data|studio-data)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
+    if (['/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js','/geolocation.js','/icons.js','/storms.js','/farmers.js','/farm-data.js','/farm-advice.js','/current-weather.js','/agri-dss.js','/agri-models.js','/farm-satellite.js','/farm-indices.js','/disease-risk.js','/disease-panel.js','/station-history.js','/field-operations.js','/soil-sensors.js','/storm-outlook.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
+    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data|studio-data|station-history|sensor-data|storm-data)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
       const relative=url.pathname.slice(1);
       const path=resolve(root,relative);
-      const types={'.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.txt':'text/plain'};
+      const types={'.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.txt':'text/plain','.csv':'text/csv'};
       if(path.startsWith(root)&&types[extname(path)])file=[relative,types[extname(path)]];
     }
     if (['/pest-criteria.json','/agri-reference.json'].includes(url.pathname)) file=[url.pathname.slice(1),'application/json'];

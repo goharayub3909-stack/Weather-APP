@@ -1,10 +1,12 @@
-// A whole-report fallback hierarchy. Missing fields in the selected report are
-// deliberately NOT filled from a different station, METAR or forecast.
+// Source selection retains the fresh nearest station and METAR candidates.
+// currentValue reads one report (used by observed agri indices); mainReading
+// implements the main-page per-field station → METAR → ECMWF fallback.
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function distanceKm(lat,lon,p){const rad=Math.PI/180,a=Math.sin((p.lat-lat)*rad/2)**2+Math.cos(lat*rad)*Math.cos(p.lat*rad)*Math.sin((p.lon-lon)*rad/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));}
 export function chooseCurrentSource(lat,lon,stations,metars,now=Date.now()){
- function nearby(rows,kind,limit,maxAge){return (rows||[]).flatMap(p=>{const time=kind==='station'?Date.parse(p.observed_at):p.obsTime*1000,temp=kind==='station'?p.temperature:p.temp;if(!finite(p.lat)||!finite(p.lon)||!finite(temp)||temp< -90||temp>65||!finite(time)||now-time>maxAge||time-now>300000)return [];const distance=distanceKm(lat,lon,p);return distance<=limit?[{kind,report:p,time,distance,name:p.name||p.icaoId||'Weather station'}]:[];}).sort((a,b)=>a.distance-b.distance||b.time-a.time)[0];}
- return nearby(stations?.stations,'station',50,3*3600000)||nearby(metars?.stations,'metar',100,2*3600000)||{kind:'forecast',name:'ECMWF IFS',time:null,distance:null,report:null};
+ function nearby(rows,kind,limit,maxAge){return (rows||[]).flatMap(p=>{const time=kind==='station'?Date.parse(p.observed_at):p.obsTime*1000,fields=kind==='station'?['temperature','humidity','dew_point','wind_speed','wind_direction','wind_gust_10min','solar_radiation','uv_index','visibility','pressure','rain_daily','rain_rate']:['temp','dewp','wspd','wdir','wgst','altim'];if(!finite(p.lat)||!finite(p.lon)||!fields.some(key=>finite(p[key]))||!finite(time)||now-time>maxAge||time-now>300000)return [];const distance=distanceKm(lat,lon,p);return distance<=limit?[{kind,report:p,time,distance,name:p.name||p.icaoId||'Weather station'}]:[];}).sort((a,b)=>a.distance-b.distance||b.time-a.time)[0];}
+ const station=nearby(stations?.stations,'station',50,3*3600000),metar=nearby(metars?.stations,'metar',100,2*3600000),forecast={kind:'forecast',name:'ECMWF IFS',time:null,distance:null,report:null};
+ const chain=[station,metar,forecast].filter(Boolean);return {...chain[0],fallbacks:chain.slice(1)};
 }
 export function currentValue(source,key,forecastValue){
  if(source.kind==='forecast')return finite(forecastValue)?forecastValue:null;
@@ -23,4 +25,14 @@ export function currentCondition(source,forecastLabel){
  const p=source.report,wx=p.wxString||'';
  if(/TS/.test(wx))return 'Thunderstorm reported';if(/SN|SG/.test(wx))return 'Snow reported';if(/RA|DZ/.test(wx))return 'Rain reported';if(/FG|BR/.test(wx))return 'Fog / mist reported';
  const sky=(p.clouds||[]).map(c=>c.cover);if(sky.includes('OVC'))return 'Overcast reported';if(sky.includes('BKN'))return 'Broken cloud reported';if(sky.includes('SCT')||sky.includes('FEW'))return 'Clouds reported';if(sky.some(c=>['SKC','CLR','CAVOK'].includes(c)))return 'Clear sky reported';return 'Airport observation';
+}
+
+// A zero reading is valid. Derived METAR RH always uses that airport's own
+// temperature / dew point; observations are never used to synthesize a model.
+export function mainReading(primary,key,forecastValue){
+ for(const source of [primary,...(primary.fallbacks||[])]){
+  const value=currentValue(source,key,forecastValue);
+  if(finite(value))return {value,source,fallback:source.kind!==primary.kind};
+ }
+ return {value:null,source:null,fallback:false};
 }

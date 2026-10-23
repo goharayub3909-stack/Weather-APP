@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {vaporPressureDeficit,deltaT,growingDegreeDay,chillHours,irrigationPlan,researchScreen,fieldAreaHa} from '../public/agri-models.js';
-import {chooseCurrentSource,currentValue} from '../public/current-weather.js';
+import {chooseCurrentSource,currentValue,mainReading} from '../public/current-weather.js';
 import {ecmwfDailyCondition} from '../public/storms.js';
 test('current weather uses one fresh nearest station report without mixing absent fields',()=>{
  const now=Date.parse('2026-10-23T06:00:00Z'),s={stations:[{name:'Station',lat:31.1,lon:73,temperature:27,humidity:null,observed_at:new Date(now-3600000).toISOString()}]},m={stations:[{name:'Airport',lat:31,lon:73,temp:26,dewp:20,obsTime:now/1000-100,wspd:10}]};let chosen=chooseCurrentSource(31,73,s,m,now);assert.equal(chosen.kind,'station');assert.equal(currentValue(chosen,'relative_humidity_2m',80),null);assert.equal(currentValue(chosen,'temperature_2m',30),27);
@@ -20,4 +20,9 @@ test('research criteria never bridge missing hours or activate ambiguous rules',
 });
 test('ECMWF thunder screen needs simultaneous convection, amount labels retain user bands',()=>{
  const h={time:['2026-10-23T10:00','2026-10-23T11:00'],cape:[800,0],showers:[0,.5],weather_code:[3,3]};assert.equal(ecmwfDailyCondition({amount:.5,code:3,hourly:h,date:'2026-10-23'}).thunder,false);h.showers[0]=.2;assert.match(ecmwfDailyCondition({amount:.5,code:3,hourly:h,date:'2026-10-23'}).label,/Isolated thunderstorm/);assert.match(ecmwfDailyCondition({amount:5,code:95,hourly:h,date:'2026-10-23'}).label,/Scattered thunderstorm/);
+});
+
+test('main-page fields fall back independently, preserve zero and retain a station with missing temperature',()=>{
+ const now=Date.parse('2026-10-23T06:00:00Z'),stations={stations:[{name:'Station',lat:31,lon:73,temperature:null,humidity:null,wind_speed:0,observed_at:new Date(now-3600000).toISOString()}]},metars={stations:[{name:'Airport',lat:31,lon:73,temp:26,dewp:20,wspd:10,obsTime:now/1000-100}]};
+ const source=chooseCurrentSource(31,73,stations,metars,now);assert.equal(source.kind,'station');assert.equal(mainReading(source,'temperature_2m',30).source.kind,'metar');assert.equal(mainReading(source,'wind_speed_10m',15).value,0);assert.equal(mainReading(source,'wind_speed_10m',15).source.kind,'station');assert.equal(mainReading(source,'cloud_cover',70).source.kind,'forecast');assert.equal(mainReading(source,'cloud_cover',70).value,70);assert.equal(mainReading(source,'cloud_cover',null).value,null);assert.equal(currentValue(source,'temperature_2m',30),null);
 });

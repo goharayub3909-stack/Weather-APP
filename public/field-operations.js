@@ -1,0 +1,76 @@
+import {finite,deltaT,irrigationPlan} from './agri-models.js';
+import {farmInstant,farmTime} from './farm-advice.js';
+import {initSoilSensors} from './soil-sensors.js';
+const HOUR=3600000;
+// Indicative crop coefficients / minimum soil temperatures. Local variety,
+// canopy, method and soil conditions must be confirmed; these are not sensors.
+export const CROP_FIELD_GUIDES={wheat:{minimum:5,kc:{sowing:.3,growing:1.15,flowering:1.15,harvest:.4}},rice:{minimum:20,kc:{sowing:1.05,growing:1.2,flowering:1.2,harvest:.75}},maize:{minimum:10,kc:{sowing:.3,growing:1.2,flowering:1.2,harvest:.6}},cotton:{minimum:16,kc:{sowing:.35,growing:1.15,flowering:1.15,harvest:.5}},potato:{minimum:7,kc:{sowing:.5,growing:1.15,flowering:1.15,harvest:.75}},sugarcane:{minimum:20,kc:{sowing:.4,growing:1.25,flowering:1.25,harvest:.75}}};
+export function soilWaterState({moisture,capacity,wilting,depth,time},now=Date.now()){
+ const stamp=farmInstant(time);
+ if(![moisture,capacity,wilting,depth].every(finite)||wilting<0||capacity<=wilting||capacity>70||moisture<0||moisture>70||depth<=0||depth>3||!finite(stamp)||stamp>now+300000||now-stamp>24*HOUR)return null;
+ return {reserve:(capacity-wilting)*10*depth,deficit:Math.max(0,Math.min(capacity-moisture,capacity-wilting))*10*depth,stamp,saturated:moisture>=capacity};
+}
+export function operationWindows(hourly,now=Date.now()){
+ const anchor=Math.floor(Number(now)/HOUR)*HOUR,axis=new Map();for(let i=0;i<(hourly?.time.length||0);i++){const t=farmInstant(hourly.time[i]);axis.set(t,axis.has(t)?-1:i);}
+ const row=time=>{const i=axis.get(time);if(!(i>=0))return null;const get=key=>hourly[key]?.[i];return {time,t:get('temperature_2m'),rh:get('relative_humidity_2m'),wind:get('wind_speed_10m'),gust:get('wind_gusts_10m'),rain:get('precipitation'),code:get('weather_code')};};
+ const future=(time,n)=>Array.from({length:n},(_,i)=>row(time+i*HOUR));
+ const noStorm=r=>finite(r?.code)&&![95,96,99].includes(r.code);
+ const dry=(r,max)=>r&&finite(r.rain)&&r.rain<max&&noStorm(r);
+ const candidates={spray:[],fertilize:[],harvest:[]};
+ for(let step=0;step<168;step++){
+  const time=anchor+step*HOUR,r=row(time),hour=new Date(time).toLocaleString('en-GB',{timeZone:'Asia/Karachi',hour:'2-digit',hourCycle:'h23'});if(!r||hour<6||hour>=18)continue;
+  const six=future(time,6),twelve=future(time,12),day=future(time,24),dt=deltaT(r.t,r.rh).value;
+  if([r.t,r.rh,r.wind,r.gust,dt].every(finite)&&r.t>=5&&r.t<=30&&r.rh>=40&&r.rh<=95&&r.wind>=3&&r.wind<=15&&r.gust<=20&&dt>=2&&dt<=8&&six.every(x=>dry(x,.2)))candidates.spray.push(time);
+  if(finite(r.wind)&&r.wind<=20&&six.every(x=>dry(x,.2))&&day.every(x=>x&&finite(x.rain)&&noStorm(x))){const rain=day.reduce((n,x)=>n+x.rain,0);if(rain>=2&&rain<=10&&day.every(x=>x.rain<5))candidates.fertilize.push(time);}
+  if([r.t,r.rh,r.wind,r.gust].every(finite)&&r.t>=5&&r.t<=35&&r.rh<=75&&r.wind<=20&&r.gust<=30&&twelve.every(x=>dry(x,.2)))candidates.harvest.push(time);
+ }
+ const group=values=>{const result=[];for(const t of values){const last=result.at(-1);if(last&&last.end===t)last.end+=HOUR;else result.push({start:t,end:t+HOUR});}return result.filter(w=>w.end-w.start>=3*HOUR).slice(0,3);};
+ return Object.fromEntries(Object.entries(candidates).map(([k,v])=>[k,group(v)]));
+}
+export function fieldWarnings(hourly,now=Date.now(),heat=35){
+ const anchor=Math.floor(Number(now)/HOUR)*HOUR,rows=(hourly?.time||[]).flatMap((t,i)=>{const time=farmInstant(t),value=hourly.temperature_2m?.[i];return time>=anchor&&time<anchor+24*HOUR&&finite(value)?[{time,value}]:[];});
+ return {coverage:rows.length,frost:rows.some(r=>r.value<=2),freezing:rows.some(r=>r.value<=0),heat:rows.some(r=>r.value>=heat),minimum:rows.length?Math.min(...rows.map(r=>r.value)):null,maximum:rows.length?Math.max(...rows.map(r=>r.value)):null,heatThreshold:heat};
+}
+const $=id=>document.getElementById(id),format=(v,s)=>finite(v)?Number(v.toFixed(1))+s:'—';
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+export function initFieldOperations(){
+ let context=null,lastCrop='',lastPlace='',notifications=false;try{notifications=localStorage.getItem('badal-field-warnings')==='1'&&'Notification'in window&&Notification.permission==='granted';}catch{}const soilInputs=['soil-temperature','soil-temperature-depth','soil-moisture','soil-depth','soil-time'];const sensors=initSoilSensors(device=>{for(const id of soilInputs)$(id).value='';if(device?.usable){const r=device.reading;const local=new Date(r.observed_at).toLocaleString('sv-SE',{timeZone:'Asia/Karachi'}).replace(' ','T').slice(0,16);$('soil-time').value=local;if(device.temperatureFresh){$('soil-temperature').value=r.temperature_c??'';$('soil-temperature-depth').value=r.temperature_depth_cm??'';}if(r.root_zone_moisture_vwc_percent!==null&&r.root_zone_depth_cm!==null){$('soil-moisture').value=r.root_zone_moisture_vwc_percent;$('soil-depth').value=r.root_zone_depth_cm/100;}}render();});const number=id=>$(id).value.trim()===''?null:Number($(id).value);
+ for(const id of ['soil-temperature','soil-temperature-depth','soil-moisture','soil-capacity','soil-wilting','soil-depth','soil-time','soil-sow-min'])$(id).addEventListener('change',render);
+ $('field-enable-alerts').addEventListener('click',async()=>{
+  if(!('Notification'in window)){$('field-alert-status').textContent='Browser notifications are unavailable here. In-page warnings remain active.';return;}
+  try{const permission=await Notification.requestPermission();notifications=permission==='granted';try{localStorage.setItem('badal-field-warnings',notifications?'1':'0');}catch{}$('field-alert-status').textContent=notifications?'Browser field warnings enabled while this app is open. No SMS or closed-app background delivery is configured.':'Browser notifications were not enabled; in-page warnings remain active.';render();}catch{$('field-alert-status').textContent='This browser could not enable notifications. In-page warnings remain active.';}
+ });
+ async function notify(warning){
+  if(!notifications||(!warning.frost&&!warning.heat)||!context)return;
+  const key=context.place.slice(1).join(',')+':'+new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'})+':'+warning.frost+':'+warning.heat;
+  try{if(localStorage.getItem('badal-field-alert')===key)return;const body=context.place[0]+': '+(warning.frost?'Frost watch, minimum '+format(warning.minimum,'°C')+'. ':'')+(warning.heat?'Heat watch, maximum '+format(warning.maximum,'°C')+'. ':'')+' Forecast guidance; check local conditions.';const registration=await navigator.serviceWorker?.getRegistration();if(registration)await registration.showNotification('Badal PK · field weather watch',{body,tag:'badal-field-warning',icon:'./app-icon-192.png'});else new Notification('Badal PK · field weather watch',{body});localStorage.setItem('badal-field-alert',key);}catch{$('field-alert-status').textContent='Browser notification delivery failed; check the in-page warnings.';}
+ }
+ function render(){
+  if(!context)return;for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';const now=Date.now(),{forecast,crop,place,stage}=context,h=forecast?.hourly,guide=CROP_FIELD_GUIDES[crop?.id],fresh=forecast&&context.retrievedAt&&now-new Date(context.retrievedAt).getTime()<=3*HOUR;
+  const root=$('field-operation-windows');root.replaceChildren();
+  const windows=fresh?operationWindows(h,now):{spray:[],fertilize:[],harvest:[]};
+  for(const [key,title,note]of [['spray','Spraying weather','Delta T 2–8°C; temperature 5–30°C; RH 40–95%; wind 3–15 km/h; gust ≤20 km/h; six dry, non-thundery hours. Check inversion, product label, rainfastness and equipment.'],['fertilize','Granular fertilizer incorporation','Dry application followed by 2–10 mm gentle precipitation in 24h; no hour ≥5 mm. Assumes soil-applied granular fertilizer. Check soil, nutrient test, product, drainage and runoff; no fertilizer rate is inferred.'],['harvest','Harvesting weather','At least three daylight hours; RH ≤75%; wind ≤20 km/h; gust ≤30 km/h; twelve dry, non-thundery hours. Crop maturity, grain moisture and soil trafficability remain unmeasured.']]){
+   const card=el('article','card field-operation-card');card.append(el('h3','',title));if(!fresh)card.append(el('p','agri-unknown','A fresh location forecast is required.'));
+   else if(!windows[key].length)card.append(el('p','agri-unknown',key==='fertilize'?'No complete gentle-rain incorporation period found. If using irrigation, confirm soil needs and product incorporation requirements.':'No complete period meets all weather criteria in the next seven days. Missing inputs cannot qualify.'));
+   else for(const window of windows[key])card.append(el('p','field-window',farmTime(window.start)+' → '+farmTime(window.end)));
+   card.append(el('small','',note));root.append(card);
+  }
+  const measurement={moisture:number('soil-moisture'),capacity:number('soil-capacity'),wilting:number('soil-wilting'),depth:number('soil-depth'),time:$('soil-time').value},soil=soilWaterState(measurement,now),temp=number('soil-temperature'),minimum=number('soil-sow-min'),stamp=farmInstant(measurement.time),temperatureDepth=number('soil-temperature-depth'),validTemp=finite(temperatureDepth)&&temperatureDepth>=0&&temperatureDepth<=300&&finite(temp)&&temp>=-20&&temp<=70&&finite(stamp)&&stamp<=now+300000&&now-stamp<=12*HOUR;
+  $('field-sowing').textContent=!validTemp?'Soil-temperature assessment unavailable. The station feed has no soil sensor; enter a recent measured value, depth and PKT measurement time.':!finite(minimum)?'Set a locally confirmed minimum soil-temperature threshold for your crop.':`${crop?.name||'Selected crop'}: measured soil temperature ${temp}°C at ${temperatureDepth} cm depth, ${farmTime(stamp)}. ${temp<minimum?'Below':'Meets'} your ${minimum}°C minimum guide. This is a germination screen; assess frost, seedbed moisture and cultivar before sowing.`;
+  const water=$('field-soil-irrigation');water.replaceChildren();
+  if(!soil)water.append(el('p','agri-unknown','Automatic soil-based irrigation needs a measured moisture reading within 24h, PKT time, representative root-zone depth, field capacity and wilting point. No sensor measurement is invented.'));
+  else if(crop?.id==='rice')water.append(el('p','agri-unknown','Rice: ponded-water management needs a paddy water balance and water-depth readings. The simple root-zone bucket is not used for an automatic paddy dose.'));
+  else if(!fresh)water.append(el('p','agri-unknown','Soil readings are available; a fresh forecast is still needed for the irrigation scenario.'));
+  else{
+   const d=forecast.daily,today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'}),days=(d?.time||[]).flatMap((date,i)=>date>=today?[{date,et0:d.et0_fao_evapotranspiration?.[i],rain:d.precipitation_sum?.[i]}]:[]).slice(0,7),plan=irrigationPlan(days,{...soil,kc:Number($('agri-kc').value),efficiency:Number($('agri-efficiency').value)}),next=plan?.find(r=>!r.unknown&&r.gross>0);
+   water.append(el('p','',`Measured soil input · available root-zone water ${format(soil.reserve,' mm')}; depletion ${format(soil.deficit,' mm')}. Kc ${$('agri-kc').value}, efficiency ${$('agri-efficiency').value}%.`));
+   water.append(el('strong','',next?`Exploratory refill: ${format(next.gross,' mm gross')} on ${next.date}.`:plan?.some(r=>r.unknown)?'Insufficient weather for a complete irrigation schedule.':'No refill trigger in the available model days.'));
+   water.append(el('p','farm-explainer','Scenario: 70% effective precipitation, 50% depletion trigger, no runoff or capillary rise. Verify sensor placement, root-zone representation, soil and crop response before application.'));
+  }
+  const warning=fresh?fieldWarnings(h,now,crop?.cool&&stage==='flowering'?30:35):null;
+  $('field-warning').textContent=warning?`${place[0]} · next 24h: ${warning.frost?(warning.freezing?'Freezing air forecast':'Frost watch'):'No ≤2°C air-temperature trigger'}; ${warning.heat?'heat watch':'no ≥'+warning.heatThreshold+'°C heat trigger'}. ${warning.coverage}/24 valid hours. Canopy / soil temperatures may differ.`:'Frost / heat warnings need a fresh forecast. No safety conclusion is made from missing data.';
+  if(warning)notify(warning);
+  $('field-crop-guide').textContent=guide?`${crop.name} · indicative minimum soil-temperature guide ${guide.minimum}°C. Crop-stage Kc starting values are editable; confirm local agronomy and cultivar. Current stage: ${stage}.`:'Select a crop. Soil thresholds and crop coefficients require local confirmation.';
+ }
+ return {update(next){context=next;const key=next.place.slice(1).join(',');if(key!==lastPlace){lastPlace=key;sensors.reset();for(const id of [...soilInputs,'soil-capacity','soil-wilting'])$(id).value='';}for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';if(next.crop?.id!==lastCrop){lastCrop=next.crop?.id||'';$('soil-sow-min').value=CROP_FIELD_GUIDES[lastCrop]?.minimum??'';}render();}};
+}

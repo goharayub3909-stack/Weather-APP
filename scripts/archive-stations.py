@@ -66,7 +66,9 @@ def publish_recent(records,path,now,archive_url):
         # Latest actual observation in an hour; revised same-time reports use
         # the latest capture. Do not average or forward-fill missing hours.
         if previous is None or (time,capture)>(previous[0],previous[1]):groups[key][hour]=(time,capture,s)
-    manifest={'schema_version':1,'source':'Archived WeatherWalay observations','published_at':now.astimezone(PKT).isoformat(),'archive_started_at':min(captured).isoformat() if captured else None,'archive_url':archive_url,'time_note':'Provider observation time and collection time are separate. One latest observed sample per completed hour; no missing hours are filled. The visible archive start is the earliest capture in the recent download window.','stations':[]}
+    activation=Path('public/station-archive-config.json')
+    started=json.loads(activation.read_text()).get('started_at') if activation.exists() else None
+    manifest={'schema_version':1,'source':'Archived WeatherWalay observations','published_at':now.astimezone(PKT).isoformat(),'archive_started_at':started or (min(captured).isoformat() if captured else None),'recent_window_started_at':min(captured).isoformat() if captured else None,'archive_url':archive_url,'time_note':'Provider observation time and collection time are separate. One latest observed sample per completed hour; no missing hours are filled. Permanent archive activation and earliest capture in the recent download window are recorded separately.','stations':[]}
     for key,s in metadata.items():
         rows=sorted(groups[key].items());h={'time':[],'temperature_2m':[],'relative_humidity_2m':[],'observed_at':[],'captured_at':[]}
         for hour,(time,capture,row) in rows:
@@ -77,7 +79,9 @@ def publish_recent(records,path,now,archive_url):
     (path/'index.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n')
     with (path/'recent.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=['captured_at',*FIELDS]);writer.writeheader()
-        for r in records:writer.writerow({'captured_at':r['captured_at'],**{k:r['station'].get(k) for k in FIELDS}})
+        for r in records:
+            row={'captured_at':r['captured_at'],**{k:r['station'].get(k) for k in FIELDS}}
+            writer.writerow({k:("'"+v if isinstance(v,str) and v.startswith(('=','+','-','@')) else v) for k,v in row.items()})
     return manifest
 
 def main():
