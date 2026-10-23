@@ -1,5 +1,5 @@
 """Verify public STAC scene and raster endpoints; no credentials or login data."""
-import json,urllib.request,urllib.parse
+import json,urllib.request,urllib.parse,math
 from datetime import datetime,timedelta,timezone
 ROOT='https://planetarycomputer.microsoft.com/api/'
 def get(url):
@@ -23,6 +23,15 @@ for collection in ['sentinel-2-l2a','landsat-c2-l2','modis-13Q1-061']:
    params={'collection':collection,'item':p['id'],'assets':bands,'expression':f'({nir}-{red})/({nir}+{red})','unscale':'true','rescale':'-1,1','colormap_name':'rdylgn'}
   try:record['ndvi_tilejson']=get(ROOT+'data/v1/item/tilejson.json?'+urllib.parse.urlencode(params))
   except Exception as e:record['tile_error']=type(e).__name__
+  record['raster_verification']={}
+  for name in ['tilejson','ndvi_tilejson']:
+   if name not in record:continue
+   z=11;x=int((73.08+180)/360*2**z);lat=math.radians(31.42);y=int((1-math.asinh(math.tan(lat))/math.pi)/2*2**z)
+   tile=record[name]['tiles'][0].replace('{z}',str(z)).replace('{x}',str(x)).replace('{y}',str(y))
+   try:
+    with urllib.request.urlopen(tile,timeout=60) as response:
+     payload=response.read();record['raster_verification'][name]={'status':response.status,'type':response.headers.get('Content-Type'),'bytes':len(payload),'png':payload.startswith(b'\x89PNG')}
+   except Exception as e:record['raster_verification'][name]={'error':str(e)}
   results.append(record)
  except Exception as e:results.append({'collection':collection,'error':type(e).__name__})
 print(json.dumps(results,separators=(',',':')))
