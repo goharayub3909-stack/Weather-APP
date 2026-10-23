@@ -14,14 +14,14 @@ for collection in ['sentinel-2-l2a','landsat-c2-l2','modis-13Q1-061']:
   p=sorted(items,key=lambda x:x['properties'].get('datetime')or x['properties'].get('start_datetime')or'',reverse=True)[0]
   record={'collection':collection,'id':p['id'],'datetime':p['properties'].get('datetime')or p['properties'].get('start_datetime'),'bbox':p.get('bbox'),'assets':list(p['assets']),'cloud':p['properties'].get('eo:cloud_cover'),'feature':p}
   if collection=='sentinel-2-l2a':params={'collection':collection,'item':p['id'],'assets':'visual'}
-  elif collection=='landsat-c2-l2':params={'collection':collection,'item':p['id'],'assets':'red,green,blue','color_formula':'gamma RGB 2.7, sigmoidal RGB 15 0.55, saturation 1.3','rescale':'0,30000'}
+  elif collection=='landsat-c2-l2':params={'collection':collection,'item':p['id'],'assets':['red','green','blue'],'color_formula':'gamma RGB 2.7, sigmoidal RGB 15 0.55, saturation 1.3','rescale':'0,30000'}
   else:params={'collection':collection,'item':p['id'],'assets':'250m_16_days_NDVI','rescale':'0,10000','colormap_name':'rdylgn'}
-  try:record['tilejson']=get(ROOT+'data/v1/item/tilejson.json?'+urllib.parse.urlencode(params))
+  try:record['tilejson']=get(ROOT+'data/v1/item/tilejson.json?'+urllib.parse.urlencode(params,doseq=True))
   except Exception as e:record['tile_error']=type(e).__name__
   if collection!='modis-13Q1-061':
    bands='B08,B04' if collection=='sentinel-2-l2a' else 'nir08,red';nir,red=bands.split(',')
-   params={'collection':collection,'item':p['id'],'assets':bands,'expression':f'({nir}-{red})/({nir}+{red})','unscale':'true','rescale':'-1,1','colormap_name':'rdylgn'}
-  try:record['ndvi_tilejson']=get(ROOT+'data/v1/item/tilejson.json?'+urllib.parse.urlencode(params))
+   params={'collection':collection,'item':p['id'],'assets':bands.split(','),'expression':f'({nir}_b1-{red}_b1)/({nir}_b1+{red}_b1)','unscale':'true','rescale':'-1,1','colormap_name':'rdylgn'}
+  try:record['ndvi_tilejson']=get(ROOT+'data/v1/item/tilejson.json?'+urllib.parse.urlencode(params,doseq=True))
   except Exception as e:record['tile_error']=type(e).__name__
   record['raster_verification']={}
   for name in ['tilejson','ndvi_tilejson']:
@@ -31,7 +31,7 @@ for collection in ['sentinel-2-l2a','landsat-c2-l2','modis-13Q1-061']:
    try:
     with urllib.request.urlopen(tile,timeout=60) as response:
      payload=response.read();record['raster_verification'][name]={'status':response.status,'type':response.headers.get('Content-Type'),'bytes':len(payload),'png':payload.startswith(b'\x89PNG')}
-   except Exception as e:record['raster_verification'][name]={'error':str(e)}
+   except Exception as e:record['raster_verification'][name]={'error':str(e),'detail':e.read().decode()[:500] if hasattr(e,'read') else ''}
   results.append(record)
  except Exception as e:results.append({'collection':collection,'error':type(e).__name__})
 print(json.dumps(results,separators=(',',':')))
