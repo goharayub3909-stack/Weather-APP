@@ -24,3 +24,8 @@ jobs:
           Path('/tmp/agri-check.json').write_text(json.dumps(out))
           PY
           gh api repos/${{ github.repository }}/check-runs --input /tmp/agri-check.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-field-index-images
+          path: /tmp/field-index-images

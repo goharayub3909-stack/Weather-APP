@@ -1,6 +1,7 @@
 // Runner-only verification of real raster responses. No signed URLs are logged.
-import {readFileSync,writeFileSync} from 'node:fs';
-import {indexRecipe,fieldColormap,FIELD_INDICES} from '../public/farm-indices.js';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {indexRecipe,fieldColormap,FIELD_INDICES,zoneExpression} from '../public/farm-indices.js';
+mkdirSync('/tmp/field-index-images',{recursive:true});
 const path='/tmp/agri-satellite.json',records=JSON.parse(readFileSync(path)),root='https://planetarycomputer.microsoft.com';
 for(const record of records){
  if(!record.feature)continue;
@@ -11,8 +12,8 @@ for(const record of records){
  for(const mode of Object.keys(FIELD_INDICES)){
   try{
    const recipe=indexRecipe(sensor,mode,record.feature);if(!recipe)continue;
-   const u=new URL(root+'/api/data/v1/item/tilejson.json');u.search=new URLSearchParams({collection:record.collection,item:record.id,rescale:recipe.range.join(','),unscale:'false',colormap:JSON.stringify(fieldColormap(mode))});recipe.assets.forEach(a=>u.searchParams.append('assets',a));if(recipe.expression)u.searchParams.set('expression',recipe.expression);
-   const response=await fetch(u,{signal:AbortSignal.timeout(30000)});if(!response.ok)throw Error('Metadata HTTP '+response.status);const data=await response.json();const z=11,x=Math.floor((73.08+180)/360*2**z),y=Math.floor((1-Math.asinh(Math.tan(31.42*Math.PI/180))/Math.PI)/2*2**z),url=data.tiles[0].replace('{z}',z).replace('{x}',x).replace('{y}',y);const tile=await fetch(url,{signal:AbortSignal.timeout(30000)});const bytes=await tile.arrayBuffer();record.field_indices[mode]={status:tile.status,type:tile.headers.get('content-type'),bytes:bytes.byteLength,cors:tile.headers.get('access-control-allow-origin'),resolution:recipe.resolution};
+   const u=new URL(root+'/api/data/v1/item/tilejson.json');u.search=new URLSearchParams({collection:record.collection,item:record.id,rescale:recipe.range.join(','),unscale:'false',colormap:JSON.stringify(fieldColormap(mode))});recipe.assets.forEach(a=>u.searchParams.append('assets',a));u.searchParams.set('expression',zoneExpression(mode,recipe.expression||'(250m_16_days_NDVI_b1*0.0001)'));u.searchParams.set('rescale','0,255');
+   const response=await fetch(u,{signal:AbortSignal.timeout(30000)});if(!response.ok)throw Error('Metadata HTTP '+response.status);const data=await response.json();const z=11,x=Math.floor((73.08+180)/360*2**z),y=Math.floor((1-Math.asinh(Math.tan(31.42*Math.PI/180))/Math.PI)/2*2**z),url=data.tiles[0].replace('{z}',z).replace('{x}',x).replace('{y}',y);const tile=await fetch(url,{signal:AbortSignal.timeout(30000),headers:{Origin:'https://goharayub3909-stack.github.io'}});const bytes=await tile.arrayBuffer();if(tile.ok)writeFileSync('/tmp/field-index-images/'+sensor+'-'+mode+'.png',Buffer.from(bytes));record.field_indices[mode]={status:tile.status,type:tile.headers.get('content-type'),bytes:bytes.byteLength,cors:tile.headers.get('access-control-allow-origin'),resolution:recipe.resolution};
   }catch(e){record.field_indices[mode]={error:e.message};}
  }
 }

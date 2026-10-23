@@ -9,7 +9,8 @@ export const FIELD_INDICES={
  ndwi:{label:'NDWI · surface water',range:[-1,1],breaks:[-.2,0,.2],description:'Green/NIR water contrast; a spectral indicator, not a water-depth measurement.'}
 };
 export const ZONE_COLORS=[[205,60,55,255],[242,153,48,255],[247,215,69,255],[39,139,59,255]];
-export function fieldColormap(mode){const index=FIELD_INDICES[mode],result={};if(!index)return result;for(let i=0;i<256;i++){const value=index.range[0]+i/255*(index.range[1]-index.range[0]);result[i]=ZONE_COLORS[index.breaks.filter(c=>value>=c).length];}return result;}
+export function fieldColormap(mode){return FIELD_INDICES[mode]?Object.fromEntries(ZONE_COLORS.map((color,i)=>[i*85,color])):{};}
+export function zoneExpression(mode,expression){const [a,b,c]=FIELD_INDICES[mode].breaks;return `where((${expression})<${a},0,where((${expression})<${b},85,where((${expression})<${c},170,255)))`;}
 export function indexRecipe(sensor,mode,scene){
  if(!FIELD_INDICES[mode])return null;
  if(sensor==='modis')return mode==='ndvi'?{assets:['250m_16_days_NDVI'],range:[-10000,10000],resolution:'250 m · 16-day composite',expression:null,note:'MOD13Q1 NDVI source scale = 0.0001.'}:null;
