@@ -16,7 +16,7 @@ export function currentValue(source,key,forecastValue){
  if(source.kind==='forecast')return finite(forecastValue)?forecastValue:null;
  const p=source.report;
  if(source.kind==='station'){
-  const keys={temperature_2m:'temperature',relative_humidity_2m:'humidity',dew_point_2m:'dew_point',wind_speed_10m:'wind_speed',wind_direction_10m:'wind_direction',wind_gusts_10m:'wind_gust_10min',shortwave_radiation:'solar_radiation',uv_index:'uv_index',visibility:'visibility',rain_daily:'rain_daily',rain_rate:'rain_rate',pressure_msl:'pressure'};
+  const keys={temperature_2m:'temperature',relative_humidity_2m:'humidity',dew_point_2m:'dew_point',wind_speed_10m:'wind_speed',wind_direction_10m:'wind_direction',wind_gusts_10m:'wind_gust_10min',shortwave_radiation:'solar_radiation',uv_index:'uv_index',visibility:'visibility',rain_daily:'rain_daily',rain_rate:'rain_rate'};
   return finite(p[keys[key]])?p[keys[key]]:null;
  }
  if(key==='relative_humidity_2m')return finite(p.temp)&&finite(p.dewp)?Math.min(100,Math.max(0,100*Math.exp(17.625*p.dewp/(243.04+p.dewp)-17.625*p.temp/(243.04+p.temp)))):null;

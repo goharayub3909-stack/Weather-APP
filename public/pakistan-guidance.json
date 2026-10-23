@@ -1,0 +1,33 @@
+{
+  "reviewed_at": "2026-10-23",
+  "scope": "Source availability and supplied district sowing windows; no live official bulletin feed or verified nationwide district-stage database.",
+  "sources": [
+    {
+      "name": "KP Agriculture Extension crop catalogue",
+      "url": "https://zarat.kp.gov.pk/crops",
+      "status": "retrieved",
+      "scope": "Official crop catalogue, not an exact district phenology model"
+    },
+    {
+      "name": "KP Wheat late sowing advisory",
+      "url": "https://zarat.kp.gov.pk/news/view_news/8",
+      "status": "retrieved",
+      "scope": "KP advisory for wheat sowing after 1 December; do not apply to Punjab or infer crop stage"
+    },
+    {
+      "name": "PMD National Agromet Centre",
+      "url": "https://namc.pmd.gov.pk/",
+      "status": "upstream HTTP 500 during review"
+    },
+    {
+      "name": "Punjab Agriculture Department",
+      "url": "https://agripunjab.gov.pk/",
+      "status": "TLS certificate validation failed during review"
+    },
+    {
+      "name": "Ayub Agricultural Research Institute",
+      "url": "https://aari.punjab.gov.pk/wheat",
+      "status": "DNS lookup failed during review"
+    }
+  ]
+}

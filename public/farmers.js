@@ -53,16 +53,6 @@ export function initFarmers(){
   for(const [label,value,glyphName,tone]of [['Next 24h rain',loaded?number(result.summary.rain,'mm'):'—','rain','rain'],['High / low · 24h',loaded?number(result.summary.high,'°C')+' / '+number(result.summary.low,'°C'):'—','temperature','warm'],['Peak gust · 24h',loaded?number(result.summary.gust,'km/h'):'—','wind','breeze'],['Weather cues · 72h',loaded?String(result.alerts.filter(a=>a.level!=='plan').length):'—','leaf','green']]){
    const card=element('div','farm-stat farm-stat--'+tone),copy=element('div');copy.append(element('span','',label),element('strong','',value));card.append(glyph(glyphName),copy);summary.append(card);
   }
-  const alerts=$('farm-alerts');alerts.replaceChildren();
-  if(!loaded){alerts.append(element('div','farm-empty',state.status==='loading'?'Waiting for forecast data. Crop calendar remains available below.':'No forecast-based recommendations are issued while weather data is unavailable.'));}
-  else if(!result.alerts.length){const empty=element('div','farm-empty');empty.append(element('strong','','No planning threshold triggered in the available data.'),element('p','','Continue normal field scouting. This does not establish that conditions are safe or that all hazards are absent.'));alerts.append(empty);}
-  else for(const alert of result.alerts){
-   const card=element('article','farm-advisory farm-advisory--'+alert.level),head=element('div','farm-advisory-head'),title=element('div');title.append(element('span','farm-label',({alert:'Prepare · stronger signal',watch:'Weather watch',plan:'Planning note'})[alert.level]),element('h3','',alert.title));head.append(glyph(alert.glyph),title);card.append(head,element('p','farm-evidence',alert.evidence),element('p','farm-action',alert.action),element('span','farm-source',alert.source));alerts.append(card);
-  }
-  const windows=$('farm-windows');windows.replaceChildren();
-  if(!loaded)windows.append(element('p','farm-empty','Forecast required to assess possible dry periods.'));
-  else if(!result.windows.length)windows.append(element('p','farm-empty','No complete period meets the weather criteria in the next 48 hours. This may be due to rain, wind, temperature or missing data.'));
-  else for(const window of result.windows){const row=element('div','farm-window');row.append(glyph('clock'),element('strong','',farmTime(window.start)+' → '+farmTime(window.end)));windows.append(row);}
   const days=$('farm-days');days.replaceChildren();
   if(loaded)for(const day of result.days){const card=element('article','farm-day'),valid=typeof day.rain==='number'&&typeof day.high==='number'&&typeof day.low==='number';const risk=valid?(day.rain>=20?'Drainage watch':day.low<=2?'Cold watch':day.high>=result.heatLimit?'Heat watch':day.rain>=.2?'Plan around rain':'Check field conditions'):'Incomplete data';card.append(element('strong','',new Date(day.date+'T12:00:00+05:00').toLocaleDateString('en-GB',{timeZone:'Asia/Karachi',weekday:'short',day:'numeric',month:'short'})),glyph(!valid?'cloud':day.rain>=.2?'rain':day.low<=2?'snow':'sun'),element('b','',number(day.low,'°')+' / '+number(day.high,'°')),element('span','',number(day.rain,'mm')),element('small','',risk));days.append(card);}
   else days.append(element('p','farm-empty','Seven-day outlook unavailable until the location forecast loads.'));

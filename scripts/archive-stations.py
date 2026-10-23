@@ -24,7 +24,7 @@ def release(tag,create=False):
     try:return json.loads(gh('release','view',tag,'--repo',REPO,'--json','assets,url'))
     except RuntimeError:
         if not create:return {'assets':[]}
-        gh('release','create',tag,'--repo',REPO,'--title','Pakistan station observations · '+tag[-7:],'--notes','Sanitized station observations collected by Badal PK from archive activation onward. PKT daily compressed JSONL. captured_at is download time; station.observed_at is provider observation time (or null). No historical readings are backfilled.','--latest=false')
+        gh('release','create',tag,'--repo',REPO,'--title','Pakistan station observations · '+tag[-7:],'--notes','Sanitized station observations collected by WeatherWalay Kissan & Sehat Hub from archive activation onward. PKT daily compressed JSONL. captured_at is download time; station.observed_at is provider observation time (or null). No historical readings are backfilled.','--latest=false')
         return json.loads(gh('release','view',tag,'--repo',REPO,'--json','assets,url'))
 
 def unpack(path):

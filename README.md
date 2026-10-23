@@ -1,4 +1,4 @@
-# Badal PK — Pakistan Weather
+# WeatherWalay Kissan & Sehat Hub — Pakistan Weather
 
 A responsive, free-to-host weather dashboard with 86 pinned Pakistani cities and a searchable GeoNames index of 156,343 cities, towns, villages and geographic places. Dark/light themes, city search, saved cities and Celsius/Fahrenheit preferences work locally in the browser.
 
@@ -53,7 +53,7 @@ Capabilities and a representative Pakistan GetMap PNG were fetched live with TLS
 
 ### Direct observed rain radar
 
-Radar imagery is plotted on **Badal PK's dark OpenStreetMap basemap**, not PMD map images or an iframe. The user-provided HAR supplied public catalog schemas and geographic bounds; PMD's public app source confirmed its relative PNG paths. Live catalogs and PNGs were then retrieved with verified HTTPS and an identified an identified application user agent user agent. No API key, captured cookie or session header is used.
+Radar imagery is plotted on **WeatherWalay Kissan & Sehat Hub's dark OpenStreetMap basemap**, not PMD map images or an iframe. The user-provided HAR supplied public catalog schemas and geographic bounds; PMD's public app source confirmed its relative PNG paths. Live catalogs and PNGs were then retrieved with verified HTTPS and an identified an identified application user agent user agent. No API key, captured cookie or session header is used.
 
 - Stations: Islamabad and Karachi. Products: Surface-R, Accumulated-R (12h), CAPPI-R (01km), with their own supplied bounds and radii.
 - Station/product selectors, playback, frame slider, latest available frame, opacity, pan/zoom and recenter controls are included. Station selection is independent of forecast city.
@@ -63,7 +63,7 @@ Radar imagery is plotted on **Badal PK's dark OpenStreetMap basemap**, not PMD m
 
 ### Lightning — WeatherWalay public feeds
 
-The selected WeatherWalay dashboard exposes a shared live buffer and a history API. `public/lightning.js` integrates these data feeds directly into Badal PK's own Leaflet map, without embedding or copying the provider dashboard. Positions are filtered to the Pakistan region. The shared buffer is polled every 15 seconds only while the panel is active and the document is visible; no per-visitor upstream stream is opened. Live/history observations are deduplicated by position and timestamp. History supports 1/3/6/12/24-hour windows and 15-minute playback buckets; yellow bolt glyphs are drawn on a shared canvas, capped at the newest 8,000. Three concentric kilometre distance rings have an independent draggable crosshair centre; “Place centre on map” also lets users click to relocate it. Main-page city/GPS changes never move this centre; an outer-radius selector supports 50/100/200 km. Strike popups show PKT time and distance from that centre. Failures preserve explicit fetch/observation timestamps. Blank areas are not a safety indication.
+The selected WeatherWalay dashboard exposes a shared live buffer and a history API. `public/lightning.js` integrates these data feeds directly into WeatherWalay Kissan & Sehat Hub's own Leaflet map, without embedding or copying the provider dashboard. Positions are filtered to the Pakistan region. The shared buffer is polled every 15 seconds only while the panel is active and the document is visible; no per-visitor upstream stream is opened. Live/history observations are deduplicated by position and timestamp. History supports 1/3/6/12/24-hour windows and 15-minute playback buckets; yellow bolt glyphs are drawn on a shared canvas, capped at the newest 8,000. Three concentric kilometre distance rings have an independent draggable crosshair centre; “Place centre on map” also lets users click to relocate it. Main-page city/GPS changes never move this centre; an outer-radius selector supports 50/100/200 km. Strike popups show PKT time and distance from that centre. Failures preserve explicit fetch/observation timestamps. Blank areas are not a safety indication.
 
 ### Airports and WeatherWalay station observations
 
@@ -139,3 +139,15 @@ Scheduled Pages builds now preserve sanitized station data in compressed daily J
 Crop health groups station weather context and Sentinel/Landsat/MODIS imagery. Image layers use a dedicated pane above the basemap, finite scene bounds, and source-footprint / edge-error handling. Drawn polygons clip actual satellite tiles in projected pixel coordinates; NDVI zones can appear over natural-colour scene context. NDVI, NDRE, EVI, SAVI, NDMI and NDWI are available where sensor bands support them. NDRE and Sentinel NDMI are 20 m; other Sentinel indices are 10 m; Landsat is 30 m; MODIS remains its native 250 m / 16-day NDVI composite. MODIS uses continuous colouring. Physical reflectance scaling includes Sentinel processing-baseline BOA offsets and Landsat scale/offset. Fixed colour zones are display thresholds, not calibrated health classes. Pixel cloud/shadow masking, validated zonal health scores and yield models are not claimed.
 
 A backend cache computes seven-day convective guidance for 86 exact major-city points from ECMWF CAPE, convective precipitation and above-terrain pressure-level K-index moisture diagnostics. Weather inputs refresh at most every six hours; the public lightning buffer is rechecked during scheduled builds. Recent lightning within 50 km supports only today's immediate wet outlook and expires after one hour. It is not extrapolated into future days. Other points retain the same transparent ECMWF ingredient screen from their own forecast. Snow, freezing precipitation and explicit hail codes take precedence over generic storm/rain icons. Rain bands include 0.2 mm; labels say isolated / scattered rain or thunderstorm chances. Displayed percentages are source rain probability, never invented thunder probabilities.
+
+### Farmer monitoring and field decisions
+
+The site is branded **WeatherWalay Kissan & Sehat Hub**. The existing repository and Pages address are retained so saved links continue to work.
+
+Crop-stage gating uses the supplied district sowing workbooks where a city matches a named district. A calendar never confirms an actual planted field. Manual stages need field confirmation; an unsown crop cannot receive a standing-crop spray or harvest window. Other calendars remain explicitly regional guides. Pakistan source availability and review limits are recorded in `public/pakistan-guidance.json`; no fully updated national district phenology database or official warning feed is claimed.
+
+Crop health supports editing, inserting and deleting boundary vertices, undo, point inspection and 90-day acquisition trends. Point samples request raw raster bands and sensor QA. Trends use up to five interior sample positions, require at least 60% valid samples per acquisition, select one available acquisition per PKT day and never fill missing dates. They are sampled indicators, not whole-field raster means. NDVI narratives describe possible growth or canopy removal, never a confirmed disease, sowing/harvest date or yield. Station context retains its own observation time and archive coverage.
+
+Landsat Collection 2 LST uses thermal scale/offset and converts Kelvin to Celsius; MODIS MOD11A1 daytime LST is a 1 km daily product. Sentinel-2 has no thermal LST band. SMI is explicitly a relative thermal proxy requiring user-calibrated wet/dry LST endmembers; it is not measured soil moisture. Google tiles are not scraped: the Google basemap choice stays disabled without official API/billing setup. Public Esri World Imagery is available with attribution as an alternative; its acquisition time is independent of analytic scenes.
+
+Reference disease photographs retain source, author, license and modification records in `public/disease-images/credits.json`. Images illustrate symptoms; they are not diagnoses of the selected field. Where no verified photograph is available, a neutral symbol is used.

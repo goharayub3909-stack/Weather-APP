@@ -31,7 +31,16 @@
         "file": "GSMA Wheat research final presentation.pptx",
         "location": "Slide 3, table row 2"
       },
-      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred.",
+      "image": {
+        "src": "./disease-images/wheat-yellow-stripe-rust.webp",
+        "page": "https://commons.wikimedia.org/wiki/File:Dz._r%C5%ABsa_z.tritik%C4%81le_2015.jpg",
+        "license": "CC BY-SA 4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+        "author": "Brauna55",
+        "caption": "Yellow Stripe Rust on triticale · reference host",
+        "modifications": "Resized and converted to WebP; original colours retained."
+      }
     },
     {
       "id": "wheat-stem-rust",
@@ -62,7 +71,16 @@
         "file": "GSMA Wheat research final presentation.pptx",
         "location": "Slide 3, table row 3"
       },
-      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred.",
+      "image": {
+        "src": "./disease-images/wheat-stem-rust.webp",
+        "page": "https://commons.wikimedia.org/wiki/File:Stem_rust_close_up.jpg",
+        "license": "Public domain",
+        "license_url": "",
+        "author": "Author attribution: see source record",
+        "caption": "Stem Rust · reference photograph",
+        "modifications": "Resized and converted to WebP; original colours retained."
+      }
     },
     {
       "id": "wheat-leaf-brown-rust",
@@ -93,7 +111,16 @@
         "file": "GSMA Wheat research final presentation.pptx",
         "location": "Slide 3, table row 4"
       },
-      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred.",
+      "image": {
+        "src": "./disease-images/wheat-leaf-brown-rust.webp",
+        "page": "https://commons.wikimedia.org/wiki/File:Wheat_leaf_rust_on_wheat.jpg",
+        "license": "Public domain",
+        "license_url": "",
+        "author": "James Kolmer",
+        "caption": "Leaf/brown Rust · reference photograph",
+        "modifications": "Resized and converted to WebP; original colours retained."
+      }
     },
     {
       "id": "wheat-karnal-bunt",
@@ -219,7 +246,16 @@
         "file": "GSMA Wheat research final presentation.pptx",
         "location": "Slide 3, table row 8"
       },
-      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred."
+      "method": "Temperature / humidity favourability screen only; duration, leaf wetness, crop stage and pathogen presence are not inferred.",
+      "image": {
+        "src": "./disease-images/wheat-fusarium-head-blight.webp",
+        "page": "https://commons.wikimedia.org/wiki/File:Wheat_scab.jpg",
+        "license": "Public domain",
+        "license_url": "",
+        "author": "Author attribution: see source record",
+        "caption": "Fusarium Head blight · reference photograph",
+        "modifications": "Resized and converted to WebP; original colours retained."
+      }
     },
     {
       "id": "sugarcane-red-rot",

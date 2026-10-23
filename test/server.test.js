@@ -11,7 +11,7 @@ test('serves the website, rejects bad locations, forwards forecasts and handles 
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const base=`http://127.0.0.1:${server.address().port}`;
  try {
-  const page=await fetch(base);assert.equal(page.status,200);assert.match(await page.text(),/<title>Badal PK/);
+  const page=await fetch(base);assert.equal(page.status,200);assert.match(await page.text(),/<title>WeatherWalay Kissan & Sehat Hub/);
   for(const module of ['farmers.js','farm-data.js','farm-advice.js']){const asset=await fetch(base+'/'+module);assert.equal(asset.status,200,module);assert.match(asset.headers.get('content-type'),/javascript/);assert.match(await asset.text(),/export /);}
   assert.equal((await fetch(base+'/api/forecast?lat=0&lon=0')).status,400);
   assert.equal((await fetch(base+'/api/forecast')).status,400);

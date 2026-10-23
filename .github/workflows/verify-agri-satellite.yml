@@ -12,6 +12,8 @@ jobs:
         run: python3 scripts/inspect-agri-satellite.py > /tmp/agri-satellite.json
       - name: Verify field index raster images and reflectance metadata
         run: node scripts/verify-field-indices.mjs
+      - name: Verify raw point readings, QA and surface temperature
+        run: node scripts/verify-farm-pixels.mjs
       - name: Save public verification results
         env:
           GH_TOKEN: ${{ github.token }}
