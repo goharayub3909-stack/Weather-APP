@@ -1,0 +1,24 @@
+name: Verify public agri satellite sources
+on: workflow_dispatch
+permissions:
+  contents: read
+  checks: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect public satellite scenes
+        run: python3 scripts/inspect-agri-satellite.py > /tmp/agri-satellite.json
+      - name: Save public verification results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          data=Path('/tmp/agri-satellite.json').read_text()
+          out={'name':'Agri satellite source verification','head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'success','output':{'title':'Public STAC verification','summary':'```json\n'+data[:60000]+'\n```'}}
+          Path('/tmp/agri-check.json').write_text(json.dumps(out))
+          PY
+          gh api repos/${{ github.repository }}/check-runs --input /tmp/agri-check.json
