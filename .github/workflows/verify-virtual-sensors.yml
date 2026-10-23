@@ -12,3 +12,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/inspect-virtual-sensors.py
+      - name: Retrieve public FarmView manual
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFERENCE_URL: https://metos.global/en/farmview-manual/
+          REFERENCE_NAME: FarmView public reference
+        run: python3 scripts/inspect-virtual-sensors.py
