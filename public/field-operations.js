@@ -1,3 +1,4 @@
+import {initCropManual} from './crop-manual.js';
 import {addTileHelp} from './tile-help.js';
 import {finite,deltaT,irrigationPlan} from './agri-models.js';
 import {farmInstant,farmTime} from './farm-advice.js';
@@ -41,6 +42,7 @@ export function fieldWarnings(hourly,now=Date.now(),heat=35){
 const $=id=>document.getElementById(id),format=(v,s)=>finite(v)?Number(v.toFixed(1))+s:'—';
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 export function initFieldOperations(){
+ const manual=initCropManual($('field-crop-manual'));
  let context=null,lastCrop='',lastPlace='',notifications=false;try{notifications=localStorage.getItem('badal-field-warnings')==='1'&&'Notification'in window&&Notification.permission==='granted';}catch{}const soilInputs=['soil-temperature','soil-temperature-depth','soil-moisture','soil-depth','soil-time'];const sensors=initSoilSensors(device=>{for(const id of soilInputs)$(id).value='';if(device?.usable){const r=device.reading;const local=new Date(r.observed_at).toLocaleString('sv-SE',{timeZone:'Asia/Karachi'}).replace(' ','T').slice(0,16);$('soil-time').value=local;if(device.temperatureFresh){$('soil-temperature').value=r.temperature_c??'';$('soil-temperature-depth').value=r.temperature_depth_cm??'';}if(r.root_zone_moisture_vwc_percent!==null&&r.root_zone_depth_cm!==null){$('soil-moisture').value=r.root_zone_moisture_vwc_percent;$('soil-depth').value=r.root_zone_depth_cm/100;}}render();});const number=id=>$(id).value.trim()===''?null:Number($(id).value);
  for(const id of ['soil-temperature','soil-temperature-depth','soil-moisture','soil-capacity','soil-wilting','soil-depth','soil-time','soil-sow-min'])$(id).addEventListener('change',render);
  $('field-enable-alerts').addEventListener('click',async()=>{
@@ -53,7 +55,7 @@ export function initFieldOperations(){
   try{if(localStorage.getItem('badal-field-alert')===key)return;const body=context.place[0]+': '+(warning.frost?'Frost watch, minimum '+format(warning.minimum,'°C')+'. ':'')+(warning.heat?'Heat watch, maximum '+format(warning.maximum,'°C')+'. ':'')+' Forecast guidance; check local conditions.';const registration=await navigator.serviceWorker?.getRegistration();if(registration)await registration.showNotification('WeatherWalay Kissan & Sehat Hub · field weather watch',{body,tag:'badal-field-warning',icon:'./app-icon-192.png'});else new Notification('WeatherWalay Kissan & Sehat Hub · field weather watch',{body});localStorage.setItem('badal-field-alert',key);}catch{$('field-alert-status').textContent='Browser notification delivery failed; check the in-page warnings.';}
  }
  function render(){
-  if(!context)return;for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';const now=Date.now(),{forecast,crop,place,stage}=context,h=forecast?.hourly,guide=CROP_FIELD_GUIDES[crop?.id],fresh=forecast&&context.retrievedAt&&now-new Date(context.retrievedAt).getTime()<=3*HOUR;
+  if(!context)return;manual.update(context);for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';const now=Date.now(),{forecast,crop,place,stage}=context,h=forecast?.hourly,guide=CROP_FIELD_GUIDES[crop?.id],fresh=forecast&&context.retrievedAt&&now-new Date(context.retrievedAt).getTime()<=3*HOUR;
   const field=context.field,allowed=field?.operations||{},root=$('field-operation-windows');root.replaceChildren();
   const windows=fresh?operationWindows(h,now):{spray:[],fertilize:[],harvest:[]};
   const actions=[['spray','Spraying'],['fertilize','Fertilizing'],['harvest','Harvesting']].filter(([key])=>allowed[key]),calendar=$('field-calendar');calendar.replaceChildren();calendar.hidden=!actions.length;
