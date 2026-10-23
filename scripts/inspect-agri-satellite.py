@@ -26,7 +26,7 @@ for collection in ['sentinel-2-l2a','landsat-c2-l2','modis-13Q1-061']:
   record['raster_verification']={}
   for name in ['tilejson','ndvi_tilejson']:
    if name not in record:continue
-   z=11;x=int((73.08+180)/360*2**z);lat=math.radians(31.42);y=int((1-math.asinh(math.tan(lat))/math.pi)/2*2**z)
+   z=6;x=int((73.08+180)/360*2**z);lat=math.radians(31.42);y=int((1-math.asinh(math.tan(lat))/math.pi)/2*2**z)
    tile=record[name]['tiles'][0].replace('{z}',str(z)).replace('{x}',str(x)).replace('{y}',str(y))
    try:
     with urllib.request.urlopen(tile,timeout=60) as response:
