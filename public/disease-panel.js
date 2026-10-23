@@ -67,20 +67,21 @@ export function initDiseasePanel(){
     box.append(node('h4','',heading),label,node('small','',span(screen.start,screen.end)),node('p','',`${screen.hits} matching hours · ${screen.available}/${screen.expected} valid hours · longest run ${screen.longest} h`));comparisons.append(box);
    }
    card.append(comparisons);
-   if(result.peak)card.append(node('p','disease-peak','Peak forecast rolling 72h: '+span(result.peak.start,result.peak.end)+' · '+result.peak.hits+'/'+result.peak.available+' matching hours · '+result.peak.longest+' h longest run.'));
-   card.append(node('h4','disease-days-heading','Seven 24-hour forecast periods · PKT'));
+   const timing=node('details','disease-timing'),timingTitle=node('summary','','Daily risk & timing');timing.append(timingTitle);
+   if(result.peak)timing.append(node('p','disease-peak','Peak forecast rolling 72h: '+span(result.peak.start,result.peak.end)+' · '+result.peak.hits+'/'+result.peak.available+' matching hours · '+result.peak.longest+' h longest run.'));
+   timing.append(node('h4','disease-days-heading','Seven 24-hour forecast periods · PKT'));
    const days=node('div','disease-days');
    for(const [i,day]of result.days.entries()){
     const cell=node('div','disease-day disease-risk--'+day.level),date=new Date(day.start).toLocaleDateString('en-GB',{timeZone:'Asia/Karachi',day:'numeric',month:'short'});
     cell.title=span(day.start,day.end)+` · ${day.hits} matching hours; ${day.available}/24 valid; longest run ${day.longest} h`;
     cell.append(node('strong','',i===0?'Next 24h':'Day '+(i+1)),node('span','',date),node('b','',loading&&day.assessable?'Loading':day.label.replace(' weather risk','').replace(' weather signal',' signal')),node('small','',day.hits+' match · '+day.available+'/24 h'));days.append(cell);
    }
-   card.append(days);
+   timing.append(days);card.append(timing);
    const details=node('details'),summary=node('summary','','Criteria & provenance');details.append(summary);
    for(const [label,value]of Object.entries(rule.raw))details.append(node('p','',label+': '+(value||'Not specified')));
    for(const issue of rule.issues)details.append(node('p','agri-review',issue));
    details.append(node('p','',rule.source.file+' · '+rule.source.location));
-   card.append(details,node('small','disease-limit','Disease / pest weather screen only. Leaf wetness, field stage, inoculum and source exposure requirements are unverified. No infection probability or pesticide dose is calculated.'));root.append(card);
+   card.append(details);root.append(card);
   }
 
  }
