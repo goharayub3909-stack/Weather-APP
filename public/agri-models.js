@@ -4,8 +4,9 @@ export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export const BASE_TEMPERATURES={wheat:0,rice:10,cotton:15.6,sugarcane:10,maize:10,potato:4.4,chickpea:0,mustard:5,sunflower:6,groundnut:10,barley:0,onion:4,tomato:10,berseem:0,apple:4.4,citrus:12.8,mango:10,dates:10};
 export function vaporPressureDeficit(t,rh){return finite(t)&&t>=-40&&t<=60&&finite(rh)&&rh>=0&&rh<=100?.6108*Math.exp(17.27*t/(t+237.3))*(1-rh/100):null;}
 export function deltaT(t,rh,wetBulb=null){
- if(!finite(t)||!finite(rh)||rh<0||rh>100)return {value:null,basis:'Unavailable'};
+ if(!finite(t))return {value:null,basis:'Unavailable'};
  if(finite(wetBulb)&&wetBulb<=t&&wetBulb>=-90)return {value:t-wetBulb,basis:'Dry minus supplied wet-bulb temperature'};
+ if(!finite(rh)||rh<0||rh>100)return {value:null,basis:'Unavailable'};
  if(rh===100)return {value:0,basis:'Saturated air: dry and wet bulb coincide'};
  if(t< -20||t>50||rh<5||rh>99)return {value:null,basis:'Outside the Stull approximation range'};
  const tw=t*Math.atan(.151977*Math.sqrt(rh+8.313659))+Math.atan(t+rh)-Math.atan(rh-1.676331)+.00391838*rh**1.5*Math.atan(.023101*rh)-4.686035;
