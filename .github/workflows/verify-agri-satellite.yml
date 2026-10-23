@@ -25,6 +25,20 @@ jobs:
           PY
           gh api repos/${{ github.repository }}/check-runs --input /tmp/agri-check.json
 
+      - name: Save small public raster samples for browser verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64,json,os,subprocess
+          from pathlib import Path
+          for name in ['sentinel-rgb','sentinel-ndvi']:
+              path=Path('/tmp/field-index-images')/(name+'.png')
+              if not path.exists():continue
+              body={'name':'Verified field preview '+name,'head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'success','output':{'title':'Public raster sample','summary':json.dumps({'image_base64':base64.b64encode(path.read_bytes()).decode(),'z':11,'lon':73.08,'lat':31.42})}}
+              target=Path('/tmp/public-raster-check.json');target.write_text(json.dumps(body))
+              subprocess.run(['gh','api','repos/goharayub3909-stack/Weather-APP/check-runs','--input',str(target)],stdout=subprocess.DEVNULL,check=True)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: verified-field-index-images

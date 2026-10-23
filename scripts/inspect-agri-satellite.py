@@ -1,5 +1,6 @@
 """Verify public STAC scene and raster endpoints; no credentials or login data."""
 import json,urllib.request,urllib.parse,math
+from pathlib import Path
 from datetime import datetime,timedelta,timezone
 ROOT='https://planetarycomputer.microsoft.com/api/'
 def get(url):
@@ -26,11 +27,11 @@ for collection in ['sentinel-2-l2a','landsat-c2-l2','modis-13Q1-061']:
   record['raster_verification']={}
   for name in ['tilejson','ndvi_tilejson']:
    if name not in record:continue
-   z=6;x=int((73.08+180)/360*2**z);lat=math.radians(31.42);y=int((1-math.asinh(math.tan(lat))/math.pi)/2*2**z)
+   z=11;x=int((73.08+180)/360*2**z);lat=math.radians(31.42);y=int((1-math.asinh(math.tan(lat))/math.pi)/2*2**z)
    tile=record[name]['tiles'][0].replace('{z}',str(z)).replace('{x}',str(x)).replace('{y}',str(y))
    try:
     with urllib.request.urlopen(tile,timeout=60) as response:
-     payload=response.read();record['raster_verification'][name]={'status':response.status,'type':response.headers.get('Content-Type'),'bytes':len(payload),'png':payload.startswith(b'\x89PNG')}
+     payload=response.read();preview=Path('/tmp/field-index-images');preview.mkdir(exist_ok=True);(preview/('sentinel-rgb.png' if collection=='sentinel-2-l2a' and name=='tilejson' else 'source-'+collection+'-'+name+'.png')).write_bytes(payload);record['raster_verification'][name]={'status':response.status,'type':response.headers.get('Content-Type'),'bytes':len(payload),'png':payload.startswith(b'\x89PNG')}
    except Exception as e:record['raster_verification'][name]={'error':str(e),'detail':e.read().decode()[:500] if hasattr(e,'read') else ''}
   results.append(record)
  except Exception as e:results.append({'collection':collection,'error':type(e).__name__})
