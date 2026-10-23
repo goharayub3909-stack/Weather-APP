@@ -1,3 +1,4 @@
+import {addTileHelp} from './tile-help.js';
 import {loadBackendStorms,backendStormDay} from './storm-outlook.js';
 import {chooseCurrentSource,currentValue,currentCondition,mainReading} from './current-weather.js';
 import {pkt} from './map-utils.js';
@@ -47,7 +48,8 @@ const metrics=[
 
 ];
 const metricAppearance={apparent_temperature:['warm','temperature'],relative_humidity_2m:['moisture','humidity'],wind_speed_10m:['breeze','wind'],wind_gusts_10m:['mint','gust'],dew_point_2m:['dew','dew'],pressure_msl:['violet','pressure'],surface_pressure:['rose','surface'],cloud_cover:['cloud','cloud'],precipitation:['rain','umbrella'],rain:['shower','rain'],snowfall:['snow','snow'],shortwave_radiation:['solar','sun'],precipitation_probability:['lilac','rain'],visibility:['mist','eye'],uv_index:['sunset','uv'],cape:['solar','storm'],hail_signal:['lilac','hail']};
-for(const [key,label,note] of metrics){const [theme,glyph]=metricAppearance[key],article=document.createElement('article');article.className='card metric metric--'+theme;article.innerHTML=`<span class="metric-art" aria-hidden="true">${icon(glyph)}</span><div class="metric-top"><span id="label-${key}">${label}</span><span class="metric-icon">${icon(glyph)}</span></div><strong id="metric-${key}">—</strong><p id="note-${key}">${note}</p>`;$('detail-grid').append(article);}
+for(const [key,label,note] of metrics){const [theme,glyph]=metricAppearance[key],article=document.createElement('article');article.className='card metric metric--'+theme;article.innerHTML=`<span class="metric-art" aria-hidden="true">${icon(glyph)}</span><div class="metric-top"><span id="label-${key}">${label}</span><span class="metric-icon">${icon(glyph)}</span></div><strong id="metric-${key}">—</strong><p id="note-${key}">${note}</p>`;addTileHelp(article,key);$('detail-grid').append(article);}
+for(const [selector,key]of [['.hero','current'],['.week-card','forecast'],['.hourly-card','hourly'],['.sun-card','sun'],['.air-card','air']]){const card=document.querySelector(selector);if(card)addTileHelp(card,key);}
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 Object.entries(cities).sort((a,b)=>a[1][0].localeCompare(b[1][0])).forEach(([id,[name]])=>{const option=document.createElement('option');option.value=id;option.textContent=name;$('city').append(option);const suggestion=document.createElement('option');suggestion.value=name;$('city-list').append(suggestion);});
 $('city').value=selected;

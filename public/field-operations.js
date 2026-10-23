@@ -1,3 +1,4 @@
+import {addTileHelp} from './tile-help.js';
 import {finite,deltaT,irrigationPlan} from './agri-models.js';
 import {farmInstant,farmTime} from './farm-advice.js';
 import {initSoilSensors} from './soil-sensors.js';
@@ -54,9 +55,9 @@ export function initFieldOperations(){
    const card=el('article','card field-operation-card');card.dataset.operation=key;card.dataset.tone=!allowed[key]?'inactive':windows[key].length?'good':'watch';card.append(el('span','operation-symbol',({spray:'❧',fertilize:'♧',harvest:'♒'})[key]),el('h3','',title));if(!allowed[key])card.append(el('p','agri-unknown',key==='harvest'?'Not applicable until you select and confirm a mature crop at harvest / picking stage. No harvest dates are recommended.':field?.reason||'Select and confirm the actual crop stage first.'));else if(!fresh)card.append(el('p','agri-unknown','A fresh location forecast is required.'));
    else if(!windows[key].length)card.append(el('p','agri-unknown',key==='fertilize'?'No complete gentle-rain incorporation period found. If using irrigation, confirm soil needs and product incorporation requirements.':'No complete period meets all weather criteria in the next seven days. Missing inputs cannot qualify.'));
    else for(const window of windows[key])card.append(el('p','field-window',farmTime(window.start)+' → '+farmTime(window.end)));
-   if(allowed[key])card.append(el('small','',note));root.append(card);
+   if(allowed[key])card.append(el('small','',note));addTileHelp(card,key);root.append(card);
   }
-  if(!root.children.length){const card=el('article','card field-operation-card');card.append(el('h3','',stage==='pre-sowing'?'Prepare for sowing':'Set the actual crop stage'),el('p','',field?.reason||'Choose your crop and confirm the stage observed in this field.'));root.append(card);}
+  if(!root.children.length){const card=el('article','card field-operation-card');card.append(el('h3','',stage==='pre-sowing'?'Prepare for sowing':'Set the actual crop stage'),el('p','',field?.reason||'Choose your crop and confirm the stage observed in this field.'));addTileHelp(card,'preparation');root.append(card);}
   const measurement={moisture:number('soil-moisture'),capacity:number('soil-capacity'),wilting:number('soil-wilting'),depth:number('soil-depth'),time:$('soil-time').value},soil=soilWaterState(measurement,now),temp=number('soil-temperature'),minimum=number('soil-sow-min'),stamp=farmInstant(measurement.time),temperatureDepth=number('soil-temperature-depth'),validTemp=finite(temperatureDepth)&&temperatureDepth>=0&&temperatureDepth<=300&&finite(temp)&&temp>=-20&&temp<=70&&finite(stamp)&&stamp<=now+300000&&now-stamp<=12*HOUR;
   $('field-sowing').textContent=!validTemp?'Soil-temperature assessment unavailable. The station feed has no soil sensor; enter a recent measured value, depth and PKT measurement time.':!finite(minimum)?'Set a locally confirmed minimum soil-temperature threshold for your crop.':`${crop?.name||'Selected crop'}: measured soil temperature ${temp}°C at ${temperatureDepth} cm depth, ${farmTime(stamp)}. ${temp<minimum?'Below':'Meets'} your ${minimum}°C minimum guide. This is a germination screen; assess frost, seedbed moisture and cultivar before sowing.`;
   const water=$('field-soil-irrigation');water.replaceChildren();

@@ -1,3 +1,4 @@
+import {addTileHelp} from './tile-help.js';
 import {diseaseWeatherURL,validateDiseaseWeather,assessDisease,DISEASE_RISK_METHOD} from './disease-risk.js';
 import {STAGE_NAMES} from './field-context.js';
 import {farmTime} from './farm-advice.js';
@@ -54,6 +55,8 @@ export function initDiseasePanel(){
   for(const rule of rules){
    const historical=station?archive.hourly:weather?.hourly;
    const result=assessDisease(rule,hourly,Date.now(),historical||null),card=node('article','agri-research-card card');card.dataset.disease=rule.id;card.dataset.risk=result.outlook.level;
+   const conditions=rule.temperature&&rule.humidity?'This screen counts hours when temperature is within '+rule.temperature.join('–')+'°C and relative humidity matches the supplied '+(rule.raw.humidity||rule.humidity.join('–')+'%')+' criterion at the same time. ':'This criterion is incomplete or requires review. ';
+   addTileHelp(card,'disease',{title:rule.name+' · weather signal',description:conditions+'It compares the last 72 completed hours with future forecast windows. High means at least 50% matching hours and a continuous run of at least 6 hours; moderate means at least 25% or a run of 3 hours. A grade requires 90% valid coverage. These are screening rules, not infection probabilities or a confirmed outbreak. Actual crop stage, leaf wetness and pathogen presence still need checking.'});
    const crop=rule.crop[0].toUpperCase()+rule.crop.slice(1);card.append(node('span','agri-crop-label',crop),node('h3','',rule.name));
    if(rule.image?.src?.startsWith('./disease-images/')&&/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(rule.image.page)){
     const figure=node('figure','disease-photo'),image=node('img');image.src=rule.image.src;image.alt=rule.image.caption;image.loading='lazy';image.width=360;image.height=160;
