@@ -53,4 +53,4 @@ export function createServer(fetcher = fetch) {
     catch { res.writeHead(500); res.end('Unable to load application'); }
   });
 }
-if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => console.log('Pakistan Weather listening on port ' + (process.env.PORT || 3000)));
+if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => console.log('WeatherWalay Kissan & Sehat Hub listening on port ' + (process.env.PORT || 3000)));

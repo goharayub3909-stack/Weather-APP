@@ -21,8 +21,15 @@ jobs:
           python3 - <<'PY'
           import json,os
           from pathlib import Path
-          data=Path('/tmp/agri-satellite.json').read_text()
-          out={'name':'Agri satellite source verification','head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'success','output':{'title':'Public STAC verification','summary':'```json\n'+data[:60000]+'\n```'}}
+          records=json.loads(Path('/tmp/agri-satellite.json').read_text())
+          compact=[]
+          for record in records:
+              row={k:v for k,v in record.items() if k!='feature'}
+              feature=record.get('feature',{})
+              row['scene_metadata']={'properties':feature.get('properties'), 'bands':{k:{x:v for x,v in a.items() if x in ['gsd','raster:bands','title']} for k,a in feature.get('assets',{}).items() if k in ['lwir11','LST_Day_1km','QC_Day']}}
+              compact.append(row)
+          data=json.dumps(compact)
+          out={'name':'Agri satellite source verification','head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'success','output':{'title':'Public STAC verification','summary':'```json\n'+data+'\n```'}}
           Path('/tmp/agri-check.json').write_text(json.dumps(out))
           PY
           gh api repos/${{ github.repository }}/check-runs --input /tmp/agri-check.json
