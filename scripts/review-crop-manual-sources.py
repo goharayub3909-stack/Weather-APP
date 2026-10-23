@@ -20,4 +20,6 @@ def review(pair):
  file=Path('/tmp/crop-check-'+re.sub('[^a-z]','',name.lower())+'.json');file.write_text(json.dumps(payload));subprocess.run(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/check-runs','--input',str(file)],check=True,stdout=subprocess.DEVNULL)
 if __name__=='__main__':
  pairs=[(urljoin(ROOT,h),name) for h,name in links(html(ROOT)) if name in NAMES and '/view_crop/' in h]
+ pairs += [('https://www.pakissan.com/english/allabout/crop/'+crop+'.shtml','Pakistan production guide: '+crop) for crop in ['wheat','rice','cotton','maize','potato','sugarcane']]
+ pairs += [('https://www.fao.org/4/x0490e/x0490e00.htm','FAO 56 methods')]
  with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(review,pairs))
