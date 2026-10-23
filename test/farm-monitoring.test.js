@@ -10,3 +10,10 @@ test('three-month scene selection keeps actual acquisition dates, deduplicates P
 test('crop-development narrative requires multiple clear acquisitions and does not confirm sowing or harvest',()=>{assert.match(historyNarrative([{time:0,value:.2}]),/Not enough/);const rise=[.1,.3,.6].map((value,i)=>({time:i*20*86400000,value}));assert.match(historyNarrative(rise),/consistent with emergence/);assert.match(historyNarrative(rise),/not confirmed/);const fall=[.6,.65,.15].map((value,i)=>({time:i*20*86400000,value}));assert.match(historyNarrative(fall),/Harvest or field clearing is possible/);});
 
 test('thermal fill pixels can never become saturated SMI values',()=>{assert.equal(thermalMoistureIndex(-273.15,20,45),null);assert.equal(thermalMoistureIndex(null,20,45),null);assert.equal(thermalMoistureIndex(36,20,45),.36);assert.equal(thermalMoistureIndex(36,null,45),null);});
+
+test('spatial vigour comparisons require clear samples and do not force weak / strong zones in a uniform field',async()=>{
+ const {vegetationSamples}=await import('../public/farm-monitoring.js');
+ assert.equal(vegetationSamples([{value:null},{value:.4},{value:null}]).ready,false);
+ const uniform=vegetationSamples([.5,.51,.49,.5,.5].map(value=>({value})));assert.ok(uniform.samples.every(s=>s.zone==='Similar green-cover signal'));
+ const varied=vegetationSamples([.1,.3,.4,.65,.75].map(value=>({value})),{stage:'pre-sowing'});assert.equal(varied.vegetated,4);assert.match(varied.note,/Low cover can fit/);assert.match(varied.note,/not field-area coverage/);assert.equal(varied.samples[4].zone,'Higher relative vigour');
+});

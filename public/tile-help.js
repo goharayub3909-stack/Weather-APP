@@ -5,6 +5,9 @@ const HELP={
  relative_humidity_2m:['Relative humidity','How much water vapour the air contains compared with what it could hold at the same temperature. A higher percentage means air closer to saturation. High humidity alone does not confirm rain or crop disease.'],
  wind_speed_10m:['Wind speed','The reported or forecast wind speed near 10 metres above ground. Conditions inside a crop canopy may differ. Use measured field wind and the product label when planning spraying.'],
  wind_gusts_10m:['Wind gusts','Short bursts of stronger wind. Gusts can be much higher than the average wind and can affect spraying, tunnels, trees and tall crops.'],
+ dew_point:['Dew point','The air temperature at which saturation would occur. Here a missing report dew point can be calculated from the same report’s temperature and humidity. A small air-to-dew-point gap suggests condensation potential, not measured leaf wetness.'],
+ wet_bulb:['Wet-bulb temperature','The temperature associated with evaporative cooling of a wetted thermometer. A supplied valid wet-bulb reading is preferred; otherwise the app uses the labelled standard-pressure Stull estimate behind Delta T. It is not a leaf or soil temperature measurement.'],
+ pore_ec:['Pore-water electrical conductivity','A soil-solution electrical-conductivity estimate using the Hilhorst / 5TE relationship. It needs compatible, co-located soil temperature, point VWC, bulk EC and dielectric permittivity. VWC must exceed 10% and permittivity must exceed the offset. Bulk EC, pore EC and saturation-extract EC must not be treated as interchangeable crop salinity thresholds.'],
  dew_point_2m:['Dew point','The temperature at which the air would become saturated if cooled. A dew point close to air temperature suggests humid air and possible condensation, but does not measure actual leaf wetness.'],
  pressure_msl:['Sea-level pressure','Air pressure adjusted to sea level, in hPa. This adjustment helps compare weather systems across places at different elevations. It differs from the actual pressure at a high-altitude field.'],
  surface_pressure:['Surface pressure','Air pressure at the model location’s elevation, in hPa. It generally decreases with altitude. It is not the same as pressure adjusted to sea level.'],
@@ -49,7 +52,7 @@ const HELP={
  hourly:['Next 24 hours','The chart follows hourly model forecasts for the chosen metric. The unit and metric label change with the selected button. Missing values leave gaps rather than being filled with zero.'],
  calendar:['Seasonal crop guide','This card describes a broad seasonal possibility for the guide area. Supplied district sowing windows take precedence when available, but a calendar cannot confirm planting, maturity or harvest in your field. Set and confirm your actual crop stage.']
 };
-const LABEL_KEYS={'Air temperature':'temperature','Humidity':'relative_humidity_2m','Relative humidity':'relative_humidity_2m','Daily rainfall':'daily_rain','Atmospheric demand':'vpd','VPD':'vpd','Delta T':'delta_t','Growing degree days':'gdd','Chilling hours':'chill','Reference ET₀':'et0','Estimated ETc':'etc','Next 24h rain':'rain24','High / low · 24h':'highlow','Peak gust · 24h':'wind_gusts_10m','Valid weather hours':'coverage'};
+const LABEL_KEYS={'Dew point':'dew_point','Wet-bulb temperature':'wet_bulb','Air temperature':'temperature','Humidity':'relative_humidity_2m','Relative humidity':'relative_humidity_2m','Daily rainfall':'daily_rain','Atmospheric demand':'vpd','VPD':'vpd','Delta T':'delta_t','Growing degree days':'gdd','Chilling hours':'chill','Reference ET₀':'et0','Estimated ETc':'etc','Next 24h rain':'rain24','High / low · 24h':'highlow','Peak gust · 24h':'wind_gusts_10m','Valid weather hours':'coverage'};
 let dialog,lastTrigger;
 function showHelp(trigger,title,description){
  if(!dialog){
@@ -65,5 +68,5 @@ export function addTileHelp(card,key,{title,description}={}){
  const entry=HELP[LABEL_KEYS[key]||key];if(!entry&&!description)return;
  // A render can reuse a card. Update its one help button, never duplicate it.
  let button=card.querySelector(':scope > .tile-help-button');if(!button){button=document.createElement('button');button.type='button';button.className='tile-help-button';const glyph=document.createElement('span');glyph.textContent='!';glyph.setAttribute('aria-hidden','true');button.append(glyph);card.prepend(button);}
- const label=title||entry[0];button.setAttribute('aria-label','About '+label);button.title='What does '+label+' mean?';button.setAttribute('aria-haspopup','dialog');button.onclick=e=>{e.stopPropagation();showHelp(button,label,description||entry[1]);};card.classList.add('tile-help-card');
+ const label=title||entry[0];button.setAttribute('aria-label','About '+label);button.title='What does '+label+' mean?';button.setAttribute('aria-haspopup','dialog');button.onclick=e=>{e.stopPropagation();showHelp(button,label,(description||entry[1])+(card.dataset.assessmentReason?'\n\nCurrent value: '+card.dataset.assessmentReason:''));};card.classList.add('tile-help-card');
 }
