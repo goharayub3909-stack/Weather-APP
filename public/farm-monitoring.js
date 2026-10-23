@@ -40,3 +40,7 @@ export function renderFieldChart(root,rows,{title='Satellite acquisitions',unit=
  for(const [i,r]of valid.entries()){const previous=valid[i-1];if(previous&&r.time-previous.time<=20*86400000)add('line',{x1:x(previous.time),y1:y(previous.value),x2:x(r.time),y2:y(r.value),stroke:color,'stroke-width':2,'stroke-dasharray':'5 5',opacity:.7});const dot=add('circle',{cx:x(r.time),cy:y(r.value),r:4,fill:color,stroke:'currentColor','stroke-width':.5}),tip=document.createElementNS(ns,'title');tip.textContent=new Date(r.time).toLocaleString('en-GB',{timeZone:'Asia/Karachi'})+' PKT: '+r.value.toFixed(3)+' '+unit+(r.count?' · '+r.count+' usable sample positions':'');dot.append(tip);}
  root.append(svg);const note=document.createElement('small');note.textContent=unit+' · dots = actual readings; dashed lines only connect observations and do not supply daily values.';root.append(note);
 }
+export function thermalMoistureIndex(temperature,wet,dry){
+ if(![temperature,wet,dry].every(finite)||temperature< -80||temperature>100||wet< -30||dry>80||dry-wet<5)return null;
+ return Math.max(0,Math.min(1,(dry-temperature)/(dry-wet)));
+}
