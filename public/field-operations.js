@@ -1,5 +1,6 @@
 import {finite,deltaT,irrigationPlan} from './agri-models.js';
 import {farmInstant,farmTime} from './farm-advice.js';
+import {STAGE_NAMES} from './field-context.js';
 import {initSoilSensors} from './soil-sensors.js';
 const HOUR=3600000;
 // Indicative crop coefficients / minimum soil temperatures. Local variety,
@@ -47,18 +48,22 @@ export function initFieldOperations(){
  }
  function render(){
   if(!context)return;for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';const now=Date.now(),{forecast,crop,place,stage}=context,h=forecast?.hourly,guide=CROP_FIELD_GUIDES[crop?.id],fresh=forecast&&context.retrievedAt&&now-new Date(context.retrievedAt).getTime()<=3*HOUR;
-  const root=$('field-operation-windows');root.replaceChildren();
+  const field=context.field,allowed=field?.operations||{},root=$('field-operation-windows');root.replaceChildren();
+  $('field-decision-briefing').textContent=place[0]+' · '+(crop?.name||'Select crop')+' · '+(STAGE_NAMES[stage]||stage)+'. '+(field?.reason||'Confirm your actual crop and field stage.')+(stage==='pre-sowing'?' Prepare a level, drained seedbed; check the local sowing window and measured soil temperature. No standing-crop spray or harvest window is recommended.':stage==='harvest'?' Harvest windows remain conditional on confirmed field stage, actual crop maturity and dry produce.':' Only operations that fit this stage are considered below.');
+  $('field-stage-evidence').textContent=field?.basis||'Seasonal stage not established.';
   const windows=fresh?operationWindows(h,now):{spray:[],fertilize:[],harvest:[]};
   for(const [key,title,note]of [['spray','Spraying weather','Delta T 2–8°C; temperature 5–30°C; RH 40–95%; wind 3–15 km/h; gust ≤20 km/h; six dry, non-thundery hours. Check inversion, product label, rainfastness and equipment.'],['fertilize','Granular fertilizer incorporation','Dry application followed by 2–10 mm gentle precipitation in 24h; no hour ≥5 mm. Assumes soil-applied granular fertilizer. Check soil, nutrient test, product, drainage and runoff; no fertilizer rate is inferred.'],['harvest','Harvesting weather','At least three daylight hours; RH ≤75%; wind ≤20 km/h; gust ≤30 km/h; twelve dry, non-thundery hours. Crop maturity, grain moisture and soil trafficability remain unmeasured.']]){
-   const card=el('article','card field-operation-card');card.append(el('h3','',title));if(!fresh)card.append(el('p','agri-unknown','A fresh location forecast is required.'));
+   const card=el('article','card field-operation-card');card.dataset.operation=key;card.dataset.tone=!allowed[key]?'inactive':windows[key].length?'good':'watch';card.append(el('span','operation-symbol',({spray:'❧',fertilize:'♧',harvest:'♒'})[key]),el('h3','',title));if(!allowed[key])card.append(el('p','agri-unknown',key==='harvest'?'Not applicable until you select and confirm a mature crop at harvest / picking stage. No harvest dates are recommended.':field?.reason||'Select and confirm the actual crop stage first.'));else if(!fresh)card.append(el('p','agri-unknown','A fresh location forecast is required.'));
    else if(!windows[key].length)card.append(el('p','agri-unknown',key==='fertilize'?'No complete gentle-rain incorporation period found. If using irrigation, confirm soil needs and product incorporation requirements.':'No complete period meets all weather criteria in the next seven days. Missing inputs cannot qualify.'));
    else for(const window of windows[key])card.append(el('p','field-window',farmTime(window.start)+' → '+farmTime(window.end)));
-   card.append(el('small','',note));root.append(card);
+   if(allowed[key])card.append(el('small','',note));root.append(card);
   }
   const measurement={moisture:number('soil-moisture'),capacity:number('soil-capacity'),wilting:number('soil-wilting'),depth:number('soil-depth'),time:$('soil-time').value},soil=soilWaterState(measurement,now),temp=number('soil-temperature'),minimum=number('soil-sow-min'),stamp=farmInstant(measurement.time),temperatureDepth=number('soil-temperature-depth'),validTemp=finite(temperatureDepth)&&temperatureDepth>=0&&temperatureDepth<=300&&finite(temp)&&temp>=-20&&temp<=70&&finite(stamp)&&stamp<=now+300000&&now-stamp<=12*HOUR;
   $('field-sowing').textContent=!validTemp?'Soil-temperature assessment unavailable. The station feed has no soil sensor; enter a recent measured value, depth and PKT measurement time.':!finite(minimum)?'Set a locally confirmed minimum soil-temperature threshold for your crop.':`${crop?.name||'Selected crop'}: measured soil temperature ${temp}°C at ${temperatureDepth} cm depth, ${farmTime(stamp)}. ${temp<minimum?'Below':'Meets'} your ${minimum}°C minimum guide. This is a germination screen; assess frost, seedbed moisture and cultivar before sowing.`;
   const water=$('field-soil-irrigation');water.replaceChildren();
-  if(!soil)water.append(el('p','agri-unknown','Automatic soil-based irrigation needs a measured moisture reading within 24h, PKT time, representative root-zone depth, field capacity and wilting point. No sensor measurement is invented.'));
+  water.dataset.tone=!soil?'unknown':soil.deficit>=soil.reserve*.5?'alert':'clear';
+  if(field?.blocked||stage==='pre-sowing'||stage==='harvest')water.append(el('p','agri-unknown','Standing-crop irrigation scheduling is inactive at this stage. For seedbed preparation or a post-harvest field, check soil moisture and local agronomy separately.'));
+  else if(!soil)water.append(el('p','agri-unknown','Automatic soil-based irrigation needs a measured moisture reading within 24h, PKT time, representative root-zone depth, field capacity and wilting point. No sensor measurement is invented.'));
   else if(crop?.id==='rice')water.append(el('p','agri-unknown','Rice: ponded-water management needs a paddy water balance and water-depth readings. The simple root-zone bucket is not used for an automatic paddy dose.'));
   else if(!fresh)water.append(el('p','agri-unknown','Soil readings are available; a fresh forecast is still needed for the irrigation scenario.'));
   else{
@@ -68,7 +73,9 @@ export function initFieldOperations(){
    water.append(el('p','farm-explainer','Scenario: 70% effective precipitation, 50% depletion trigger, no runoff or capillary rise. Verify sensor placement, root-zone representation, soil and crop response before application.'));
   }
   const warning=fresh?fieldWarnings(h,now,crop?.cool&&stage==='flowering'?30:35):null;
-  $('field-warning').textContent=warning?`${place[0]} · next 24h: ${warning.frost?(warning.freezing?'Freezing air forecast':'Frost watch'):'No ≤2°C air-temperature trigger'}; ${warning.heat?'heat watch':'no ≥'+warning.heatThreshold+'°C heat trigger'}. ${warning.coverage}/24 valid hours. Canopy / soil temperatures may differ.`:'Frost / heat warnings need a fresh forecast. No safety conclusion is made from missing data.';
+  $('field-warning').dataset.tone=!warning?'unknown':warning.frost||warning.heat?'alert':warning.coverage<24?'unknown':'clear';
+  $('field-sowing').dataset.tone=!validTemp||!finite(minimum)?'unknown':temp<minimum?'alert':'clear';
+  $('field-warning').textContent=warning?`${place[0]} · next 24h: ${warning.frost?(warning.freezing?'Freezing air forecast':'Frost watch'):(warning.coverage<24?'Frost status uncertain · incomplete data':'No frost alert · no ≤2°C forecast trigger')}; ${warning.heat?'heat watch':'no ≥'+warning.heatThreshold+'°C heat trigger'}. ${warning.coverage}/24 valid hours. Canopy / soil temperatures may differ.`:'Frost / heat warnings need a fresh forecast. No safety conclusion is made from missing data.';
   if(warning)notify(warning);
   $('field-crop-guide').textContent=guide?`${crop.name} · indicative minimum soil-temperature guide ${guide.minimum}°C. Crop-stage Kc starting values are editable; confirm local agronomy and cultivar. Current stage: ${stage}.`:'Select a crop. Soil thresholds and crop coefficients require local confirmation.';
  }

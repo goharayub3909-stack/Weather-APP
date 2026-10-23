@@ -2,7 +2,7 @@
 import concurrent.futures,json,os,re,subprocess,urllib.request
 from html import unescape
 from pathlib import Path
-URLS=["https://namc.pmd.gov.pk/", "https://namc.pmd.gov.pk/crop-calendar.php", "https://aari.punjab.gov.pk/wheat", "https://aari.punjab.gov.pk/crop_production_technology", "https://agripunjab.gov.pk/", "https://zarat.kp.gov.pk/", "https://www.fao.org/4/y5146e/y5146e0i.htm"]
+URLS=["https://namc.pmd.gov.pk/", "https://namc.pmd.gov.pk/crop-calendar.php", "https://aari.punjab.gov.pk/wheat", "https://aari.punjab.gov.pk/crop_production_technology", "https://agripunjab.gov.pk/", "https://zarat.kp.gov.pk/", "https://zarat.kp.gov.pk/crops", "https://zarat.kp.gov.pk/news/view_news/8", "https://www.agripunjab.gov.pk/", "http://agripunjab.gov.pk/", "https://nwfc.pmd.gov.pk/new/agro.php", "https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=original&titles=Wheat_yellow_rust|Potato_blight|Rice_blast"]
 def read(url):
  try:
   request=urllib.request.Request(url,headers={"User-Agent":"BadalPK public guidance verification"})
@@ -14,7 +14,7 @@ def read(url):
   return {"url":url,"final":final,"text":text[:11000],"links":links[:35]}
  except Exception as error:return {"url":url,"error":str(error)}
 if __name__=="__main__":
- with concurrent.futures.ThreadPoolExecutor(max_workers=7) as pool: results=list(pool.map(read,URLS))
+ with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool: results=list(pool.map(read,URLS))
  payload={"name":"Pakistan agricultural sources","head_sha":os.environ["GITHUB_SHA"],"status":"completed","conclusion":"success","output":{"title":"Official guidance retrieval evidence","summary":json.dumps(results,ensure_ascii=False)[:64000]}}
  Path("/tmp/agri-sources-check.json").write_text(json.dumps(payload))
  subprocess.run(["gh","api","repos/"+os.environ["GITHUB_REPOSITORY"]+"/check-runs","--input","/tmp/agri-sources-check.json"],check=True,stdout=subprocess.DEVNULL)

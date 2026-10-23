@@ -1,4 +1,5 @@
 import {diseaseWeatherURL,validateDiseaseWeather,assessDisease,DISEASE_RISK_METHOD} from './disease-risk.js';
+import {STAGE_NAMES} from './field-context.js';
 import {farmTime} from './farm-advice.js';
 import {loadStationHistory} from './station-history.js';
 const $=id=>document.getElementById(id);
@@ -46,15 +47,18 @@ export function initDiseasePanel(){
   const archiveNote=archive?.building?' Station archive building: '+archive.building.hours+'/72 valid completed hours at '+archive.building.name+'.':!station?' Station archive is not yet sufficiently complete nearby.':'';
   status.textContent=loading?'Loading the rolling past 72 hours and next 168 forecast hours for this location…':weather?historySource+' '+(hourly?'Future = ECMWF forecast.':'Future forecast unavailable.')+archiveNote+' Retrieved '+farmTime(weather.fetched)+'. All times PKT.':fallback?'72-hour history unavailable. Using the main ECMWF forecast for available future hours only; missing hours remain unknown. Retry to load the full window.':error?'Disease weather could not be loaded. No historical or future risk grade is inferred. Retry when the service is available.':'Open this tab to load location-specific history and forecast weather.';
   if(archive?.manifest.archive_url&&/^https:\/\/github\.com\/goharayub3909-stack\/Weather-APP\/releases\/tag\/station-history-\d{4}-\d{2}$/.test(archive.manifest.archive_url))$('station-archive-link').href=archive.manifest.archive_url;
-  root.replaceChildren();
-  if(!criteria){root.append(node('p','agri-unknown',criteriaFailed?'Crop criteria could not be loaded. Reload this page to retry.':'Loading crop research…'));return;}
+  root.replaceChildren();const briefing=$('disease-briefing');briefing.replaceChildren();briefing.append(node('p','',context.place[0]+' · '+(context.crop?.name||'All supported crops')+' · '+(STAGE_NAMES[context.stage]||'Stage not established')+'. '+(context.stage==='pre-sowing'?'No standing crop is established in this guide; weather favourability below is for planning and does not imply a current field outbreak.':'Use the named disease signals below to prioritise field scouting.')));
+  if(!criteria){root.append(node('p','agri-unknown',criteriaFailed?'Crop criteria could not be loaded. Reload this page to retry.':'Loading disease and pest criteria…'));return;}
   const rules=criteria.rules.filter(r=>!context.crop||r.crop===context.crop.id);
-  if(!rules.length){root.append(node('p','agri-unknown','No supplied disease / pest criteria for this crop. Choose a research crop above; no model is invented.'));return;}
+  if(!rules.length){root.append(node('p','agri-unknown','No supplied disease / pest criteria for this crop. Choose a supported crop above; no model is invented.'));return;}
+  const priorities=[];
   for(const rule of rules){
    const historical=station?archive.hourly:weather?.hourly;
-   const result=assessDisease(rule,hourly,Date.now(),historical||null),card=node('article','agri-research-card card');card.dataset.disease=rule.id;
+   const result=assessDisease(rule,hourly,Date.now(),historical||null),card=node('article','agri-research-card card');card.dataset.disease=rule.id;card.dataset.risk=result.outlook.level;priorities.push({rule,result});
    const crop=rule.crop[0].toUpperCase()+rule.crop.slice(1);card.append(node('span','agri-crop-label',crop),node('h3','',rule.name));
+   const art=node('div','disease-art');art.setAttribute('aria-hidden','true');art.textContent=/aphid|borer|fly|worm|bug|hopper|mite|insect/i.test(rule.name)?'⌁':'❧';card.append(art);
    if(rule.pathogen)card.append(node('p','agri-pathogen',rule.pathogen));
+   card.append(node('p','disease-stage-context','Field stage: '+(STAGE_NAMES[context.stage]||'Unknown')+' · Source occurrence stage: '+(rule.raw.stage||'not specified')+'. Stage compatibility must be checked in the field.'));
    const comparisons=node('div','disease-comparisons');
    for(const [heading,screen]of [[station?'Past 72h · station history':'Past 72h · model history',result.past],['Next 7 days · forecast',result.outlook]]){
     const box=node('section','disease-period'),label=node('strong','disease-risk disease-risk--'+screen.level,loading&&screen.assessable?'Loading weather…':screen.label);
@@ -75,6 +79,12 @@ export function initDiseasePanel(){
    for(const issue of rule.issues)details.append(node('p','agri-review',issue));
    details.append(node('p','',rule.source.file+' · '+rule.source.location));
    card.append(details,node('small','disease-limit','Disease / pest weather screen only. Leaf wetness, field stage, inoculum and source exposure requirements are unverified. No infection probability or pesticide dose is calculated.'));root.append(card);
+  }
+  if(loading)briefing.append(node('p','','Loading location-specific disease weather signals…'));
+  else {
+   const ranked=priorities.filter(p=>p.result.outlook.rank>=0).sort((a,b)=>b.result.outlook.rank-a.result.outlook.rank||b.result.outlook.hits-a.result.outlook.hits);
+   for(const p of ranked.slice(0,3)){const item=node('p','disease-briefing-item disease-risk--'+p.result.outlook.level,p.rule.name+' · '+p.result.outlook.label+'. '+(p.result.outlook.rank>=2?(context.stage==='pre-sowing'?'Planning signal only for this unsown field; review host stage and seed / residue health before establishment.':'Scout for symptoms during and after the favourable weather window; confirm host stage and leaf wetness.'):'Continue routine scouting; this weather screen cannot rule out disease.'));briefing.append(item);}
+   if(!ranked.length)briefing.append(node('p','agri-unknown','No sufficiently complete disease weather assessment yet. Missing weather is not a low-risk result.'));
   }
  }
  return {

@@ -54,7 +54,7 @@ export function analyseFarm({forecast,supplemental=null,crop=null,stage='mixed',
  if(finite(rain72)&&rain72<2)add('moisture','plan','Check moisture before irrigating',`${fmt(rain72,'mm')} precipitation across the next 72 forecast hours.`,`${isSowing?'Check seedbed moisture before sowing. ':''}${isOrchard?'Inspect the active root zone and irrigation emitters. ':''}Use soil moisture, crop stage and your irrigation schedule to decide whether watering is needed. A dry forecast is not a drought diagnosis; no irrigation quantity is estimated.`,'humidity');
  if(crop){
   const timing=isHarvest?'Check maturity before picking and use a suitable dry period; let dew or rain on the crop dry first.':isSowing?'Check seedbed moisture and drainage before planting; use local variety and sowing-date guidance.':stage==='flowering'?'Inspect flowering and grain-filling crops for water or temperature stress; adjust irrigation only after checking soil moisture.':'Match field checks and irrigation to your actual growth stage and root-zone conditions.';
-  add('crop-plan','plan',crop.name+' · field plan',`Selected crop / stage · next 24 model hours: ${fmt(summary.rain,'mm')} precipitation, ${fmt(summary.low,'°C')} low.`,crop.note+' '+timing,crop.glyph,'Your selected crop / stage + ECMWF');
+  add('crop-plan','plan',crop.name+' · field plan',`Selected crop / stage · next 24 model hours: ${fmt(summary.rain,'mm')} precipitation, ${fmt(summary.low,'°C')} low.`,(isHarvest?crop.note+' ':'')+timing,crop.glyph,'Your selected crop / stage + ECMWF');
  }
  // Candidate dry fieldwork periods need every hour plus a short rain/storm
  // look-ahead. This never establishes soil trafficability or a safe spray slot.

@@ -1,6 +1,7 @@
 import {initAgriDSS} from './agri-dss.js';
 import {CROPS,ZONES,activity,approximateZone,pakistanMonth,seasonName} from './farm-data.js';
 import {analyseFarm,farmTime} from './farm-advice.js';
+import {fieldContext} from './field-context.js';
 import {icon} from './icons.js';
 const $=id=>document.getElementById(id);
 const number=(v,unit)=>typeof v==='number'&&Number.isFinite(v)?Number(v.toFixed(1))+' '+unit:'—';
@@ -9,14 +10,16 @@ function element(tag,className,text){const e=document.createElement(tag);if(clas
 function glyph(name){const e=element('span','farm-glyph');e.innerHTML=icon(name);return e;}
 export function initFarmers(){
  const dss=initAgriDSS();
+ let reference=null;fetch('./agri-reference.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{reference=data;render();}).catch(()=>{});
  let state={place:['Islamabad',33.69,73.05],forecast:null,supplemental:null,status:'loading',retrievedAt:null},showAll=false;
  const preferences={crop:'all',stage:'auto',zone:'auto'};
- try{const saved=JSON.parse(localStorage.getItem('badal-farm-preferences'));if(saved){if(saved.crop==='all'||CROPS.some(c=>c.id===saved.crop))preferences.crop=saved.crop;if(['auto','sowing','growing','flowering','harvest'].includes(saved.stage))preferences.stage=saved.stage;if(saved.zone==='auto'||ZONES[saved.zone])preferences.zone=saved.zone;}}catch{}
+ try{const saved=JSON.parse(localStorage.getItem('badal-farm-preferences'));if(saved){if(saved.crop==='all'||CROPS.some(c=>c.id===saved.crop))preferences.crop=saved.crop;if(['auto','pre-sowing','sowing','growing','flowering','harvest'].includes(saved.stage))preferences.stage=saved.stage;if(saved.zone==='auto'||ZONES[saved.zone])preferences.zone=saved.zone;}}catch{}
  for(const [key,name]of Object.entries(ZONES))$('farm-zone').append(new Option(name,key));
  for(const crop of CROPS)$('farm-crop').append(new Option(crop.name+' · '+crop.urdu,crop.id));
  for(const key of ['crop','stage','zone']){
-  $('farm-'+key).value=preferences[key];$('farm-'+key).addEventListener('change',()=>{preferences[key]=$('farm-'+key).value;try{localStorage.setItem('badal-farm-preferences',JSON.stringify(preferences));}catch{}render();});
+  $('farm-'+key).value=preferences[key];$('farm-'+key).addEventListener('change',()=>{preferences[key]=$('farm-'+key).value;$('farm-stage-confirmed').checked=false;try{localStorage.setItem('badal-farm-preferences',JSON.stringify(preferences));}catch{}render();});
  }
+ $('farm-stage-confirmed').addEventListener('change',render);
  $('farm-show-all').addEventListener('click',()=>{showAll=!showAll;render();});
  function navigate(){
   const active=location.hash==='#farmers';$('farmers-view').hidden=!active;$('weather-view').hidden=active;
@@ -37,11 +40,12 @@ export function initFarmers(){
  setTimeout(navigate,0);
  function render(){
   const now=new Date(),month=pakistanMonth(now),zone=preferences.zone==='auto'?approximateZone(state.place[1],state.place[2]):preferences.zone;
-  const crop=CROPS.find(c=>c.id===preferences.crop),calendar=crop?activity(crop,zone,month):null,stage=preferences.stage==='auto'?calendar?.stage||'mixed':preferences.stage;
+  const crop=CROPS.find(c=>c.id===preferences.crop),calendar=crop?activity(crop,zone,month):null,field=fieldContext({crop,zone,place:state.place,selectedStage:preferences.stage,confirmed:$('farm-stage-confirmed').checked,reference,now}),stage=field.stage;
+  $('farm-stage-confirmation').hidden=preferences.stage==='auto';$('farm-stage-validation').textContent=(field.conflict?'Stage differs from the seasonal guide. ':'')+field.reason+' '+field.basis;$('farm-stage-validation').dataset.tone=field.conflict||field.blocked?'watch':'info';
   $('farm-place').textContent=state.place[0];$('farm-season').textContent=seasonName(month,zone);
   $('farm-zone-note').textContent=(preferences.zone==='auto'?'Approximate area from coordinates: ':'Your chosen guide area: ')+ZONES[zone]+'. Adjust this guide for local altitude and planting dates.';
-  $('farm-crop-context').textContent=crop?crop.name+' · '+(preferences.stage==='auto'?calendar.label:$('farm-stage').selectedOptions[0].textContent)+(calendar.suitable?'':' · using your selected crop despite the regional guide'): 'General field advice for seasonal crops. Select your actual crop and stage for a closer fit.';
-  dss.update({...state,crop,stage,zone});
+  $('farm-crop-context').textContent=crop?crop.name+' · '+(preferences.stage==='auto'?field.label:$('farm-stage').selectedOptions[0].textContent)+(calendar.suitable?'':' · using your selected crop despite the regional guide'): 'General field advice for seasonal crops. Select your actual crop and stage for a closer fit.';
+  dss.update({...state,crop,stage,zone,field});
   const result=analyseFarm({...state,crop,stage,now}),loaded=state.status==='ready'&&result.available;
   $('farm-data-status').textContent=loaded?`ECMWF IFS 0.25° via Open-Meteo · ${farmTime(result.start)} to ${farmTime(result.end)} · fetched ${state.retrievedAt?farmTime(state.retrievedAt):'time unavailable'}.`:(state.status==='loading'?'Loading this location’s forecast…':state.status==='error'?'Weather forecast unavailable. Press Refresh above to try again.':result.reason);
   $('farm-quality').hidden=!loaded;$('farm-quality').textContent=loaded?(result.complete?'Next 24 hours: complete core fields.':'Some next-24-hour fields are missing; partial values are shown and missing rain never becomes zero.')+` Complete core fields in ${result.complete72}/72 model hours; absent inputs stay unknown.`:'';
@@ -68,5 +72,5 @@ export function initFarmers(){
   if(!visible.length)grid.append(element('p','farm-empty','No broad calendar match for this guide area. Browse all crops and set your actual field stage.'));
   for(const c of visible){const a=activity(c,zone,month),card=element('article','farm-crop-card'+(c.id===preferences.crop?' farm-crop-selected':'')),head=element('div','farm-crop-head'),name=element('div');name.append(element('h3','',c.name));const urdu=element('span','farm-urdu',c.urdu);urdu.lang='ur';urdu.dir='rtl';name.append(urdu);head.append(glyph(c.glyph),name,element('span','farm-crop-group',c.group));card.append(head,element('strong','farm-crop-stage',a.label),element('p','',c.note));const choose=element('button','text-button',c.id===preferences.crop?'Selected crop ✓':'Use this crop ↗');choose.type='button';choose.addEventListener('click',()=>{$('farm-crop').value=c.id;$('farm-crop').dispatchEvent(new Event('change'));$('farm-crop-context').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});card.append(choose);grid.append(card);}
  }
- render();return {update(patch){state={...state,...patch};render();}};
+ render();return {update(patch){if(patch.place&&patch.place.slice(1).join(',')!==state.place.slice(1).join(','))$('farm-stage-confirmed').checked=false;state={...state,...patch};render();}};
 }

@@ -1,10 +1,14 @@
-// Source selection retains the fresh nearest station and METAR candidates.
+// Prefer the most complete fresh station within 50 km; distance breaks ties.
 // currentValue reads one report (used by observed agri indices); mainReading
 // implements the main-page per-field station → METAR → ECMWF fallback.
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function distanceKm(lat,lon,p){const rad=Math.PI/180,a=Math.sin((p.lat-lat)*rad/2)**2+Math.cos(lat*rad)*Math.cos(p.lat*rad)*Math.sin((p.lon-lon)*rad/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));}
+export function stationCompleteness(report){
+ const usable=(k,min,max)=>finite(report[k])&&report[k]>=min&&report[k]<=max;
+ return [usable('temperature',-90,65),usable('humidity',0,100),usable('wind_speed',0,400),usable('rain_daily',0,3000)||usable('rain_rate',0,1000),usable('pressure',300,1100),usable('solar_radiation',0,1800),usable('dew_point',-100,65),usable('visibility',0,200000),usable('uv_index',0,30)].filter(Boolean).length;
+}
 export function chooseCurrentSource(lat,lon,stations,metars,now=Date.now()){
- function nearby(rows,kind,limit,maxAge){return (rows||[]).flatMap(p=>{const time=kind==='station'?Date.parse(p.observed_at):p.obsTime*1000,fields=kind==='station'?['temperature','humidity','dew_point','wind_speed','wind_direction','wind_gust_10min','solar_radiation','uv_index','visibility','pressure','rain_daily','rain_rate']:['temp','dewp','wspd','wdir','wgst','altim'];if(!finite(p.lat)||!finite(p.lon)||!fields.some(key=>finite(p[key]))||!finite(time)||now-time>maxAge||time-now>300000)return [];const distance=distanceKm(lat,lon,p);return distance<=limit?[{kind,report:p,time,distance,name:p.name||p.icaoId||'Weather station'}]:[];}).sort((a,b)=>a.distance-b.distance||b.time-a.time)[0];}
+ function nearby(rows,kind,limit,maxAge){return (rows||[]).flatMap(p=>{const time=kind==='station'?Date.parse(p.observed_at):p.obsTime*1000,fields=kind==='station'?['temperature','humidity','dew_point','wind_speed','wind_direction','wind_gust_10min','solar_radiation','uv_index','visibility','pressure','rain_daily','rain_rate']:['temp','dewp','wspd','wdir','wgst','altim'];if(!finite(p.lat)||!finite(p.lon)||!fields.some(key=>finite(p[key]))||!finite(time)||now-time>maxAge||time-now>300000)return [];const distance=distanceKm(lat,lon,p);return distance<=limit?[{kind,report:p,time,distance,name:p.name||p.icaoId||'Weather station',completeness:kind==='station'?stationCompleteness(p):0}]:[];}).sort((a,b)=>b.completeness-a.completeness||a.distance-b.distance||b.time-a.time)[0];}
  const station=nearby(stations?.stations,'station',50,3*3600000),metar=nearby(metars?.stations,'metar',100,2*3600000),forecast={kind:'forecast',name:'ECMWF IFS',time:null,distance:null,report:null};
  const chain=[station,metar,forecast].filter(Boolean);return {...chain[0],fallbacks:chain.slice(1)};
 }
@@ -12,7 +16,7 @@ export function currentValue(source,key,forecastValue){
  if(source.kind==='forecast')return finite(forecastValue)?forecastValue:null;
  const p=source.report;
  if(source.kind==='station'){
-  const keys={temperature_2m:'temperature',relative_humidity_2m:'humidity',dew_point_2m:'dew_point',wind_speed_10m:'wind_speed',wind_direction_10m:'wind_direction',wind_gusts_10m:'wind_gust_10min',shortwave_radiation:'solar_radiation',uv_index:'uv_index',visibility:'visibility',rain_daily:'rain_daily',rain_rate:'rain_rate'};
+  const keys={temperature_2m:'temperature',relative_humidity_2m:'humidity',dew_point_2m:'dew_point',wind_speed_10m:'wind_speed',wind_direction_10m:'wind_direction',wind_gusts_10m:'wind_gust_10min',shortwave_radiation:'solar_radiation',uv_index:'uv_index',visibility:'visibility',rain_daily:'rain_daily',rain_rate:'rain_rate',pressure_msl:'pressure'};
   return finite(p[keys[key]])?p[keys[key]]:null;
  }
  if(key==='relative_humidity_2m')return finite(p.temp)&&finite(p.dewp)?Math.min(100,Math.max(0,100*Math.exp(17.625*p.dewp/(243.04+p.dewp)-17.625*p.temp/(243.04+p.temp)))):null;
