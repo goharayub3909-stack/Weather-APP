@@ -11,7 +11,7 @@ export function soilWaterState({moisture,capacity,wilting,depth,time},now=Date.n
  if(![moisture,capacity,wilting,depth].every(finite)||wilting<0||capacity<=wilting||capacity>70||moisture<0||moisture>70||depth<=0||depth>3||!finite(stamp)||stamp>now+300000||now-stamp>24*HOUR)return null;
  return {reserve:(capacity-wilting)*10*depth,deficit:Math.max(0,Math.min(capacity-moisture,capacity-wilting))*10*depth,stamp,saturated:moisture>=capacity};
 }
-export function operationWindows(hourly,now=Date.now()){
+export function operationWindows(hourly,now=Date.now(),{limit=3}={}){
  const anchor=Math.floor(Number(now)/HOUR)*HOUR,axis=new Map();for(let i=0;i<(hourly?.time.length||0);i++){const t=farmInstant(hourly.time[i]);axis.set(t,axis.has(t)?-1:i);}
  const row=time=>{const i=axis.get(time);if(!(i>=0))return null;const get=key=>hourly[key]?.[i];return {time,t:get('temperature_2m'),rh:get('relative_humidity_2m'),wind:get('wind_speed_10m'),gust:get('wind_gusts_10m'),rain:get('precipitation'),code:get('weather_code')};};
  const future=(time,n)=>Array.from({length:n},(_,i)=>row(time+i*HOUR));
@@ -25,8 +25,14 @@ export function operationWindows(hourly,now=Date.now()){
   if(finite(r.wind)&&r.wind<=20&&six.every(x=>dry(x,.2))&&day.every(x=>x&&finite(x.rain)&&noStorm(x))){const rain=day.reduce((n,x)=>n+x.rain,0);if(rain>=2&&rain<=10&&day.every(x=>x.rain<5))candidates.fertilize.push(time);}
   if([r.t,r.rh,r.wind,r.gust].every(finite)&&r.t>=5&&r.t<=35&&r.rh<=75&&r.wind<=20&&r.gust<=30&&twelve.every(x=>dry(x,.2)))candidates.harvest.push(time);
  }
- const group=values=>{const result=[];for(const t of values){const last=result.at(-1);if(last&&last.end===t)last.end+=HOUR;else result.push({start:t,end:t+HOUR});}return result.filter(w=>w.end-w.start>=3*HOUR).slice(0,3);};
+ const group=values=>{const result=[];for(const t of values){const last=result.at(-1);if(last&&last.end===t)last.end+=HOUR;else result.push({start:t,end:t+HOUR});}return result.filter(w=>w.end-w.start>=3*HOUR).slice(0,limit);};
  return Object.fromEntries(Object.entries(candidates).map(([k,v])=>[k,group(v)]));
+}
+// A calendar uses every qualifying period, rather than only the three preview
+// windows shown in the detailed cards. Dates and clock labels are always PKT.
+export function operationCalendar(hourly,now=Date.now()){
+ const windows=operationWindows(hourly,now,{limit:Infinity}),today=new Date(now).toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'}),start=Date.parse(today+'T00:00:00+05:00');
+ return Array.from({length:7},(_,i)=>{const stamp=start+i*24*HOUR,date=new Date(stamp).toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'});return {date,time:stamp,actions:Object.fromEntries(Object.entries(windows).map(([key,rows])=>[key,rows.filter(w=>new Date(w.start).toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'})===date)]))};});
 }
 export function fieldWarnings(hourly,now=Date.now(),heat=35){
  const anchor=Math.floor(Number(now)/HOUR)*HOUR,rows=(hourly?.time||[]).flatMap((t,i)=>{const time=farmInstant(t),value=hourly.temperature_2m?.[i];return time>=anchor&&time<anchor+24*HOUR&&finite(value)?[{time,value}]:[];});
@@ -50,6 +56,12 @@ export function initFieldOperations(){
   if(!context)return;for(const id of soilInputs)$(id).readOnly=$('soil-reading-source').value==='sensor';const now=Date.now(),{forecast,crop,place,stage}=context,h=forecast?.hourly,guide=CROP_FIELD_GUIDES[crop?.id],fresh=forecast&&context.retrievedAt&&now-new Date(context.retrievedAt).getTime()<=3*HOUR;
   const field=context.field,allowed=field?.operations||{},root=$('field-operation-windows');root.replaceChildren();
   const windows=fresh?operationWindows(h,now):{spray:[],fertilize:[],harvest:[]};
+  const actions=[['spray','Spraying'],['fertilize','Fertilizing'],['harvest','Harvesting']].filter(([key])=>allowed[key]),calendar=$('field-calendar');calendar.replaceChildren();calendar.hidden=!actions.length;
+  $('field-decision-context').textContent=(crop?.name||'Choose a crop')+' · '+place[0]+' · '+(stage==='pre-sowing'?'Before sowing':stage==='mixed'?'Stage needed':stage.charAt(0).toUpperCase()+stage.slice(1))+' · '+(field?.verified?'Stage confirmed by you':field?.manual?'Stage confirmation needed':'Seasonal estimate')+(fresh?' · forecast planning':' · fresh forecast needed');
+  $('field-window-details').open=!actions.length;
+  if(actions.length){const table=el('table','operation-calendar-table'),caption=el('caption','','Seven-day work calendar · only operations relevant to this crop stage');table.append(caption);const head=el('thead'),hr=el('tr');hr.append(el('th','','Day'));for(const [,label]of actions)hr.append(el('th','',label));head.append(hr);table.append(head);const body=el('tbody');
+   for(const day of operationCalendar(h,now)){const tr=el('tr'),date=el('th','',new Date(day.time).toLocaleDateString('en-GB',{timeZone:'Asia/Karachi',weekday:'short',day:'numeric',month:'short'}));date.scope='row';tr.append(date);for(const [key,label]of actions){const td=el('td'),w=fresh?day.actions[key][0]:null;td.dataset.label=label;td.dataset.state=w?'window':fresh?'none':'unknown';const clock=t=>new Date(t).toLocaleTimeString('en-GB',{timeZone:'Asia/Karachi',hour:'2-digit',minute:'2-digit'});td.append(el('strong','',w?clock(w.start)+'–'+clock(w.end):fresh?'No complete window':'Awaiting forecast'));td.append(el('small','',w?'Meets weather screen · PKT':fresh?'Criteria or data gaps prevent a window':'No planning conclusion'));tr.append(td);}body.append(tr);}table.append(body);calendar.append(table,el('p','farm-explainer','Green: a complete weather window meets the screen. Amber: no complete window; conditions or missing data may prevent one. Forecasts do not confirm soil trafficability, crop maturity or pesticide suitability.'));
+  }
   for(const [key,title,note]of [['spray','Spraying weather','Delta T 2–8°C; temperature 5–28°C; RH 40–95%; wind 3–15 km/h; gust ≤20 km/h; six dry, non-thundery hours. Check inversion, product label, rainfastness and equipment.'],['fertilize','Granular fertilizer incorporation','Dry application followed by 2–10 mm gentle precipitation in 24h; no hour ≥5 mm. Assumes soil-applied granular fertilizer. Check soil, nutrient test, product, drainage and runoff; no fertilizer rate is inferred.'],['harvest','Harvesting weather','At least three daylight hours; RH ≤75%; wind ≤20 km/h; gust ≤30 km/h; twelve dry, non-thundery hours. Crop maturity, grain moisture and soil trafficability remain unmeasured.']]){
    if(!allowed[key])continue;
    const card=el('article','card field-operation-card');card.dataset.operation=key;card.dataset.tone=!allowed[key]?'inactive':windows[key].length?'good':'watch';card.append(el('span','operation-symbol',({spray:'❧',fertilize:'♧',harvest:'♒'})[key]),el('h3','',title));if(!allowed[key])card.append(el('p','agri-unknown',key==='harvest'?'Not applicable until you select and confirm a mature crop at harvest / picking stage. No harvest dates are recommended.':field?.reason||'Select and confirm the actual crop stage first.'));else if(!fresh)card.append(el('p','agri-unknown','A fresh location forecast is required.'));
