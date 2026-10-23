@@ -12,3 +12,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/verify-pakistan-agri.py
+      - name: Review official crop-cycle references
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/review-crop-manual-sources.py
