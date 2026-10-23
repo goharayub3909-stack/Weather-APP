@@ -76,7 +76,7 @@ for doc in documents:
     if '__WW_BOOT__' in doc: continue
     lines=doc.splitlines();selected=set()
     for i,line in enumerate(lines):
-        if re.search(r"case\s+['\"](?:rainfall|rain_rate|pressure)['\"]",line):
+        if re.search(r"currentParameter\s*===?\s*['\"](?:rain|rainfall|rain_rate|pressure|dew_point|heat_index|wind_chill)['\"]",line):
             selected.update(range(max(0,i-2),min(len(lines),i+125)))
     safe=[lines[i][:220] for i in sorted(selected) if not re.search(r'token|secret|password|apiKey',lines[i],re.I)]
     if safe: print(json.dumps({'rain_pressure_mapping':safe}))
