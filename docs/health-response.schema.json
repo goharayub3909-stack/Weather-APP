@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "health-response.schema.json",
+  "title": "Health & environmental disease intelligence response (schema_version 1)",
+  "type": "object",
+  "required": ["schema_version", "timestamp", "timestamp_pkt", "overall_level", "data_quality", "groups", "modules", "alerts", "disclaimer"],
+  "additionalProperties": false,
+  "$defs": {
+    "text": { "type": "object", "required": ["en", "ur"], "additionalProperties": false, "properties": { "en": { "type": "string" }, "ur": { "type": "string" } } },
+    "level": { "enum": ["LOW", "MODERATE", "HIGH", "CRITICAL", "UNKNOWN"] },
+    "criterion": {
+      "type": "object",
+      "required": ["id", "label", "value", "unit", "rule", "met", "closeness"],
+      "properties": {
+        "id": { "type": "string" }, "label": { "type": "string" },
+        "value": { "type": ["number", "string", "null"] }, "unit": { "type": "string" }, "rule": { "type": "string" },
+        "met": { "type": ["boolean", "null"], "description": "null = input unavailable; never treated as not met" },
+        "closeness": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "proxy": { "type": "boolean" }
+      }
+    },
+    "module": {
+      "type": "object",
+      "required": ["id", "title", "index_score", "level", "status", "confidence", "headline", "criteria", "metrics", "flags", "notes", "actions"],
+      "properties": {
+        "id": { "enum": ["dengue", "malaria", "locust", "rust", "cotton", "migraine", "arthritis", "heat", "smog", "asthma", "flu"] },
+        "title": { "$ref": "#/$defs/text" },
+        "index_score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Closeness of conditions to the trigger (75+ means every criterion met); null when nothing could be evaluated" },
+        "level": { "$ref": "#/$defs/level" },
+        "status": { "enum": ["ok", "partial", "unavailable", "out_of_season"] },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "headline": { "$ref": "#/$defs/text" },
+        "criteria": { "type": "array", "items": { "$ref": "#/$defs/criterion" } },
+        "metrics": { "type": "object" },
+        "flags": { "type": "object" },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/text" }, "description": "Empty unless level is MODERATE or higher" }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "timestamp_pkt": { "type": "string", "pattern": "\\+05:00$" },
+    "overall_level": { "$ref": "#/$defs/level" },
+    "data_quality": {
+      "type": "object",
+      "required": ["stale", "latest_reading_age_hours", "history_samples", "history_span_hours", "missing_inputs", "invalid_inputs", "fallbacks"],
+      "properties": {
+        "stale": { "type": "boolean" }, "latest_reading_age_hours": { "type": "number" },
+        "history_samples": { "type": "integer", "minimum": 0 }, "history_span_hours": { "type": "number", "minimum": 0 },
+        "missing_inputs": { "type": "array", "items": { "type": "string" } },
+        "invalid_inputs": { "type": "array", "items": { "type": "string" } },
+        "fallbacks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "groups": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+    "modules": {
+      "type": "object",
+      "required": ["dengue", "malaria", "locust", "rust", "cotton", "migraine", "arthritis", "heat", "smog", "asthma", "flu"],
+      "additionalProperties": { "$ref": "#/$defs/module" }
+    },
+    "alerts": {
+      "type": "array",
+      "description": "Modules at MODERATE or higher, most severe first",
+      "items": {
+        "type": "object", "required": ["module", "level", "title", "headline", "actions"],
+        "properties": { "module": { "type": "string" }, "level": { "enum": ["MODERATE", "HIGH", "CRITICAL"] }, "title": { "$ref": "#/$defs/text" }, "headline": { "$ref": "#/$defs/text" }, "actions": { "type": "array", "items": { "$ref": "#/$defs/text" } } }
+      }
+    },
+    "disclaimer": { "$ref": "#/$defs/text" }
+  }
+}
