@@ -1,0 +1,657 @@
+{
+  "schema_version": 1,
+  "timestamp": "2026-11-04T13:30:00.000Z",
+  "timestamp_pkt": "2026-11-04T18:30:00.000+05:00",
+  "overall_level": "CRITICAL",
+  "data_quality": {
+    "stale": false,
+    "latest_reading_age_hours": 0,
+    "history_samples": 48,
+    "history_span_hours": 48,
+    "missing_inputs": [
+      "pm10",
+      "solar_wm2",
+      "rain_acc_72h"
+    ],
+    "invalid_inputs": [],
+    "fallbacks": [
+      "pm25 from model, not sensor"
+    ]
+  },
+  "groups": {
+    "vector_borne": [
+      "dengue",
+      "malaria"
+    ],
+    "crop_pest": [
+      "locust",
+      "rust",
+      "cotton"
+    ],
+    "biometeorology": [
+      "migraine",
+      "arthritis",
+      "heat"
+    ],
+    "respiratory": [
+      "smog",
+      "asthma"
+    ],
+    "seasonal_virus": [
+      "flu"
+    ]
+  },
+  "modules": {
+    "dengue": {
+      "id": "dengue",
+      "title": {
+        "en": "Dengue & Chikungunya breeding risk",
+        "ur": "ڈینگی اور چکن گنیا کے مچھروں کی افزائش کا خطرہ"
+      },
+      "index_score": 53,
+      "level": "MODERATE",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "criteria": [
+        {
+          "id": "temp",
+          "label": "Air temperature",
+          "value": 24,
+          "unit": "°C",
+          "rule": "25–30 °C",
+          "met": false,
+          "closeness": 0.6000000000000001
+        },
+        {
+          "id": "rh",
+          "label": "Relative humidity",
+          "value": 55,
+          "unit": "%",
+          "rule": "≥ 75 %",
+          "met": false,
+          "closeness": 0
+        },
+        {
+          "id": "wetness",
+          "label": "Rain in the last 48–72 h",
+          "value": 6,
+          "unit": "mm",
+          "rule": "≥ 1 mm",
+          "met": true,
+          "closeness": 1
+        }
+      ],
+      "metrics": {
+        "temp_above_28c_hours_coverage": 1
+      },
+      "flags": {
+        "high_viral_transmission_potential": false,
+        "peak_biting_window_now": false,
+        "peak_biting_windows_pkt": [
+          "06:00–09:00",
+          "16:30–18:30"
+        ]
+      },
+      "notes": [],
+      "actions": [
+        {
+          "en": "Aedes aegypti breeds in clean standing water: empty or cover desert coolers, flower pots, rooftop tanks, tyres and buckets every 2–3 days.",
+          "ur": "ڈینگی مچھر صاف کھڑے پانی میں پیدا ہوتا ہے۔ ہر 2 سے 3 دن بعد کولر، گملوں، ٹینکیوں، ٹائروں اور بالٹیوں کا پانی خالی کریں یا انہیں ڈھانپ دیں۔"
+        },
+        {
+          "en": "Wear long sleeves and use repellent from 06:00–09:00 and 16:30–18:30 PKT, when these mosquitoes bite most.",
+          "ur": "صبح 6 سے 9 بجے اور شام 4:30 سے 6:30 بجے مچھر زیادہ کاٹتے ہیں؛ اس وقت پوری آستین کے کپڑے پہنیں اور مچھر بھگانے والا لوشن لگائیں۔"
+        },
+        {
+          "en": "Fit window screens. For high fever, severe headache, joint pain or bleeding see a doctor early and avoid aspirin or ibuprofen unless a doctor advises.",
+          "ur": "کھڑکیوں پر جالی لگائیں۔ تیز بخار، شدید سر درد، جوڑوں کا درد یا خون آنے کی صورت میں جلد ڈاکٹر سے رجوع کریں؛ ڈاکٹر کے مشورے کے بغیر اسپرین یا آئبوپروفین نہ لیں۔"
+        }
+      ]
+    },
+    "malaria": {
+      "id": "malaria",
+      "title": {
+        "en": "Malaria mosquito activity",
+        "ur": "ملیریا مچھروں کی سرگرمی"
+      },
+      "index_score": 80,
+      "level": "MODERATE",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "criteria": [
+        {
+          "id": "night_low",
+          "label": "Night-time lowest temperature (21:00–05:00 PKT)",
+          "value": 19,
+          "unit": "°C",
+          "rule": "20–28 °C",
+          "met": false,
+          "closeness": 0.6000000000000001
+        },
+        {
+          "id": "night_rh",
+          "label": "Night-time mean humidity",
+          "value": 88,
+          "unit": "%",
+          "rule": "≥ 70 %",
+          "met": true,
+          "closeness": 1
+        }
+      ],
+      "metrics": {
+        "night_coverage": 1
+      },
+      "flags": {
+        "night_in_progress": false
+      },
+      "notes": [],
+      "actions": [
+        {
+          "en": "Sleep under an insecticide-treated net or behind screens, use repellent from dusk to dawn, and clear stagnant water near the home. Get a malaria test for any fever after mosquito exposure.",
+          "ur": "غروبِ آفتاب سے صبح تک مچھر دانی یا جالی استعمال کریں، مچھر بھگانے والا لوشن لگائیں اور گھر کے آس پاس کھڑا پانی ختم کریں۔ مچھر کاٹنے کے بعد بخار ہو تو ملیریا کا ٹیسٹ کروائیں۔"
+        }
+      ]
+    },
+    "locust": {
+      "id": "locust",
+      "title": {
+        "en": "Locust breeding risk",
+        "ur": "ٹڈی دل کی افزائش کا خطرہ"
+      },
+      "index_score": 48,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "soil_moisture",
+          "label": "Soil moisture",
+          "value": 34,
+          "unit": "%",
+          "rule": "> 60 %",
+          "met": false,
+          "closeness": 0
+        },
+        {
+          "id": "soil_temp",
+          "label": "Soil temperature (0–10 cm)",
+          "value": 23,
+          "unit": "°C",
+          "rule": "25–35 °C",
+          "met": false,
+          "closeness": 0.44999999999999996,
+          "proxy": false
+        },
+        {
+          "id": "rain_or_dry_vegetation",
+          "label": "Rainfall event or dry vegetation",
+          "value": 6,
+          "unit": "mm",
+          "rule": "≥ 1 mm or vegetation flagged dry",
+          "met": true,
+          "closeness": 1
+        }
+      ],
+      "metrics": {},
+      "flags": {},
+      "notes": [
+        "The 60% volumetric threshold means near-saturated soil; calibrate against local sandy-soil sensor readings before relying on it."
+      ],
+      "actions": []
+    },
+    "rust": {
+      "id": "rust",
+      "title": {
+        "en": "Wheat yellow (stripe) rust risk",
+        "ur": "گندم کی زرد کنگی کا خطرہ"
+      },
+      "index_score": 0,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "wet_cool_run",
+          "label": "Consecutive night hours at 8–13 °C with humidity > 85 %",
+          "value": 0,
+          "unit": "h",
+          "rule": "> 6 consecutive hours",
+          "met": false,
+          "closeness": 0,
+          "latest_temp_c": 24,
+          "latest_rh": 55
+        }
+      ],
+      "metrics": {
+        "longest_run_hours": 0,
+        "coverage": 1
+      },
+      "flags": {
+        "in_season": true,
+        "event_in_progress": false
+      },
+      "notes": [
+        "Leaf wetness is not measured; humidity above 85% during cool nights is used as its proxy."
+      ],
+      "actions": []
+    },
+    "cotton": {
+      "id": "cotton",
+      "title": {
+        "en": "Cotton whitefly & pink bollworm stress",
+        "ur": "کپاس میں سفید مکھی اور گلابی سنڈی کا دباؤ"
+      },
+      "index_score": 46,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "hot_hours",
+          "label": "Hours above 38 °C in the last 24 h",
+          "value": 0,
+          "unit": "h",
+          "rule": "≥ 6 h",
+          "met": false,
+          "closeness": 0
+        },
+        {
+          "id": "humidity_drop",
+          "label": "Largest humidity fall within 6 h (from ≥ 60 %)",
+          "value": 33,
+          "unit": "points",
+          "rule": "≥ 20 points",
+          "met": true,
+          "closeness": 0.9125
+        }
+      ],
+      "metrics": {},
+      "flags": {
+        "in_season": true
+      },
+      "notes": [
+        "\"Extended\" heat is read as at least 6 hours above 38 °C and a \"humidity drop\" as 20 points in 6 h; confirm these interpretations with entomologists."
+      ],
+      "actions": []
+    },
+    "migraine": {
+      "id": "migraine",
+      "title": {
+        "en": "Migraine pressure-change trigger",
+        "ur": "میگرین کا فضائی دباؤ محرک"
+      },
+      "index_score": 77,
+      "level": "HIGH",
+      "status": "ok",
+      "confidence": "low",
+      "headline": {
+        "en": "Rapid barometric fall: a common migraine trigger",
+        "ur": "فضائی دباؤ میں تیزی سے کمی: میگرین کا عام محرک"
+      },
+      "criteria": [
+        {
+          "id": "pressure_drop_3h",
+          "label": "Largest pressure fall within 3 h",
+          "value": 3.3,
+          "unit": "hPa",
+          "rule": "> 3.0 hPa",
+          "met": true,
+          "closeness": 0.7749999999999962
+        }
+      ],
+      "metrics": {
+        "coverage": 0.5
+      },
+      "flags": {},
+      "notes": [],
+      "actions": [
+        {
+          "en": "Drink water, keep meals and sleep regular, limit bright light and screens, and keep your prescribed medicine with you. Follow your doctor's plan.",
+          "ur": "پانی پئیں، کھانے اور نیند کا وقت باقاعدہ رکھیں، تیز روشنی اور اسکرین کم کریں اور ڈاکٹر کی تجویز کردہ دوا ساتھ رکھیں۔ ڈاکٹر کے مشورے پر عمل کریں۔"
+        }
+      ]
+    },
+    "arthritis": {
+      "id": "arthritis",
+      "title": {
+        "en": "Arthritis & joint discomfort",
+        "ur": "گٹھیا اور جوڑوں کی تکلیف"
+      },
+      "index_score": 30,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "low",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "pressure_drop_3h",
+          "label": "Largest pressure fall within 3 h",
+          "value": 3.3,
+          "unit": "hPa",
+          "rule": "> 2 hPa",
+          "met": true,
+          "closeness": 0.9124999999999943
+        },
+        {
+          "id": "rh",
+          "label": "Relative humidity",
+          "value": 55,
+          "unit": "%",
+          "rule": "> 80 %",
+          "met": false,
+          "closeness": 0
+        },
+        {
+          "id": "temp",
+          "label": "Air temperature",
+          "value": 24,
+          "unit": "°C",
+          "rule": "< 18 °C",
+          "met": false,
+          "closeness": 0
+        }
+      ],
+      "metrics": {},
+      "flags": {},
+      "notes": [],
+      "actions": []
+    },
+    "heat": {
+      "id": "heat",
+      "title": {
+        "en": "Heat stress (WBGT & heat index)",
+        "ur": "گرمی کا دباؤ (WBGT اور ہیٹ انڈیکس)"
+      },
+      "index_score": 31,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "medium",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "wbgt",
+          "label": "Estimated WBGT",
+          "value": 23.98,
+          "unit": "°C",
+          "rule": "> 31 °C critical, > 28 °C high, ≥ 25 °C moderate",
+          "met": false,
+          "closeness": 0
+        }
+      ],
+      "metrics": {
+        "wbgt_c": 24,
+        "heat_index_c": 24
+      },
+      "flags": {},
+      "notes": [
+        "WBGT is estimated from air temperature and humidity only. Direct sun, still air, protective clothing and heavy work make real heat stress higher."
+      ],
+      "actions": []
+    },
+    "smog": {
+      "id": "smog",
+      "title": {
+        "en": "Smog & particulate exposure",
+        "ur": "اسموگ اور ذرّاتی آلودگی"
+      },
+      "index_score": 93,
+      "level": "CRITICAL",
+      "status": "ok",
+      "confidence": "low",
+      "headline": {
+        "en": "Severe Temperature Inversion Smog: Toxic Particulate Trapping",
+        "ur": "شدید درجۂ حرارت الٹاؤ کی اسموگ: زہریلے ذرات کا جمع ہونا"
+      },
+      "criteria": [
+        {
+          "id": "pm25",
+          "label": "PM2.5",
+          "value": 210,
+          "unit": "µg/m³",
+          "rule": "> 150 µg/m³",
+          "met": true,
+          "closeness": 0.95,
+          "source": "model"
+        },
+        {
+          "id": "calm_wind",
+          "label": "Wind speed (calm air proxy for an inversion)",
+          "value": 0.8,
+          "unit": "m/s",
+          "rule": "< 2 m/s",
+          "met": true,
+          "closeness": 0.9
+        }
+      ],
+      "metrics": {},
+      "flags": {
+        "inversion_inferred_from_calm_wind": true
+      },
+      "notes": [
+        "A temperature inversion is inferred from calm surface wind; it is not measured with a temperature profile.",
+        "PM2.5 came from a model (for example CAMS), not a local sensor."
+      ],
+      "actions": [
+        {
+          "en": "Avoid outdoor exercise and work where possible. Wear a well-fitted N95/KN95 mask outdoors (cloth and surgical masks do little against PM2.5), keep windows closed and use an air purifier if you have one. Children, older people and those with asthma or heart disease should stay indoors.",
+          "ur": "جہاں ممکن ہو باہر ورزش اور کام سے گریز کریں۔ باہر نکلتے وقت درست فٹنگ والا N95/KN95 ماسک پہنیں (کپڑے یا سرجیکل ماسک PM2.5 کے خلاف کم مؤثر ہیں)، کھڑکیاں بند رکھیں اور ممکن ہو تو ایئر پیوریفائر استعمال کریں۔ بچے، بزرگ اور دمہ یا دل کے مریض گھر کے اندر رہیں۔"
+        }
+      ]
+    },
+    "asthma": {
+      "id": "asthma",
+      "title": {
+        "en": "Asthma & bronchospasm trigger",
+        "ur": "دمہ اور سانس کی نالیوں کے سکڑاؤ کا محرک"
+      },
+      "index_score": 88,
+      "level": "MODERATE",
+      "status": "ok",
+      "confidence": "low",
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "criteria": [
+        {
+          "id": "temp_drop_4h",
+          "label": "Largest temperature fall within 4 h",
+          "value": 5,
+          "unit": "°C",
+          "rule": "> 5 °C",
+          "met": false,
+          "closeness": 0.75
+        },
+        {
+          "id": "aggravator",
+          "label": "PM2.5 or humidity",
+          "value": 210,
+          "unit": "",
+          "rule": "PM2.5 > 75 µg/m³ or humidity > 80 %",
+          "met": true,
+          "closeness": 1,
+          "pm25_met": true,
+          "rh_met": false
+        }
+      ],
+      "metrics": {},
+      "flags": {},
+      "notes": [],
+      "actions": [
+        {
+          "en": "Keep your reliever inhaler with you, follow your doctor's asthma action plan, avoid sudden cold air and outdoor exertion, and cover nose and mouth with a scarf or mask in cold or polluted air.",
+          "ur": "ریلیور انہیلر ساتھ رکھیں، ڈاکٹر کے دمہ منصوبے پر عمل کریں، اچانک ٹھنڈی ہوا اور بیرونی مشقت سے بچیں اور ٹھنڈی یا آلودہ ہوا میں ناک اور منہ مفلر یا ماسک سے ڈھانپیں۔"
+        }
+      ]
+    },
+    "flu": {
+      "id": "flu",
+      "title": {
+        "en": "Influenza & RSV transmission window",
+        "ur": "نزلہ، فلو اور آر ایس وی کے پھیلاؤ کا موسم"
+      },
+      "index_score": 9,
+      "level": "LOW",
+      "status": "ok",
+      "confidence": "high",
+      "headline": {
+        "en": "Trigger conditions are not met",
+        "ur": "محرک حالات موجود نہیں"
+      },
+      "criteria": [
+        {
+          "id": "rh",
+          "label": "Relative humidity",
+          "value": 55,
+          "unit": "%",
+          "rule": "< 40 %",
+          "met": false,
+          "closeness": 0.1875
+        },
+        {
+          "id": "temp",
+          "label": "Air temperature",
+          "value": 24,
+          "unit": "°C",
+          "rule": "< 16 °C",
+          "met": false,
+          "closeness": 0
+        }
+      ],
+      "metrics": {},
+      "flags": {},
+      "notes": [],
+      "actions": []
+    }
+  },
+  "alerts": [
+    {
+      "module": "smog",
+      "level": "CRITICAL",
+      "title": {
+        "en": "Smog & particulate exposure",
+        "ur": "اسموگ اور ذرّاتی آلودگی"
+      },
+      "headline": {
+        "en": "Severe Temperature Inversion Smog: Toxic Particulate Trapping",
+        "ur": "شدید درجۂ حرارت الٹاؤ کی اسموگ: زہریلے ذرات کا جمع ہونا"
+      },
+      "actions": [
+        {
+          "en": "Avoid outdoor exercise and work where possible. Wear a well-fitted N95/KN95 mask outdoors (cloth and surgical masks do little against PM2.5), keep windows closed and use an air purifier if you have one. Children, older people and those with asthma or heart disease should stay indoors.",
+          "ur": "جہاں ممکن ہو باہر ورزش اور کام سے گریز کریں۔ باہر نکلتے وقت درست فٹنگ والا N95/KN95 ماسک پہنیں (کپڑے یا سرجیکل ماسک PM2.5 کے خلاف کم مؤثر ہیں)، کھڑکیاں بند رکھیں اور ممکن ہو تو ایئر پیوریفائر استعمال کریں۔ بچے، بزرگ اور دمہ یا دل کے مریض گھر کے اندر رہیں۔"
+        }
+      ]
+    },
+    {
+      "module": "migraine",
+      "level": "HIGH",
+      "title": {
+        "en": "Migraine pressure-change trigger",
+        "ur": "میگرین کا فضائی دباؤ محرک"
+      },
+      "headline": {
+        "en": "Rapid barometric fall: a common migraine trigger",
+        "ur": "فضائی دباؤ میں تیزی سے کمی: میگرین کا عام محرک"
+      },
+      "actions": [
+        {
+          "en": "Drink water, keep meals and sleep regular, limit bright light and screens, and keep your prescribed medicine with you. Follow your doctor's plan.",
+          "ur": "پانی پئیں، کھانے اور نیند کا وقت باقاعدہ رکھیں، تیز روشنی اور اسکرین کم کریں اور ڈاکٹر کی تجویز کردہ دوا ساتھ رکھیں۔ ڈاکٹر کے مشورے پر عمل کریں۔"
+        }
+      ]
+    },
+    {
+      "module": "asthma",
+      "level": "MODERATE",
+      "title": {
+        "en": "Asthma & bronchospasm trigger",
+        "ur": "دمہ اور سانس کی نالیوں کے سکڑاؤ کا محرک"
+      },
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "actions": [
+        {
+          "en": "Keep your reliever inhaler with you, follow your doctor's asthma action plan, avoid sudden cold air and outdoor exertion, and cover nose and mouth with a scarf or mask in cold or polluted air.",
+          "ur": "ریلیور انہیلر ساتھ رکھیں، ڈاکٹر کے دمہ منصوبے پر عمل کریں، اچانک ٹھنڈی ہوا اور بیرونی مشقت سے بچیں اور ٹھنڈی یا آلودہ ہوا میں ناک اور منہ مفلر یا ماسک سے ڈھانپیں۔"
+        }
+      ]
+    },
+    {
+      "module": "malaria",
+      "level": "MODERATE",
+      "title": {
+        "en": "Malaria mosquito activity",
+        "ur": "ملیریا مچھروں کی سرگرمی"
+      },
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "actions": [
+        {
+          "en": "Sleep under an insecticide-treated net or behind screens, use repellent from dusk to dawn, and clear stagnant water near the home. Get a malaria test for any fever after mosquito exposure.",
+          "ur": "غروبِ آفتاب سے صبح تک مچھر دانی یا جالی استعمال کریں، مچھر بھگانے والا لوشن لگائیں اور گھر کے آس پاس کھڑا پانی ختم کریں۔ مچھر کاٹنے کے بعد بخار ہو تو ملیریا کا ٹیسٹ کروائیں۔"
+        }
+      ]
+    },
+    {
+      "module": "dengue",
+      "level": "MODERATE",
+      "title": {
+        "en": "Dengue & Chikungunya breeding risk",
+        "ur": "ڈینگی اور چکن گنیا کے مچھروں کی افزائش کا خطرہ"
+      },
+      "headline": {
+        "en": "Watch: some trigger conditions are present",
+        "ur": "نگرانی کریں: کچھ محرک حالات موجود ہیں"
+      },
+      "actions": [
+        {
+          "en": "Aedes aegypti breeds in clean standing water: empty or cover desert coolers, flower pots, rooftop tanks, tyres and buckets every 2–3 days.",
+          "ur": "ڈینگی مچھر صاف کھڑے پانی میں پیدا ہوتا ہے۔ ہر 2 سے 3 دن بعد کولر، گملوں، ٹینکیوں، ٹائروں اور بالٹیوں کا پانی خالی کریں یا انہیں ڈھانپ دیں۔"
+        },
+        {
+          "en": "Wear long sleeves and use repellent from 06:00–09:00 and 16:30–18:30 PKT, when these mosquitoes bite most.",
+          "ur": "صبح 6 سے 9 بجے اور شام 4:30 سے 6:30 بجے مچھر زیادہ کاٹتے ہیں؛ اس وقت پوری آستین کے کپڑے پہنیں اور مچھر بھگانے والا لوشن لگائیں۔"
+        },
+        {
+          "en": "Fit window screens. For high fever, severe headache, joint pain or bleeding see a doctor early and avoid aspirin or ibuprofen unless a doctor advises.",
+          "ur": "کھڑکیوں پر جالی لگائیں۔ تیز بخار، شدید سر درد، جوڑوں کا درد یا خون آنے کی صورت میں جلد ڈاکٹر سے رجوع کریں؛ ڈاکٹر کے مشورے کے بغیر اسپرین یا آئبوپروفین نہ لیں۔"
+        }
+      ]
+    }
+  ],
+  "disclaimer": {
+    "en": "Weather-based screening for awareness only. It is not a diagnosis, a case forecast or an official warning. For symptoms or emergencies contact a doctor or Rescue 1122.",
+    "ur": "یہ صرف موسمی حالات پر مبنی آگاہی کا جائزہ ہے، تشخیص، بیماری کی پیش گوئی یا سرکاری انتباہ نہیں۔ علامات یا ہنگامی صورت میں ڈاکٹر سے رجوع کریں یا ریسکیو 1122 کو بلائیں۔"
+  }
+}
