@@ -69,8 +69,14 @@ Mapping from the Sheikhupura dashboard: `AirTC`→`temp_c`, `RH`→`rh`, `B_Pres
 8. **Urdu text** should be reviewed by a native-speaking health communicator before publication, and the actions by a clinician and an agronomist.
 9. The thresholds have not been validated against Pakistani case or outbreak data. That is a necessary step before using any index for decisions beyond awareness.
 
-## Next steps for the website
+## Website panel
 
-1. A `health-panel.js` that reads the station feed, calls `assessHealth` and `assessOutlook`, and renders cards with a language toggle (English, اردو).
-2. A feed adapter for the Sheikhupura dashboard (including the 48 h rainfall sum).
-3. A Health tab and its section in `index.html`, styled with the existing card and alert components.
+`public/health-panel.js` runs the engine for the selected forecast place and renders the **Health** section (`#health`) on the weather view. It fetches 72 h of history and 72 h of forecast from Open-Meteo (best-match model: temperature, RH, surface pressure, wind in m/s, precipitation, 0–1 cm soil moisture and 0 cm soil temperature) and PM2.5/PM10 from the CAMS air-quality model. `rain_acc_48h`/`rain_acc_72h` are trailing sums and stay null without a full window. Readings are model values, labelled as such in the UI; if the air-quality request fails, smog and asthma become partial instead of LOW.
+
+The panel shows the overall level, full alert cards for HIGH and CRITICAL, a watch line for MODERATE, module cards with criteria and actions, and a 72 h outlook grid at 3 h steps. English/Urdu toggle is remembered per browser. Data loads only when the section scrolls near view. Adapter tests: `test/health-panel.test.js`.
+
+## Next steps
+
+1. Prefer a nearby WeatherWalay station reading for the current hour when one is fresh, falling back to the model (the Sheikhupura mapping above).
+2. Native-speaker review of the Urdu text and clinician/agronomist review of the actions.
+3. Local calibration of thresholds against Pakistani case and outbreak records.

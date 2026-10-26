@@ -3,6 +3,7 @@ import {loadBackendStorms,backendStormDay} from './storm-outlook.js';
 import {chooseCurrentSource,currentValue,currentCondition,mainReading} from './current-weather.js';
 import {pkt} from './map-utils.js';
 import {initFarmers} from './farmers.js';
+import {initHealthPanel} from './health-panel.js';
 import {supplementalFields,dailyCondition,ecmwfDailyCondition} from './storms.js';
 import {icon} from './icons.js';
 import {initGeolocation} from './geolocation.js';
@@ -183,6 +184,8 @@ initObservations();
 initMapTabs();
 
 initPlacePhotos();
+
+initHealthPanel({cities,getSelected:()=>selected});
 
 initGeolocation({getSelectionRevision:()=>selectionRevision,onLocate({lat,lon}){cities['current-location']=['Your location',lat,lon];if(!$('city').querySelector('option[value="current-location"]'))$('city').append(new Option('Your location','current-location'));selectCity('current-location');}});
 
