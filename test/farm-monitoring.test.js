@@ -50,3 +50,15 @@ test('narrative attributes a pre-sowing decline to the previous crop', async () 
   assert.match(text, /previous season's crop/);
   assert.doesNotMatch(historyNarrative(rows, {crop: {name: 'Wheat'}, stage: 'flowering'}, 45 * 86400000), /previous season/);
 });
+
+test('boundary upload reads GeoJSON and KML polygons and rejects bad input', async () => {
+  const {parseBoundaryFile} = await import('../public/farm-satellite.js');
+  const gj = JSON.stringify({type: 'FeatureCollection', features: [{type: 'Feature', properties: {name: 'Plot 7'}, geometry: {type: 'Polygon', coordinates: [[[74.056, 31.623], [74.059, 31.623], [74.059, 31.625], [74.056, 31.625], [74.056, 31.623]]]}}]});
+  const a = parseBoundaryFile(gj, 'plot.geojson');
+  assert.equal(a.vertices.length, 4); assert.deepEqual(a.vertices[0], [31.623, 74.056]); assert.equal(a.name, 'Plot 7');
+  const kml = '<kml><Placemark><name>Farm A</name><Polygon><outerBoundaryIs><LinearRing><coordinates>74.056,31.623,0 74.059,31.623,0 74.059,31.625,0 74.056,31.625,0 74.056,31.623,0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></kml>';
+  const b = parseBoundaryFile(kml, 'farm.kml');
+  assert.equal(b.vertices.length, 4); assert.equal(b.name, 'Farm A');
+  assert.throws(() => parseBoundaryFile('{"type":"Point","coordinates":[74,31]}', 'x.geojson'), /No polygon/);
+  assert.throws(() => parseBoundaryFile('not json', 'x.json'));
+});
