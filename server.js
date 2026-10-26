@@ -47,7 +47,7 @@ export function createServer(fetcher = fetch) {
       const types={'.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.txt':'text/plain','.csv':'text/csv'};
       if(path.startsWith(root)&&types[extname(path)])file=[relative,types[extname(path)]];
     }
-    if (['/pest-criteria.json','/agri-reference.json','/pakistan-guidance.json'].includes(url.pathname)) file=[url.pathname.slice(1),'application/json'];
+    if (['/pest-criteria.json','/agri-reference.json','/pakistan-guidance.json','/maps-config.json'].includes(url.pathname)) file=[url.pathname.slice(1),'application/json'];
     if (!file) { res.writeHead(404); return res.end('Not found'); }
     try { res.setHeader('Content-Type', `${file[1]}; charset=utf-8`); res.end(await readFile(root + file[0])); }
     catch { res.writeHead(500); res.end('Unable to load application'); }

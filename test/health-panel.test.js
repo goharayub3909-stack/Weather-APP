@@ -59,7 +59,13 @@ test('missing air quality leaves PM2.5 null, not zero', () => {
 test('engine runs end to end: smog flagged, 24 outlook steps', () => {
   const {forecast, air} = fixture();
   const {result, outlook} = runHealth(buildReadings(forecast, air, NOW));
-  assert.equal(Object.keys(result.modules).length, 11);
+  assert.equal(Object.keys(result.modules).length, 8);
+  assert.ok(!('crop_pest' in result.groups));
+  for (const id of ['locust', 'rust', 'cotton']) {
+    assert.ok(!(id in result.modules));
+    assert.ok(!result.alerts.some(a => a.module === id));
+    assert.ok(outlook.steps.every(st => !(id in st.levels)));
+  }
   assert.ok(['HIGH', 'CRITICAL'].includes(result.modules.smog.level));
   assert.ok(result.alerts.some(a => a.module === 'smog'));
   assert.equal(outlook.steps.length, 24);

@@ -11,6 +11,9 @@ import {assessHealth, assessOutlook, LEVELS} from './health-engine.js';
 
 const HOUR = 3600000;
 const PAST_DAYS = 3, FORECAST_DAYS = 4, OUTLOOK_HOURS = 72, STEP_HOURS = 3;
+// Crop pests are covered by the Farmers section, so the Health panel shows people-focused indices only.
+export const HIDDEN_GROUPS = new Set(['crop_pest']);
+
 const HOURLY = ['temperature_2m', 'relative_humidity_2m', 'surface_pressure', 'wind_speed_10m', 'precipitation', 'soil_moisture_0_to_1cm', 'soil_temperature_0cm'];
 
 /** Request URLs for one place. Wind in m/s because the engine expects it. */
@@ -73,11 +76,30 @@ export function buildReadings(forecastJson, airJson, now = new Date()) {
   };
 }
 
-/** Run the engine on built readings. */
+/** Run the engine on built readings, keeping only the groups shown on the Health panel. */
 export function runHealth(built) {
-  return {
+  return withoutHiddenGroups({
     result: assessHealth(built.current, built.history),
     outlook: assessOutlook(built.current, built.history, built.forecast, {stepHours: STEP_HOURS, horizonHours: OUTLOOK_HOURS}),
+  });
+}
+
+/** Drop hidden groups from modules, alerts, outlook and the overall level. */
+export function withoutHiddenGroups({result, outlook}) {
+  const hidden = new Set(Object.entries(result.groups).filter(([g]) => HIDDEN_GROUPS.has(g)).flatMap(([, ids]) => ids));
+  const keep = id => !hidden.has(id);
+  const modules = Object.fromEntries(Object.entries(result.modules).filter(([id]) => keep(id)));
+  const known = Object.values(modules).map(m => m.level).filter(l => l !== 'UNKNOWN');
+  const overall = known.length ? LEVELS[Math.max(...known.map(l => LEVELS.indexOf(l)))] : 'UNKNOWN';
+  return {
+    result: {...result, modules, overall_level: overall,
+      groups: Object.fromEntries(Object.entries(result.groups).filter(([g]) => !HIDDEN_GROUPS.has(g))),
+      alerts: result.alerts.filter(a => keep(a.module))},
+    outlook: {...outlook, steps: outlook.steps.map(s => {
+      const levels = Object.fromEntries(Object.entries(s.levels).filter(([id]) => keep(id)));
+      const lv = Object.values(levels).map(v => v.level).filter(l => l !== 'UNKNOWN');
+      return {...s, levels, overall_level: lv.length ? LEVELS[Math.max(...lv.map(l => LEVELS.indexOf(l)))] : 'UNKNOWN'};
+    })},
   };
 }
 
@@ -86,26 +108,26 @@ export function runHealth(built) {
 const UI = {
   en: {
     eyebrow: 'SEHAT · WEATHER-BASED HEALTH SCREENING', title: 'Health & environment',
-    intro: 'Eleven weather-linked health and crop-pest indices for the selected place, from the last 72 hours of model weather and the CAMS air-quality model.',
+    intro: 'Eight weather-linked health indices for the selected place, from the last 72 hours of model weather and the CAMS air-quality model.',
     overall: 'Overall', loading: 'Calculating health indices…', failed: 'Health indices are unavailable. Check your connection and press Refresh.',
     alerts: 'Active alerts', noAlerts: 'No index is at HIGH or CRITICAL right now.', watch: 'Watch (moderate)', outlook: 'Next 72 hours · every 3 hours',
     details: 'Why this level · what to do', criteria: 'Conditions checked', actions: 'What to do', notes: 'Notes',
     confidence: 'Confidence', partial: 'Some inputs missing', refresh: 'Refresh', source: 'Model data · not station readings',
     asOf: 'Model hour', met: 'met', notMet: 'not met', noData: 'no data', now: 'Now',
     dataNote: 'Inputs: Open-Meteo best-match model (temperature, humidity, surface pressure, wind, rain, top-layer soil) and CAMS PM2.5. Model values smooth out local extremes, so station readings may differ.',
-    groups: {vector_borne: 'Mosquito-borne', crop_pest: 'Crop pests & disease', biometeorology: 'Weather & the body', respiratory: 'Air & breathing', seasonal_virus: 'Seasonal viruses'},
+    groups: {vector_borne: 'Mosquito-borne', biometeorology: 'Weather & the body', respiratory: 'Air & breathing', seasonal_virus: 'Seasonal viruses'},
     levels: {LOW: 'Low', MODERATE: 'Moderate', HIGH: 'High', CRITICAL: 'Critical', UNKNOWN: 'Unknown'},
   },
   ur: {
     eyebrow: 'صحت · موسم پر مبنی جائزہ', title: 'صحت اور ماحول',
-    intro: 'منتخب جگہ کے لیے موسم سے جڑے صحت اور فصلوں کے کیڑوں کے گیارہ اشاریے، پچھلے 72 گھنٹوں کے ماڈل موسم اور CAMS فضائی معیار ماڈل کی بنیاد پر۔',
+    intro: 'منتخب جگہ کے لیے موسم سے جڑے صحت کے آٹھ اشاریے، پچھلے 72 گھنٹوں کے ماڈل موسم اور CAMS فضائی معیار ماڈل کی بنیاد پر۔',
     overall: 'مجموعی', loading: 'صحت کے اشاریے تیار ہو رہے ہیں…', failed: 'صحت کے اشاریے دستیاب نہیں۔ انٹرنیٹ چیک کر کے ریفریش کریں۔',
     alerts: 'فعال انتباہات', noAlerts: 'اس وقت کوئی اشاریہ "زیادہ" یا "انتہائی" سطح پر نہیں۔', watch: 'نگرانی (درمیانہ)', outlook: 'اگلے 72 گھنٹے · ہر 3 گھنٹے',
     details: 'یہ سطح کیوں · کیا کریں', criteria: 'جانچی گئی شرائط', actions: 'کیا کریں', notes: 'نوٹ',
     confidence: 'اعتماد', partial: 'کچھ معلومات دستیاب نہیں', refresh: 'ریفریش', source: 'ماڈل ڈیٹا · اسٹیشن ریڈنگ نہیں',
     asOf: 'ماڈل کا وقت', met: 'پوری', notMet: 'پوری نہیں', noData: 'ڈیٹا نہیں', now: 'ابھی',
     dataNote: 'ماخذ: Open-Meteo ماڈل (درجۂ حرارت، نمی، فضائی دباؤ، ہوا، بارش، مٹی کی اوپری تہہ) اور CAMS سے PM2.5۔ ماڈل مقامی شدت کو ہموار کر دیتا ہے، اس لیے اسٹیشن کی ریڈنگ مختلف ہو سکتی ہے۔',
-    groups: {vector_borne: 'مچھر سے پھیلنے والی بیماریاں', crop_pest: 'فصلوں کے کیڑے اور بیماریاں', biometeorology: 'موسم اور جسم', respiratory: 'ہوا اور سانس', seasonal_virus: 'موسمی وائرس'},
+    groups: {vector_borne: 'مچھر سے پھیلنے والی بیماریاں', biometeorology: 'موسم اور جسم', respiratory: 'ہوا اور سانس', seasonal_virus: 'موسمی وائرس'},
     levels: {LOW: 'کم', MODERATE: 'درمیانہ', HIGH: 'زیادہ', CRITICAL: 'انتہائی', UNKNOWN: 'نامعلوم'},
   },
 };
