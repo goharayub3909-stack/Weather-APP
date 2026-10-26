@@ -472,6 +472,7 @@ export function initFarmSatellite() {
         return;
       }
       await draw();
+      updateSteps();
       if (validField(vertices)) loadHistory();
     } catch (e) {
       if (!signal.aborted) status("Satellite unavailable: " + e.message + ". Use Load recent satellite scenes to retry.");
