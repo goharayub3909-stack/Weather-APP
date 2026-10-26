@@ -151,3 +151,10 @@ Crop health supports editing, inserting and deleting boundary vertices, undo, po
 Landsat Collection 2 LST uses thermal scale/offset and converts Kelvin to Celsius; MODIS MOD11A1 daytime LST is a 1 km daily product. Sentinel-2 has no thermal LST band. SMI is explicitly a relative thermal proxy requiring user-calibrated wet/dry LST endmembers; it is not measured soil moisture. Google tiles are not scraped: the Google basemap choice stays disabled without official API/billing setup. Public Esri World Imagery is available with attribution as an alternative; its acquisition time is independent of analytic scenes.
 
 Reference disease photographs retain source, author, license and modification records in `public/disease-images/credits.json`. Images illustrate symptoms; they are not diagnoses of the selected field. Where no verified photograph is available, a neutral symbol is used.
+
+
+## Farmers · crop health report
+
+The Crop health tab builds a 12-month field report for a drawn or saved boundary. Each Sentinel-2 or Landsat pass (the least cloudy per 5-day window) is reduced to a whole-field mean by Microsoft Planetary Computer's statistics service, masked with the pass's own quality band (Sentinel-2 SCL 4/5/6; Landsat QA fill/cloud/shadow/cirrus/snow clear). A pass counts only when at least 60% of the field is clear. Reflectance uses the published scale and offsets, including the Sentinel-2 processing-baseline 04.00 offset (without it NDVI reads roughly 0.1 low). Results are cached in the browser; the service rate-limits bursts, so requests are retried with backoff. MODIS products and SMI use five interior sample points.
+
+The field map basemap defaults to Google satellite through the official Google Maps Platform Map Tiles API. Put a key in `public/maps-config.json` (`googleMapsApiKey`), enable the Map Tiles API and billing for it, and restrict the key to this site's address. With no key the map falls back to Esri World Imagery. Unofficial Google tile URLs are not used.

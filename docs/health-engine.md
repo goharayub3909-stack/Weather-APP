@@ -73,7 +73,7 @@ Mapping from the Sheikhupura dashboard: `AirTC`→`temp_c`, `RH`→`rh`, `B_Pres
 
 `public/health-panel.js` runs the engine for the selected forecast place and renders the **Health** section (`#health`) on the weather view. It fetches 72 h of history and 72 h of forecast from Open-Meteo (best-match model: temperature, RH, surface pressure, wind in m/s, precipitation, 0–1 cm soil moisture and 0 cm soil temperature) and PM2.5/PM10 from the CAMS air-quality model. `rain_acc_48h`/`rain_acc_72h` are trailing sums and stay null without a full window. Readings are model values, labelled as such in the UI; if the air-quality request fails, smog and asthma become partial instead of LOW.
 
-The panel shows the overall level, full alert cards for HIGH and CRITICAL, a watch line for MODERATE, module cards with criteria and actions, and a 72 h outlook grid at 3 h steps. English/Urdu toggle is remembered per browser. Data loads only when the section scrolls near view. Adapter tests: `test/health-panel.test.js`.
+The panel shows eight people-focused indices (the crop-pest group is left to the Farmers section): the overall level, full alert cards for HIGH and CRITICAL, a watch line for MODERATE, module cards with criteria and actions, and a 72 h outlook grid at 3 h steps. English/Urdu toggle is remembered per browser. Data loads only when the section scrolls near view. Adapter tests: `test/health-panel.test.js`.
 
 ## Next steps
 
