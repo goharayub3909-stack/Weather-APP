@@ -138,7 +138,7 @@ export function historyNarrative(rows, { crop = null, stage = "mixed" } = {}, no
 export function renderFieldChart(
   root,
   rows,
-  { title = "Satellite acquisitions", unit = "", start = Date.now() - 365 * 86400000, end = Date.now(), color = "#92d494" } = {},
+  { title = "Satellite acquisitions", unit = "", start = Date.now() - 365 * 86400000, end = Date.now(), color = "#92d494", events = [] } = {},
 ) {
   root.replaceChildren();
   const valid = rows.filter((r) => finite(r.value) && finite(r.time)).sort((a, b) => a.time - b.time),
@@ -212,6 +212,13 @@ export function renderFieldChart(
       unit +
       (finite(r.clear) ? " · " + Math.round(r.clear * 100) + "% of field clear" : r.count ? " · " + r.count + " usable sample positions" : "");
     dot.append(tip);
+  }
+  // Field events (sowing, logged activities) as labelled dashed lines.
+  for (const ev of events) {
+    if (!finite(ev.time) || ev.time < start || ev.time > end) continue;
+    const ex = x(ev.time), tone = ev.color || "#e4bc60";
+    add("line", { x1: ex, x2: ex, y1: p.t, y2: h - p.b, stroke: tone, "stroke-dasharray": "3 3", opacity: 0.85 });
+    add("text", { x: ex + 3, y: p.t + 10, fill: tone, "font-size": 10 }, ev.label);
   }
   root.append(svg);
   const note = document.createElement("small");

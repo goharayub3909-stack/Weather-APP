@@ -41,6 +41,32 @@ export function maskedStatsExpression(sensor, indexExpression) {
   return `where(${cond},${indexExpression},0);where(${cond},1,0)`;
 }
 
+/** Read the first polygon from GeoJSON or KML text. Returns {vertices:[[lat,lon],...], name}. */
+export function parseBoundaryFile(text, filename = "") {
+  let ring = null,
+    name = "";
+  const trimmed = String(text).trim();
+  if (/\.kml$/i.test(filename) || trimmed.startsWith("<")) {
+    const coords = trimmed.match(/<coordinates>([\s\S]*?)<\/coordinates>/i);
+    if (!coords) throw Error("No polygon coordinates in this KML");
+    ring = coords[1].trim().split(/\s+/).map((t) => t.split(",").map(Number)).filter((c) => c.length >= 2 && c.every(finite));
+    name = (trimmed.match(/<Placemark[\s\S]*?<name>([^<]{1,70})<\/name>/i) || trimmed.match(/<name>([^<]{1,70})<\/name>/i) || [])[1] || "";
+  } else {
+    const json = JSON.parse(trimmed),
+      features = json.type === "FeatureCollection" ? json.features : [json],
+      found = (features || []).map((f) => ({ g: f?.type === "Feature" ? f.geometry : f, p: f?.properties || {} })).find(({ g }) => g && /Polygon/.test(g.type));
+    if (!found) throw Error("No polygon in this GeoJSON");
+    ring = found.g.type === "MultiPolygon" ? found.g.coordinates[0][0] : found.g.coordinates[0];
+    name = String(found.p.name || found.p.Name || "").slice(0, 70);
+  }
+  if (!Array.isArray(ring)) throw Error("Invalid polygon");
+  let vertices = ring.map(([lon, lat]) => [lat, lon]).filter(([lat, lon]) => finite(lat) && finite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180);
+  if (vertices.length > 1 && vertices[0][0] === vertices.at(-1)[0] && vertices[0][1] === vertices.at(-1)[1]) vertices = vertices.slice(0, -1);
+  if (vertices.length > 500) throw Error("Boundary has more than 500 points");
+  if (!validField(vertices)) throw Error("The polygon needs at least three points without crossing edges");
+  return { vertices, name };
+}
+
 /**
  * Thin a year of passes to the least-cloudy pass in each window (Sentinel-2 revisits
  * about every 5 days), keeping requests modest. Input/output: [date, scene] pairs.
@@ -888,6 +914,16 @@ export function initFarmSatellite() {
     $("agri-field-station-chart").replaceChildren();
     renderDataChips(null, null);
     reportSubtitle();
+    lastChart = null;
+    lastRisks = [];
+    $("crop-risk-list").replaceChildren(Object.assign(document.createElement("p"), { className: "farm-explainer", textContent: "Risks appear once the field report has loaded." }));
+    $("crop-zones").replaceChildren();
+    $("crop-weather-chart").replaceChildren();
+    $("crop-scout-empty").hidden = false;
+    $("crop-sowing-date").value = sowingStore.get(fieldKey()) || "";
+    seasonNote();
+    renderLog();
+    updateSteps();
   }
   // Whole-field, cloud-masked mean for one pass from the statistics service.
   async function fieldStats(scene, mode, sensor, signal) {
@@ -1116,12 +1152,13 @@ export function initFarmSatellite() {
     historyRows = results.sort((a, b) => a.time - b.time);
     const usable = historyRows.filter((r) => finite(r.value)).length,
       failed = historyRows.filter((r) => r.failed).length;
-    renderFieldChart($("agri-field-history-chart"), historyRows, {
+    lastChart = {
       title: FIELD_INDICES[mode].label + (whole ? " · whole-field mean" : " · sampled field trend"),
       unit: FIELD_INDICES[mode].unit || "",
       start: Date.now() - HISTORY_DAYS * 86400000,
       color: mode === "lst" ? "#f0a26c" : "#5fbf6a",
-    });
+    };
+    drawTrend();
     snapshotCards(mode, historyRows, usable, days.length, whole);
     renderDataChips(usable, days.length);
     // Within-field differences: five interior points on the latest clear pass.
@@ -1165,7 +1202,12 @@ export function initFarmSatellite() {
             map.fire("click", { latlng: L.latLng(s.point) });
             $("agri-satellite-map").scrollIntoView({ block: "center", behavior: "smooth" });
           });
-          row.append(document.createTextNode(" "), locate);
+          const maps = document.createElement("a");
+          maps.href = "https://www.google.com/maps?q=" + s.point[0].toFixed(6) + "," + s.point[1].toFixed(6);
+          maps.target = "_blank";
+          maps.rel = "noopener noreferrer";
+          maps.textContent = "Directions ↗";
+          row.append(document.createTextNode(" "), locate, document.createTextNode(" "), maps);
           zoneRoot.append(row);
         }
     }
@@ -1177,7 +1219,482 @@ export function initFarmSatellite() {
       mode === "ndvi" || mode === "evi" || mode === "savi"
         ? historyNarrative(historyRows, farmContext || {})
         : "This is a " + FIELD_INDICES[mode].label + " record. Switch the graph to NDVI for a crop-development reading; thermal and water indices alone cannot show sowing or harvest.";
+    afterHistory(mode, sensor, whole, signal, version);
   }
+  // ---------------- Six-step workflow: season, weather, risks, zones, scouting, log, report ----------------
+  const DAY = 86400000;
+  const fieldKey = () => (validField(vertices) ? vertices.map(([a, b]) => a.toFixed(5) + "," + b.toFixed(5)).join(";") : "");
+  const jsonStore = (name) => ({
+    all() {
+      try {
+        return JSON.parse(localStorage.getItem(name)) || {};
+      } catch {
+        return {};
+      }
+    },
+    get(k) {
+      return this.all()[k];
+    },
+    set(k, v) {
+      try {
+        const a = this.all();
+        if (v === undefined || v === "" || (Array.isArray(v) && !v.length)) delete a[k];
+        else a[k] = v;
+        localStorage.setItem(name, JSON.stringify(a));
+      } catch {}
+    },
+  });
+  const logStore = jsonStore("weatherwalay-field-log-v1"),
+    sowingStore = jsonStore("weatherwalay-field-sowing-v1");
+  const ACTIVITY = { sowing: "Sowing", irrigation: "Irrigation", fertilizer: "Fertilizer", spray: "Spray", scouting: "Scouting", harvest: "Harvest", other: "Other" };
+  const localDay = (t) => new Date(t).toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
+  const niceDay = (t) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Karachi" });
+  let lastChart = null,
+    lastRisks = [],
+    lastZones = null,
+    weatherYear = null;
+  function sowingTime() {
+    const v = $("crop-sowing-date")?.value,
+      t = v ? Date.parse(v + "T00:00:00+05:00") : NaN;
+    return finite(t) ? t : null;
+  }
+  function fieldEvents() {
+    const events = [],
+      sown = sowingTime();
+    if (sown) events.push({ time: sown, label: "Sown", color: "#8ad9ff" });
+    for (const e of logStore.get(fieldKey()) || [])
+      if (e.type !== "sowing" || !sown) events.push({ time: Date.parse(e.date + "T12:00:00+05:00"), label: ACTIVITY[e.type] || "Activity", color: "#e4bc60" });
+    return events;
+  }
+  function drawTrend() {
+    if (!lastChart) return;
+    renderFieldChart($("agri-field-history-chart"), historyRows, { ...lastChart, events: fieldEvents() });
+  }
+  // Shared statistics request with retry (the service rate-limits bursts without CORS headers).
+  async function statsFetch(u, body, signal) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const r = await fetch(u, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.any([signal || new AbortController().signal, AbortSignal.timeout(30000)]),
+        });
+        if (r.ok) return r.json();
+        if (r.status !== 429 && r.status < 500) throw Error("Statistics service HTTP " + r.status);
+      } catch (e) {
+        if (signal?.aborted || e.name === "AbortError" || /HTTP 4/.test(e.message)) throw e;
+      }
+      if (attempt >= 4) throw Error("Statistics service unavailable after retries");
+      await new Promise((done) => setTimeout(done, 1500 * 2 ** attempt + Math.random() * 500));
+    }
+  }
+  const fieldFeature = () => ({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[...vertices, vertices[0]].map(([lat, lon]) => [lon, lat])] } });
+  // Area share of four NDVI classes over the clear part of the field (one request).
+  async function fieldZones(scene, sensor, signal) {
+    const recipe = recipeFor(sensor, "ndvi", scene),
+      cond = QA_CONDITION[sensor];
+    if (!recipe?.expression || !cond) return null;
+    const E = "(" + recipe.expression + ")",
+      u = new URL(base + "/api/data/v1/item/statistics");
+    u.search = new URLSearchParams({ collection: collections[sensor].id, item: scene.id, histogram_bins: "5", histogram_range: "0,5" });
+    for (const a of new Set([...recipe.assets, qualityAsset(sensor)])) u.searchParams.append("assets", a);
+    u.searchParams.set("expression", `where(${cond},where(${E}<0.2,1,where(${E}<0.4,2,where(${E}<0.6,3,4))),0)`);
+    const d = await statsFetch(u, fieldFeature(), signal),
+      counts = Object.values(d.properties?.statistics || {})[0]?.histogram?.[0];
+    if (!Array.isArray(counts) || counts.length < 5) return null;
+    const clear = counts.slice(1).reduce((a, b) => a + b, 0);
+    return clear ? { shares: counts.slice(1).map((c) => c / clear), clearShare: clear / counts.reduce((a, b) => a + b, 0) } : null;
+  }
+  function renderZones(zones, time) {
+    const root = $("crop-zones");
+    root.replaceChildren();
+    if (!zones) {
+      root.append(Object.assign(document.createElement("p"), { className: "farm-explainer", textContent: "Zones need a clear Sentinel-2 or Landsat NDVI pass." }));
+      return;
+    }
+    const area = fieldAreaHa(vertices),
+      names = [
+        ["Low", "< 0.2", "#cd3c37"],
+        ["Moderate", "0.2–0.4", "#f29930"],
+        ["Good", "0.4–0.6", "#d9c13a"],
+        ["Dense", "> 0.6", "#278b3b"],
+      ],
+      bar = document.createElement("div");
+    bar.className = "crop-zone-bar";
+    const list = document.createElement("div");
+    list.className = "crop-zone-list";
+    zones.shares.forEach((share, i) => {
+      const seg = document.createElement("i");
+      seg.style.width = share * 100 + "%";
+      seg.style.background = names[i][2];
+      seg.title = names[i][0] + " " + Math.round(share * 100) + "%";
+      bar.append(seg);
+      const item = document.createElement("span");
+      const sw = document.createElement("b");
+      sw.style.background = names[i][2];
+      item.append(sw, document.createTextNode(`${names[i][0]} (NDVI ${names[i][1]}): ${Math.round(share * 100)}%` + (finite(area) ? ` · ${(area * share).toFixed(1)} ha` : "")));
+      list.append(item);
+    });
+    const note = document.createElement("p");
+    note.className = "farm-explainer";
+    note.textContent = "Latest clear pass " + pkt(time) + " · " + Math.round(zones.clearShare * 100) + "% of the field was cloud-free. Use these zones to target scouting, or as a starting point for variable-rate fertilizer or seed. Zones show relative greenness, not a nutrient test.";
+    root.append(bar, list, note);
+  }
+  // 12 months of daily rain and temperature at the field centre (Open-Meteo archive).
+  async function loadWeatherYear(signal) {
+    const lat = vertices.reduce((a, v) => a + v[0], 0) / vertices.length,
+      lon = vertices.reduce((a, v) => a + v[1], 0) / vertices.length,
+      key = lat.toFixed(2) + "," + lon.toFixed(2);
+    if (weatherYear?.key === key) return weatherYear;
+    const u = new URL("https://archive-api.open-meteo.com/v1/archive");
+    u.search = new URLSearchParams({
+      latitude: lat.toFixed(4),
+      longitude: lon.toFixed(4),
+      start_date: localDay(Date.now() - HISTORY_DAYS * DAY),
+      end_date: localDay(Date.now() - 2 * DAY),
+      daily: "precipitation_sum,temperature_2m_max,temperature_2m_min",
+      timezone: "Asia/Karachi",
+    });
+    const r = await fetch(u, { signal: AbortSignal.any([signal || new AbortController().signal, AbortSignal.timeout(20000)]) });
+    if (!r.ok) throw Error("Weather archive HTTP " + r.status);
+    const d = (await r.json()).daily;
+    weatherYear = { key, days: (d?.time || []).map((t, i) => ({ time: Date.parse(t + "T12:00:00+05:00"), rain: d.precipitation_sum?.[i], tmax: d.temperature_2m_max?.[i], tmin: d.temperature_2m_min?.[i] })) };
+    return weatherYear;
+  }
+  function renderWeatherYear(w) {
+    const root = $("crop-weather-chart");
+    root.replaceChildren();
+    if (!w?.days?.length) return;
+    const months = new Map();
+    for (const d of w.days) {
+      const k = localDay(d.time).slice(0, 7),
+        m = months.get(k) || { time: d.time, rain: 0, tmax: [], n: 0 };
+      if (finite(d.rain)) m.rain += d.rain;
+      if (finite(d.tmax)) m.tmax.push(d.tmax);
+      months.set(k, m);
+    }
+    const rows = [...months.values()],
+      ns = "http://www.w3.org/2000/svg",
+      W = 720,
+      H = 150,
+      P = { l: 54, r: 46, t: 18, b: 26 },
+      maxRain = Math.max(10, ...rows.map((m) => m.rain)),
+      temps = rows.flatMap((m) => (m.tmax.length ? [m.tmax.reduce((a, b) => a + b, 0) / m.tmax.length] : [])),
+      tLo = Math.min(...temps) - 2,
+      tHi = Math.max(...temps) + 2,
+      bw = (W - P.l - P.r) / rows.length,
+      svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Monthly rainfall bars and mean daily maximum temperature line, last 12 months");
+    const add = (tag, attrs, text) => {
+      const e = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text !== undefined) e.textContent = text;
+      svg.append(e);
+      return e;
+    };
+    const pts = [];
+    rows.forEach((m, i) => {
+      const x = P.l + i * bw,
+        bh = (m.rain / maxRain) * (H - P.t - P.b);
+      const bar = add("rect", { x: x + bw * 0.18, y: H - P.b - bh, width: bw * 0.64, height: bh, fill: "#5aa9e6", opacity: 0.75, rx: 2 });
+      const tip = document.createElementNS(ns, "title");
+      tip.textContent = new Date(m.time).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "Asia/Karachi" }) + ": " + m.rain.toFixed(0) + " mm rain";
+      bar.append(tip);
+      add("text", { x: x + bw / 2, y: H - 8, "text-anchor": "middle", fill: "currentColor", "font-size": 10, opacity: 0.7 }, new Date(m.time).toLocaleDateString("en-GB", { month: "short", timeZone: "Asia/Karachi" }));
+      if (m.tmax.length) pts.push([x + bw / 2, H - P.b - ((m.tmax.reduce((a, b) => a + b, 0) / m.tmax.length - tLo) / (tHi - tLo)) * (H - P.t - P.b)]);
+    });
+    if (pts.length > 1) add("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: "none", stroke: "#f0a26c", "stroke-width": 2.5 });
+    add("text", { x: P.l - 8, y: P.t + 8, "text-anchor": "end", fill: "#5aa9e6", "font-size": 10 }, maxRain.toFixed(0) + " mm");
+    add("text", { x: W - P.r + 6, y: P.t + 8, fill: "#f0a26c", "font-size": 10 }, tHi.toFixed(0) + " °C");
+    add("text", { x: W - P.r + 6, y: H - P.b, fill: "#f0a26c", "font-size": 10 }, tLo.toFixed(0) + " °C");
+    const h4 = document.createElement("h4");
+    h4.textContent = "Rain & temperature · last 12 months";
+    const total = w.days.reduce((a, d) => a + (finite(d.rain) ? d.rain : 0), 0),
+      note = document.createElement("small");
+    note.textContent = "Bars: monthly rainfall (total " + total.toFixed(0) + " mm). Line: mean daily maximum temperature. Open-Meteo reanalysis at the field centre.";
+    root.append(h4, svg, note);
+  }
+  function seasonNote() {
+    const el = $("crop-season-note");
+    if (!el) return;
+    const sown = sowingTime();
+    if (!sown) {
+      el.textContent = validField(vertices) ? "Add the sowing date to track days after sowing and growing degree days." : "";
+      return;
+    }
+    const das = Math.floor((Date.now() - sown) / DAY);
+    if (das < 0) {
+      el.textContent = "Planned sowing " + niceDay(sown) + ".";
+      return;
+    }
+    const crop = farmContext?.crop?.id,
+      baseTemp = ["wheat", "barley", "chickpea", "mustard", "berseem"].includes(crop) ? 0 : 10;
+    let gdd = null;
+    if (weatherYear?.days?.length && sown >= weatherYear.days[0].time - DAY)
+      gdd = weatherYear.days.filter((d) => d.time >= sown && finite(d.tmax) && finite(d.tmin)).reduce((a, d) => a + Math.max(0, (d.tmax + d.tmin) / 2 - baseTemp), 0);
+    el.textContent = "Sown " + niceDay(sown) + " · day " + das + " after sowing" + (finite(gdd) ? " · " + Math.round(gdd) + " °C·days since sowing (base " + baseTemp + " °C)" : "") + ".";
+  }
+  function weatherRisks() {
+    const h = farmContext?.forecast?.hourly,
+      out = [];
+    if (!h?.time?.length) return out;
+    const now = Date.now(),
+      idx = h.time.map((t, i) => [Date.parse(t + ":00+05:00"), i]).filter(([t]) => t >= now && t <= now + 7 * DAY),
+      temps = idx.map(([, i]) => h.temperature_2m?.[i]).filter(finite),
+      daily = new Map();
+    for (const [t, i] of idx) if (finite(h.precipitation?.[i])) daily.set(localDay(t), (daily.get(localDay(t)) || 0) + h.precipitation[i]);
+    if (temps.length) {
+      const hi = Math.max(...temps),
+        lo = Math.min(...temps);
+      if (lo <= 2) out.push(["high", "Frost risk: down to " + lo.toFixed(0) + " °C this week", "A light irrigation the evening before helps protect the crop. Avoid fertilizer on frozen ground."]);
+      if (hi >= 38) out.push(["high", "Severe heat: up to " + hi.toFixed(0) + " °C this week", "Keep irrigation on schedule and avoid spraying in the afternoon."]);
+      else if (hi >= 35) out.push(["watch", "Heat stress possible: up to " + hi.toFixed(0) + " °C", "Irrigate on time; spray early morning or evening only."]);
+    }
+    const wet = Math.max(0, ...daily.values());
+    if (wet >= 25) out.push(["watch", "Heavy rain: up to " + wet.toFixed(0) + " mm in a day", "Clear field drains and delay fertilizer and spraying until it passes."]);
+    return out;
+  }
+  function computeRisks(rows, zones, ndmi) {
+    const out = [],
+      valid = rows.filter((r) => finite(r.value)),
+      latest = valid.at(-1),
+      stage = farmContext?.stage || "mixed",
+      early = ["pre-sowing", "sowing"].includes(stage),
+      s = fieldChangeSummary(rows);
+    if (s?.previous && s.change <= -0.1)
+      out.push(
+        early
+          ? ["info", "Greenness fell " + Math.abs(s.change).toFixed(2) + " in " + s.days + " days", "Expected while the previous crop matures or is cleared before sowing."]
+          : ["high", "Greenness fell " + Math.abs(s.change).toFixed(2) + " in " + s.days + " days", "Check for water stress, pests, disease or lodging. Start with the scouting points below."],
+      );
+    else if (s?.previous && s.change >= 0.1) out.push(["ok", "Greenness rose " + s.change.toFixed(2) + " in " + s.days + " days", "The canopy is developing."]);
+    // Weak = clearly low cover (NDVI < 0.2); in a dense crop (mean ≥ 0.55) the 0.2–0.4 band also lags.
+    const weak = zones ? zones.shares[0] + (latest?.value >= 0.55 ? zones.shares[1] : 0) : 0;
+    if (zones && !early && latest?.value >= 0.3 && weak >= 0.15) {
+      const area = fieldAreaHa(vertices),
+        share = weak;
+      out.push(["watch", Math.round(share * 100) + "% of the field" + (finite(area) ? " (" + (area * share).toFixed(1) + " ha)" : "") + " is noticeably weaker", "Uneven growth: check for emergence gaps, waterlogging, salinity or nutrient patches."]);
+    }
+    if (finite(ndmi) && !early && latest?.value >= 0.3) {
+      if (ndmi < 0) out.push(["watch", "Low canopy moisture (NDMI " + ndmi.toFixed(2) + ")", "The crop may be short of water. Check soil moisture and the next irrigation turn."]);
+      else out.push(["ok", "Canopy moisture normal (NDMI " + ndmi.toFixed(2) + ")", "No water-stress signal in the latest clear pass."]);
+    }
+    out.push(...weatherRisks());
+    if (latest && Date.now() - latest.time > 15 * DAY)
+      out.push(["info", "No clear satellite view for " + Math.round((Date.now() - latest.time) / DAY) + " days", "Cloud has hidden the field. Rely on a field visit until the next clear pass."]);
+    if (!out.some((r) => r[0] === "high" || r[0] === "watch")) out.unshift(["ok", "No risks flagged", "Vegetation change, field uniformity and the 7-day weather are within normal limits."]);
+    return out;
+  }
+  function renderRisks(risks) {
+    const root = $("crop-risk-list");
+    root.replaceChildren();
+    for (const [level, title, detail] of risks) {
+      const item = document.createElement("article");
+      item.className = "crop-risk";
+      item.dataset.level = level;
+      const badge = document.createElement("span");
+      badge.textContent = { high: "Act now", watch: "Watch", ok: "OK", info: "Note" }[level];
+      const h = document.createElement("strong");
+      h.textContent = title;
+      const p = document.createElement("p");
+      p.textContent = detail;
+      item.append(badge, h, p);
+      root.append(item);
+    }
+  }
+  function renderLog() {
+    const list = $("crop-log-list"),
+      key = fieldKey();
+    list.replaceChildren();
+    $("crop-log-add").disabled = !key;
+    const entries = (logStore.get(key) || []).sort((a, b) => b.date.localeCompare(a.date));
+    for (const e of entries) {
+      const li = document.createElement("li");
+      const strong = document.createElement("strong");
+      strong.textContent = niceDay(Date.parse(e.date + "T12:00:00+05:00")) + " · " + (ACTIVITY[e.type] || "Activity");
+      const note = document.createElement("span");
+      note.textContent = e.note || "";
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "text-button";
+      del.textContent = "Remove";
+      del.setAttribute("aria-label", "Remove " + strong.textContent);
+      del.addEventListener("click", () => {
+        logStore.set(key, (logStore.get(key) || []).filter((x) => x.id !== e.id));
+        renderLog();
+        drawTrend();
+        updateSteps();
+      });
+      li.append(strong, note, del);
+      list.append(li);
+    }
+    if (!entries.length && key) list.append(Object.assign(document.createElement("li"), { className: "crop-log-empty", textContent: "No activities logged for this field yet." }));
+  }
+  function updateSteps() {
+    const valid = historyRows.some((r) => finite(r.value)),
+      done = {
+        1: validField(vertices),
+        2: scenes.length > 0,
+        3: valid,
+        4: lastRisks.length > 0,
+        5: (logStore.get(fieldKey()) || []).length > 0,
+        6: valid,
+      };
+    for (const li of document.querySelectorAll("#crop-stepper li")) li.dataset.done = String(!!done[li.dataset.step]);
+    for (const id of ["crop-print", "crop-csv", "crop-copy"]) $(id).disabled = !valid;
+    $("crop-export").disabled = !validField(vertices);
+  }
+  async function afterHistory(mode, sensor, whole, signal, version) {
+    renderLog();
+    seasonNote();
+    loadWeatherYear(signal)
+      .then((w) => {
+        if (version !== historyVersion) return;
+        renderWeatherYear(w);
+        seasonNote();
+      })
+      .catch(() => {});
+    const latest = historyRows.filter((r) => finite(r.value)).at(-1),
+      scene = latest && scenes.find((f) => f.id === latest.scene);
+    lastZones = null;
+    let ndmi = null;
+    if (scene && whole) {
+      try {
+        lastZones = await fieldZones(scene, sensor, signal);
+      } catch {}
+      try {
+        ndmi = (await fieldStats(scene, "ndmi", sensor, signal)).value;
+      } catch {}
+    }
+    if (version !== historyVersion) return;
+    renderZones(lastZones, latest?.time);
+    lastRisks = mode === "ndvi" || mode === "evi" || mode === "savi" ? computeRisks(historyRows, lastZones, ndmi) : [["info", "Risks use NDVI", "Switch the graph parameter to NDVI to check vegetation risks."], ...weatherRisks()];
+    renderRisks(lastRisks);
+    $("crop-scout-empty").hidden = !$("agri-zone-details").hidden;
+    updateSteps();
+  }
+  function reportText() {
+    const valid = historyRows.filter((r) => finite(r.value)),
+      s = fieldChangeSummary(historyRows),
+      area = validField(vertices) ? fieldAreaHa(vertices) : null,
+      name = $("farm-boundary-name").value.trim() || "Field",
+      lines = [
+        "WeatherWalay Kissan Hub · Field report",
+        [name, farmContext?.crop?.name, finite(area) ? area.toFixed(1) + " ha" : null, place[0]].filter(Boolean).join(" · "),
+        s ? "Latest NDVI " + s.latest.value.toFixed(2) + " (" + niceDay(s.latest.time) + ")" + (finite(s.change) ? ", change " + (s.change >= 0 ? "+" : "") + s.change.toFixed(2) + " in " + s.days + " days" : "") : "No clear pass yet",
+        valid.length ? "12-month range " + Math.min(...valid.map((r) => r.value)).toFixed(2) + "–" + Math.max(...valid.map((r) => r.value)).toFixed(2) + " from " + valid.length + " clear passes" : "",
+        $("crop-season-note").textContent,
+        "",
+        "Risks:",
+        ...lastRisks.map(([l, t, d]) => "- " + t + ": " + d),
+      ];
+    return lines.filter((l, i) => l || i === 5).join("\n");
+  }
+  $("crop-sowing-date").addEventListener("change", () => {
+    sowingStore.set(fieldKey(), $("crop-sowing-date").value);
+    seasonNote();
+    drawTrend();
+  });
+  $("crop-log-date").value = localDay(Date.now());
+  $("crop-log-add").addEventListener("click", () => {
+    const key = fieldKey(),
+      date = $("crop-log-date").value;
+    if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const entries = logStore.get(key) || [];
+    entries.push({ id: Date.now().toString(36), date, type: $("crop-log-type").value, note: $("crop-log-note").value.trim().slice(0, 140) });
+    logStore.set(key, entries.slice(-200));
+    if ($("crop-log-type").value === "sowing" && !$("crop-sowing-date").value) {
+      $("crop-sowing-date").value = date;
+      sowingStore.set(key, date);
+      seasonNote();
+    }
+    $("crop-log-note").value = "";
+    renderLog();
+    drawTrend();
+    updateSteps();
+  });
+  $("crop-upload").addEventListener("change", async () => {
+    const file = $("crop-upload").files?.[0];
+    $("crop-upload").value = "";
+    if (!file) return;
+    try {
+      if (file.size > 2e6) throw Error("File is larger than 2 MB");
+      const parsed = parseBoundaryFile(await file.text(), file.name);
+      ensureMap();
+      snapshot();
+      vertices = parsed.vertices;
+      drawing = editing = false;
+      pointMode = true;
+      $("agri-field-draw").textContent = "Draw field boundary";
+      $("farm-boundary-name").value = parsed.name || file.name.replace(/\.[^.]+$/, "").slice(0, 70);
+      $("crop-sowing-date").value = sowingStore.get(fieldKey()) || "";
+      syncModeButtons();
+      clearHistory();
+      syncBoundary(false);
+      map.fitBounds(L.latLngBounds(vertices), { padding: [35, 35], maxZoom: 17 });
+      load();
+      $("farm-boundary-status").textContent = "Loaded " + file.name + ". Save it to keep it in this browser.";
+    } catch (e) {
+      status("Could not read that boundary: " + e.message + ". Use a GeoJSON or KML polygon.");
+    }
+  });
+  $("crop-csv").addEventListener("click", () => {
+    const rows = [["date_pkt", "value", "clear_fraction", "scene"], ...historyRows.map((r) => [localDay(r.time), finite(r.value) ? r.value.toFixed(4) : "", finite(r.clear) ? r.clear.toFixed(3) : "", r.scene || ""])],
+      url = URL.createObjectURL(new Blob([rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" })),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = ($("farm-boundary-name").value.trim() || "field").replace(/[^a-z0-9_-]/gi, "-") + "-12-month.csv";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $("crop-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(reportText());
+      $("crop-share-status").textContent = "Summary copied. Paste it into WhatsApp, SMS or email.";
+    } catch {
+      $("crop-share-status").textContent = "Copy was blocked by the browser. Use Print / save PDF instead.";
+    }
+  });
+  $("crop-export").addEventListener("click", () => $("farm-boundary-export").click());
+  $("crop-print").addEventListener("click", () => {
+    const win = window.open("", "_blank");
+    if (!win) {
+      $("crop-share-status").textContent = "Allow pop-ups for this site to print the report.";
+      return;
+    }
+    const doc = win.document,
+      parts = ["agri-field-history-chart", "agri-growth-snapshot", "crop-weather-chart", "agri-field-history-narrative", "crop-risk-list", "crop-zones", "crop-log-list"];
+    doc.title = "Field report";
+    const style = doc.createElement("style");
+    style.textContent =
+      "body{font:13px system-ui,Arial,sans-serif;color:#17263a;margin:28px;max-width:820px}h1{font-size:22px;margin:0}h2{font-size:14px;margin:22px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}svg{width:100%;height:auto;color:#17263a}.growth-snapshot{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.growth-snapshot-card{border:1px solid #ddd;border-radius:6px;padding:8px;display:flex;flex-direction:column}.growth-snapshot-card strong{font-size:18px}.crop-risk{border-left:3px solid #999;padding:4px 10px;margin:6px 0}.crop-risk[data-level=high]{border-color:#c0392b}.crop-risk[data-level=watch]{border-color:#d4a017}.crop-risk[data-level=ok]{border-color:#27ae60}.crop-risk span{font-size:10px;text-transform:uppercase;margin-right:6px}.crop-risk p{margin:2px 0}.crop-zone-bar{display:flex;height:14px;border-radius:4px;overflow:hidden}.crop-zone-bar i{display:block}.crop-zone-list{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0}.crop-zone-list b{display:inline-block;width:10px;height:10px;margin-right:4px}button{display:none}small,.farm-explainer{color:#555}footer{margin-top:24px;font-size:11px;color:#666;border-top:1px solid #ddd;padding-top:8px}";
+    doc.head.append(style);
+    const h1 = doc.createElement("h1");
+    h1.textContent = "Field report";
+    const sub = doc.createElement("p");
+    sub.textContent = ($("field-report-sub").textContent || "") + " · " + niceDay(Date.now());
+    const season = doc.createElement("p");
+    season.textContent = $("crop-season-note").textContent;
+    doc.body.append(h1, sub, season);
+    const titles = { "agri-field-history-chart": "Vegetation trend", "crop-weather-chart": "Weather", "agri-field-history-narrative": "Reading the record", "crop-risk-list": "Risks", "crop-zones": "Vigour zones", "crop-log-list": "Field activity log" };
+    for (const id of parts) {
+      const el = $(id);
+      if (!el || !el.textContent.trim()) continue;
+      if (titles[id]) {
+        const h2 = doc.createElement("h2");
+        h2.textContent = titles[id];
+        doc.body.append(h2);
+      }
+      doc.body.append(doc.importNode(el, true));
+    }
+    const foot = doc.createElement("footer");
+    foot.textContent = "WeatherWalay Kissan & Sehat Hub · Sentinel-2 / Landsat via Microsoft Planetary Computer · Decision support only; not a substitute for a field visit or extension advice.";
+    doc.body.append(foot);
+    setTimeout(() => win.print(), 300);
+  });
   addTileHelp($("agri-point-panel"), "point");
   addTileHelp($("agri-field-history-panel"), "history");
   $("agri-satellite-load").addEventListener("click", load);
