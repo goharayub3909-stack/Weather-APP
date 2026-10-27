@@ -138,7 +138,7 @@ export function historyNarrative(rows, { crop = null, stage = "mixed" } = {}, no
 export function renderFieldChart(
   root,
   rows,
-  { title = "Satellite acquisitions", unit = "", start = Date.now() - 365 * 86400000, end = Date.now(), color = "#92d494", events = [] } = {},
+  { title = "Satellite acquisitions", unit = "", start = Date.now() - 365 * 86400000, end = Date.now(), color = "#92d494", events = [], marker = null, onPick = null } = {},
 ) {
   root.replaceChildren();
   const valid = rows.filter((r) => finite(r.value) && finite(r.time)).sort((a, b) => a.time - b.time),
@@ -178,14 +178,20 @@ export function renderFieldChart(
     add("line", { x1: p.l, x2: w - p.r, y1: y(v), y2: y(v), stroke: "currentColor", opacity: 0.12 });
     add("text", { x: p.l - 8, y: y(v) + 4, "text-anchor": "end", fill: "currentColor", "font-size": 12 }, (Math.abs(v) < 0.005 ? 0 : v).toFixed(2));
   }
-  for (let i = 0; i < 4; i++) {
-    const t = start + ((end - start) * i) / 3;
-    add(
-      "text",
-      { x: x(t), y: h - 10, "text-anchor": "middle", fill: "currentColor", "font-size": 12 },
-      new Date(t).toLocaleDateString("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "short" }),
-    );
-  }
+  if ((end - start) / 86400000 > 120) {
+    // Month labels for a year-long record.
+    const first = new Date(start);
+    for (let t = Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 1); t <= end; ) {
+      const d = new Date(t);
+      add("line", { x1: x(t), x2: x(t), y1: p.t, y2: h - p.b, stroke: "currentColor", opacity: 0.07 });
+      add("text", { x: x(t), y: h - 10, "text-anchor": "middle", fill: "currentColor", "font-size": 11 }, d.toLocaleDateString("en-GB", { timeZone: "UTC", month: "short" }) + (d.getUTCMonth() === 0 ? " " + d.getUTCFullYear() : ""));
+      t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    }
+  } else
+    for (let i = 0; i < 4; i++) {
+      const t = start + ((end - start) * i) / 3;
+      add("text", { x: x(t), y: h - 10, "text-anchor": "middle", fill: "currentColor", "font-size": 12 }, new Date(t).toLocaleDateString("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "short" }));
+    }
   for (const [i, r] of valid.entries()) {
     if (finite(r.min) && finite(r.max)) {
       add("line", { x1: x(r.time), x2: x(r.time), y1: y(r.min), y2: y(r.max), stroke: color, "stroke-width": 6, opacity: 0.35 });
@@ -212,6 +218,18 @@ export function renderFieldChart(
       unit +
       (finite(r.clear) ? " · " + Math.round(r.clear * 100) + "% of field clear" : r.count ? " · " + r.count + " usable sample positions" : "");
     dot.append(tip);
+    if (onPick) {
+      // Larger invisible target so a fingertip can hit a dot; keyboard users can Tab to it.
+      const hit = add("circle", { cx: x(r.time), cy: y(r.value), r: 11, fill: "transparent", tabindex: 0, role: "button", style: "cursor:pointer", "aria-label": "Show the satellite image from " + new Date(r.time).toLocaleDateString("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "long" }) + ", value " + r.value.toFixed(2) });
+      hit.append(tip.cloneNode(true));
+      hit.addEventListener("click", () => onPick(r));
+      hit.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(r); } });
+    }
+  }
+  // Date shown on the map right now.
+  if (finite(marker) && marker >= start && marker <= end) {
+    add("line", { x1: x(marker), x2: x(marker), y1: p.t, y2: h - p.b, stroke: "#8ad9ff", "stroke-width": 2, opacity: 0.95 });
+    add("path", { d: `M${x(marker) - 5},${p.t - 8} L${x(marker) + 5},${p.t - 8} L${x(marker)},${p.t} Z`, fill: "#8ad9ff" });
   }
   // Field events (sowing, logged activities) as labelled dashed lines.
   for (const ev of events) {
@@ -229,6 +247,47 @@ export function renderFieldChart(
       : " · dots = actual available readings.") +
     " Dashed lines connect observations and do not supply missing daily values.";
   root.append(note);
+}
+/** Mean value per month (Pakistan time) from clear passes, in calendar order. */
+export function monthlyMeans(rows, start = -Infinity, end = Infinity) {
+  const groups = new Map();
+  for (const r of rows) {
+    if (!finite(r.value) || !finite(r.time) || r.time < start || r.time > end) continue;
+    const key = new Date(r.time + 5 * 3600000).toISOString().slice(0, 7), g = groups.get(key) || { key, sum: 0, n: 0 };
+    g.sum += r.value; g.n++; groups.set(key, g);
+  }
+  return [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)).map((g) => ({ key: g.key, mean: g.sum / g.n, n: g.n }));
+}
+export function renderMonthlyChart(root, rows, { title = "Monthly average", unit = "", color = "#92d494", start = Date.now() - 365 * 86400000, end = Date.now() } = {}) {
+  root.replaceChildren();
+  const months = monthlyMeans(rows, start, end), heading = document.createElement("h4");
+  heading.textContent = title;
+  root.append(heading);
+  if (!months.length) { const p = document.createElement("p"); p.textContent = "No clear months yet."; root.append(p); return; }
+  const byKey = new Map(months.map((m) => [m.key, m])), seq = [];
+  for (let t = Date.UTC(new Date(start).getUTCFullYear(), new Date(start).getUTCMonth(), 1); t <= end; ) {
+    const d = new Date(t); seq.push({ key: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-GB", { timeZone: "UTC", month: "short" }) });
+    t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  }
+  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), w = 720, h = 170, pad = { l: 54, r: 22, t: 20, b: 28 },
+    vals = months.map((m) => m.mean), lo = Math.min(0, ...vals), hi = Math.max(...vals, lo + 0.1) * 1.12,
+    y = (v) => h - pad.b - ((v - lo) / (hi - lo)) * (h - pad.t - pad.b), bw = (w - pad.l - pad.r) / seq.length;
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", title + ". One bar per month; empty months had no clear satellite pass.");
+  const add = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text !== undefined) e.textContent = text; svg.append(e); return e; };
+  add("line", { x1: pad.l, x2: w - pad.r, y1: y(0), y2: y(0), stroke: "currentColor", opacity: 0.25 });
+  add("text", { x: pad.l - 8, y: y(hi) + 10, "text-anchor": "end", fill: "currentColor", "font-size": 11 }, hi.toFixed(2));
+  add("text", { x: pad.l - 8, y: y(0) + 4, "text-anchor": "end", fill: "currentColor", "font-size": 11 }, "0");
+  seq.forEach((m, i) => {
+    const x0 = pad.l + i * bw, g = byKey.get(m.key);
+    add("text", { x: x0 + bw / 2, y: h - 9, "text-anchor": "middle", fill: "currentColor", "font-size": 11, opacity: 0.8 }, m.label);
+    if (!g) { add("text", { x: x0 + bw / 2, y: y(0) - 6, "text-anchor": "middle", fill: "currentColor", "font-size": 10, opacity: 0.5 }, "–"); return; }
+    const top = Math.min(y(g.mean), y(0)), bar = add("rect", { x: x0 + bw * 0.16, y: top, width: bw * 0.68, height: Math.max(1, Math.abs(y(g.mean) - y(0))), fill: color, opacity: 0.8, rx: 2 });
+    const tip = document.createElementNS(ns, "title"); tip.textContent = m.label + ": mean " + g.mean.toFixed(2) + " " + unit + " from " + g.n + " clear pass" + (g.n === 1 ? "" : "es"); bar.append(tip);
+    add("text", { x: x0 + bw / 2, y: top - 4, "text-anchor": "middle", fill: "currentColor", "font-size": 10 }, g.mean.toFixed(2));
+  });
+  root.append(svg);
+  const note = document.createElement("small"); note.textContent = "Average of the clear passes in each month; “–” means no clear pass."; root.append(note);
 }
 export function thermalMoistureIndex(temperature, wet, dry) {
   if (![temperature, wet, dry].every(finite) || temperature < -80 || temperature > 100 || wet < -30 || dry > 80 || dry - wet < 5) return null;

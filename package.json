@@ -9,7 +9,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:css": "tailwindcss -c tailwind.config.cjs -i src/tailwind.input.css -o public/tailwind.css --minify"
   },
-  "description": "WeatherWalay Kissan & Sehat Hub \u2014 Pakistan weather and farmer decision support"
+  "description": "WeatherWalay Kissan & Sehat Hub — Pakistan weather and farmer decision support",
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
 }

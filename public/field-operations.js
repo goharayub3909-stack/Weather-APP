@@ -37,7 +37,8 @@ export function soilWaterState({ moisture, capacity, wilting, depth, time }, now
     saturated: moisture >= capacity,
   };
 }
-export function operationWindows(hourly, now = Date.now(), { limit = 3 } = {}) {
+// Hour-by-hour forecast reader shared by the work calendar and the weather ticker.
+function hourlyReader(hourly, now) {
   const anchor = Math.floor(Number(now) / HOUR) * HOUR,
     axis = new Map();
   for (let i = 0; i < (hourly?.time.length || 0); i++) {
@@ -61,6 +62,42 @@ export function operationWindows(hourly, now = Date.now(), { limit = 3 } = {}) {
   const future = (time, n) => Array.from({ length: n }, (_, i) => row(time + i * HOUR));
   const noStorm = (r) => finite(r?.code) && ![95, 96, 99].includes(r.code);
   const dry = (r, max) => r && finite(r.rain) && r.rain < max && noStorm(r);
+  return { anchor, row, future, noStorm, dry };
+}
+
+// The spray screen: each entry is [criterion, passed]. One definition, used everywhere.
+export function sprayChecks(r, six, dt, dryFn) {
+  return [
+    ['Complete weather data', [r.t, r.rh, r.wind, r.gust, dt].every(finite)],
+    ['Temperature 5–28 °C', r.t >= 5 && r.t <= 28],
+    ['Humidity 40–95%', r.rh >= 40 && r.rh <= 95],
+    ['Wind 3–15 km/h', r.wind >= 3 && r.wind <= 15],
+    ['Gusts up to 20 km/h', r.gust <= 20],
+    ['Delta T 2–8 °C', dt >= 2 && dt <= 8],
+    ['Dry for the next 6 h', six.every((x) => dryFn(x, 0.2))],
+  ];
+}
+
+/** Spray suitability for each of the next hours: ok / check (one criterion off) / no / night / unknown. */
+export function sprayStatusByHour(hourly, now = Date.now(), hours = 48) {
+  const { anchor, row, future, dry } = hourlyReader(hourly, now),
+    out = [];
+  for (let step = 0; step < hours; step++) {
+    const time = anchor + step * HOUR,
+      r = row(time),
+      hour = Number(new Date(time).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', hourCycle: 'h23' }));
+    if (!r) { out.push({ time, hour, state: 'unknown', fails: ['No forecast for this hour'] }); continue; }
+    if (hour < 6 || hour >= 18) { out.push({ time, hour, state: 'night', fails: [] }); continue; }
+    const dt = deltaT(r.t, r.rh).value,
+      fails = sprayChecks(r, future(time, 6), dt, dry).filter((c) => !c[1]).map((c) => c[0]),
+      hard = fails.includes('Dry for the next 6 h') || fails.includes('Complete weather data');
+    out.push({ time, hour, state: fails.length === 0 ? 'ok' : fails.length === 1 && !hard ? 'check' : 'no', fails, row: r, deltaT: dt });
+  }
+  return out;
+}
+
+export function operationWindows(hourly, now = Date.now(), { limit = 3 } = {}) {
+  const { anchor, row, future, noStorm, dry } = hourlyReader(hourly, now);
   const candidates = { spray: [], fertilize: [], harvest: [] };
   for (let step = 0; step < 168; step++) {
     const time = anchor + step * HOUR,
@@ -71,20 +108,7 @@ export function operationWindows(hourly, now = Date.now(), { limit = 3 } = {}) {
       twelve = future(time, 12),
       day = future(time, 24),
       dt = deltaT(r.t, r.rh).value;
-    if (
-      [r.t, r.rh, r.wind, r.gust, dt].every(finite) &&
-      r.t >= 5 &&
-      r.t <= 28 &&
-      r.rh >= 40 &&
-      r.rh <= 95 &&
-      r.wind >= 3 &&
-      r.wind <= 15 &&
-      r.gust <= 20 &&
-      dt >= 2 &&
-      dt <= 8 &&
-      six.every((x) => dry(x, 0.2))
-    )
-      candidates.spray.push(time);
+    if (sprayChecks(r, six, dt, dry).every((c) => c[1])) candidates.spray.push(time);
     if (finite(r.wind) && r.wind <= 20 && six.every((x) => dry(x, 0.2)) && day.every((x) => x && finite(x.rain) && noStorm(x))) {
       const rain = day.reduce((n, x) => n + x.rain, 0);
       // Most Pakistani fields are irrigated, so a dry day is a valid window when the farmer
