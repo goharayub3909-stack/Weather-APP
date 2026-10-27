@@ -1179,6 +1179,7 @@ export function initFarmSatellite() {
     drawTrend();
     snapshotCards(mode, historyRows, usable, days.length, whole);
     renderDataChips(usable, days.length);
+    updateSteps();
     // Within-field differences: five interior points on the latest clear pass.
     const zoneRoot = $("agri-field-zones");
     zoneRoot.replaceChildren();
