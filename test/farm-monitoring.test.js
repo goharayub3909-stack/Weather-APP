@@ -62,3 +62,23 @@ test('boundary upload reads GeoJSON and KML polygons and rejects bad input', asy
   assert.throws(() => parseBoundaryFile('{"type":"Point","coordinates":[74,31]}', 'x.geojson'), /No polygon/);
   assert.throws(() => parseBoundaryFile('not json', 'x.json'));
 });
+
+test('MSAVI and NDWI recipes use the right bands and match the textbook formulas', async () => {
+  const {indexRecipe, FIELD_INDICES, indexMeaning} = await import('../public/farm-indices.js');
+  const scene = {properties: {'s2:processing_baseline': '05.13'}, assets: Object.fromEntries(['B02', 'B03', 'B04', 'B08', 'B11', 'B05', 'B8A', 'SCL'].map(k => [k, {'raster:bands': [{scale: 0.0001, offset: -0.1}]}]))};
+  const dn = {B08: 4200, B04: 1800, B03: 1500}; // raw digital numbers
+  const refl = k => dn[k] * 0.0001 - 0.1;
+  const run = expr => Function('Math', 'return ' + expr.replace(/sqrt/g, 'Math.sqrt').replace(/(B\d\d)_b1/g, (_, k) => dn[k]))(Math);
+  const nir = refl('B08'), red = refl('B04'), green = refl('B03');
+  const msavi = indexRecipe('sentinel', 'msavi', scene);
+  assert.deepEqual([...msavi.assets].sort(), ['B04', 'B08']);
+  assert.ok(Math.abs(run(msavi.expression) - (2 * nir + 1 - Math.sqrt((2 * nir + 1) ** 2 - 8 * (nir - red))) / 2) < 1e-9);
+  const ndwi = indexRecipe('sentinel', 'ndwi', scene);
+  assert.deepEqual([...ndwi.assets].sort(), ['B03', 'B08']);
+  assert.ok(Math.abs(run(ndwi.expression) - (green - nir) / (green + nir)) < 1e-9);
+  assert.ok(run(ndwi.expression) < 0, 'vegetation reads negative on NDWI');
+  const ls = {properties: {}, assets: Object.fromEntries(['nir08', 'red', 'green', 'blue', 'swir16'].map(k => [k, {'raster:bands': [{scale: 0.0000275, offset: -0.2}]}]))};
+  assert.ok(indexRecipe('landsat', 'msavi', ls).expression.includes('sqrt'));
+  assert.ok(FIELD_INDICES.msavi && FIELD_INDICES.ndwi);
+  assert.match(indexMeaning('msavi', 0.1), /soil/);
+});

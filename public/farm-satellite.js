@@ -41,6 +41,23 @@ export function maskedStatsExpression(sensor, indexExpression) {
   return `where(${cond},${indexExpression},0);where(${cond},1,0)`;
 }
 
+/**
+ * fetch() with retries for the satellite service, which rate-limits bursts with HTTP 429
+ * (sent without CORS headers, so the browser reports a network error) and sometimes 5xx.
+ */
+export async function fetchRetry(url, options = {}, { attempts = 4, delay = 1200 } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const r = await fetch(url, options);
+      if (r.ok || (r.status !== 429 && r.status < 500) || attempt >= attempts - 1) return r;
+    } catch (e) {
+      if (options.signal?.aborted || e.name === "AbortError" || attempt >= attempts - 1) throw e;
+    }
+    await new Promise((done) => setTimeout(done, delay * 2 ** attempt + Math.random() * 400));
+    if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  }
+}
+
 /** Read the first polygon from GeoJSON or KML text. Returns {vertices:[[lat,lon],...], name}. */
 export function parseBoundaryFile(text, filename = "") {
   let ring = null,
@@ -431,7 +448,7 @@ export function initFarmSatellite() {
         limit: "1000",
         sortby: "-datetime",
       });
-      const r = await fetch(u, { signal, cache: "no-store" });
+      const r = await fetchRetry(u, { signal, cache: "no-store" });
       if (!r.ok) throw Error("Scene service returned " + r.status);
       const data = await r.json();
       let next = data.links?.find((l) => l.rel === "next");
@@ -558,7 +575,7 @@ export function initFarmSatellite() {
     }
     status("Loading " + source.resolution + " satellite tiles…");
     try {
-      const r = await fetch(u, { signal, cache: "no-store" });
+      const r = await fetchRetry(u, { signal, cache: "no-store" });
       if (!r.ok) throw Error("Tile service returned " + r.status);
       const data = await r.json();
       if (version !== drawVersion || signal?.aborted) return;
@@ -1217,7 +1234,7 @@ export function initFarmSatellite() {
       : "No pass with cloud cover ≤60% over this field in the last 12 months." + (sensor === "modis" ? " MODIS NDVI is a 16-day composite." : "");
     if (mode === "smi") root.textContent += " SMI uses the same user-supplied endmembers across dates.";
     $("agri-field-history-narrative").textContent =
-      mode === "ndvi" || mode === "evi" || mode === "savi"
+      mode === "ndvi" || mode === "evi" || mode === "savi" || mode === "msavi"
         ? historyNarrative(historyRows, farmContext || {})
         : "This is a " + FIELD_INDICES[mode].label + " record. Switch the graph to NDVI for a crop-development reading; thermal and water indices alone cannot show sowing or harvest.";
     afterHistory(mode, sensor, whole, signal, version);
@@ -1458,7 +1475,7 @@ export function initFarmSatellite() {
     if (wet >= 25) out.push(["watch", "Heavy rain: up to " + wet.toFixed(0) + " mm in a day", "Clear field drains and delay fertilizer and spraying until it passes."]);
     return out;
   }
-  function computeRisks(rows, zones, ndmi) {
+  function computeRisks(rows, zones, ndmi, ndwi) {
     const out = [],
       valid = rows.filter((r) => finite(r.value)),
       latest = valid.at(-1),
@@ -1482,6 +1499,11 @@ export function initFarmSatellite() {
     if (finite(ndmi) && !early && latest?.value >= 0.3) {
       if (ndmi < 0) out.push(["watch", "Low canopy moisture (NDMI " + ndmi.toFixed(2) + ")", "The crop may be short of water. Check soil moisture and the next irrigation turn."]);
       else out.push(["ok", "Canopy moisture normal (NDMI " + ndmi.toFixed(2) + ")", "No water-stress signal in the latest clear pass."]);
+    }
+    // NDWI: water-like response inside the field. Expected for paddy rice and right after irrigation.
+    if (finite(ndwi) && ndwi > 0) {
+      const paddy = farmContext?.crop?.id === "rice";
+      out.push(paddy ? ["ok", "Standing water detected (NDWI " + ndwi.toFixed(2) + ")", "Expected for flooded paddy. Check that depth matches the crop stage."] : ["watch", "Standing water or waterlogging (NDWI " + ndwi.toFixed(2) + ")", "Water is showing across the field. Check drainage; most crops suffer if roots stay flooded for more than a day or two."]);
     }
     out.push(...weatherRisks());
     if (latest && Date.now() - latest.time > 15 * DAY)
@@ -1561,7 +1583,8 @@ export function initFarmSatellite() {
     const latest = historyRows.filter((r) => finite(r.value)).at(-1),
       scene = latest && scenes.find((f) => f.id === latest.scene);
     lastZones = null;
-    let ndmi = null;
+    let ndmi = null,
+      ndwi = null;
     if (scene && whole) {
       try {
         lastZones = await fieldZones(scene, sensor, signal);
@@ -1569,10 +1592,13 @@ export function initFarmSatellite() {
       try {
         ndmi = (await fieldStats(scene, "ndmi", sensor, signal)).value;
       } catch {}
+      try {
+        ndwi = (await fieldStats(scene, "ndwi", sensor, signal)).value;
+      } catch {}
     }
     if (version !== historyVersion) return;
     renderZones(lastZones, latest?.time);
-    lastRisks = mode === "ndvi" || mode === "evi" || mode === "savi" ? computeRisks(historyRows, lastZones, ndmi) : [["info", "Risks use NDVI", "Switch the graph parameter to NDVI to check vegetation risks."], ...weatherRisks()];
+    lastRisks = ["ndvi", "evi", "savi", "msavi"].includes(mode) ? computeRisks(historyRows, lastZones, ndmi, ndwi) : [["info", "Risks use NDVI", "Switch the graph parameter to NDVI to check vegetation risks."], ...weatherRisks()];
     renderRisks(lastRisks);
     $("crop-scout-empty").hidden = !$("agri-zone-details").hidden;
     updateSteps();
@@ -1594,6 +1620,9 @@ export function initFarmSatellite() {
       ];
     return lines.filter((l, i) => l || i === 5).join("\n");
   }
+  // The app routes on location.hash, so steps scroll in place instead of linking to #anchors.
+  for (const b of document.querySelectorAll("#crop-stepper [data-scroll]"))
+    b.addEventListener("click", () => document.getElementById(b.dataset.scroll)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
   $("crop-sowing-date").addEventListener("change", () => {
     sowingStore.set(fieldKey(), $("crop-sowing-date").value);
     seasonNote();

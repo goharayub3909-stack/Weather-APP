@@ -7,11 +7,12 @@ export const FIELD_INDICES={
  ndre:{label:'NDRE · red-edge',range:[-1,1],breaks:[.1,.2,.35],description:'Red-edge vegetation response; a spectral indicator, not a measured nitrogen dose.'},
  evi:{label:'EVI · vegetation',range:[-1,1],breaks:[.2,.4,.6],description:'Enhanced vegetation index with blue-band atmospheric and soil adjustments.'},
  savi:{label:'SAVI · soil-adjusted vegetation',range:[-1,1],breaks:[.2,.4,.6],description:'Soil-adjusted vegetation index, using L = 0.5.'},
+ msavi:{label:'MSAVI · modified soil-adjusted vegetation',range:[-1,1],breaks:[.2,.4,.6],description:'Self-adjusting soil-adjusted vegetation index (MSAVI2). Better than NDVI for sparse crops and young stands where bare soil shows through.'},
  ndmi:{label:'NDMI · canopy moisture',range:[-1,1],breaks:[0,.2,.4],description:'Canopy moisture spectral contrast; not measured soil-water content.'},
- ndwi:{label:'NDWI · surface water',range:[-1,1],breaks:[-.2,0,.2],description:'Green/NIR water contrast; a spectral indicator, not a water-depth measurement.'}
+ ndwi:{label:'NDWI · surface water',range:[-1,1],breaks:[-.2,0,.2],description:'Green/NIR water contrast (McFeeters). Highlights standing or irrigation water and waterlogging; a spectral indicator, not a water-depth measurement. For canopy moisture use NDMI.'}
 };
 export const ZONE_COLORS=[[205,60,55,255],[242,153,48,255],[247,215,69,255],[39,139,59,255]];
-export function indexColors(mode){return mode==='lst'?[[74,109,208,255],[76,184,148,255],[244,208,70,255],[218,75,49,255]]:ZONE_COLORS;}
+export function indexColors(mode){return mode==='lst'?[[74,109,208,255],[76,184,148,255],[244,208,70,255],[218,75,49,255]]:mode==='ndwi'?[[176,140,92,255],[151,203,222,255],[66,146,214,255],[22,76,176,255]]:ZONE_COLORS;}
 export function fieldColormap(mode){return FIELD_INDICES[mode]?Object.fromEntries(indexColors(mode).map((color,i)=>[i*85,color])):{};}
 export function zoneExpression(mode,expression){const [a,b,c]=FIELD_INDICES[mode].breaks;return `where((${expression})<${a},0,where((${expression})<${b},85,where((${expression})<${c},170,255)))`;}
 export function indexRecipe(sensor,mode,scene,calibration={}){
@@ -32,7 +33,7 @@ export function indexRecipe(sensor,mode,scene,calibration={}){
  let expression;
  if(mode==='ndre'){const n=physical('edgeNir'),r=physical('edge');expression=`(${n}-${r})/(${n}+${r})`;}
  else if(mode==='ndwi'){const g=physical('green'),n=physical('nir');expression=`(${g}-${n})/(${g}+${n})`;}
- else{const n=physical('nir'),r=physical(mode==='ndmi'?'swir':'red');expression=mode==='evi'?`2.5*(${n}-${r})/(${n}+6*${r}-7.5*${physical('blue')}+1)`:mode==='savi'?`1.5*(${n}-${r})/(${n}+${r}+0.5)`:`(${n}-${r})/(${n}+${r})`;}
+ else{const n=physical('nir'),r=physical(mode==='ndmi'?'swir':'red');expression=mode==='evi'?`2.5*(${n}-${r})/(${n}+6*${r}-7.5*${physical('blue')}+1)`:mode==='msavi'?`(2*${n}+1-sqrt((2*${n}+1)*(2*${n}+1)-8*(${n}-${r})))/2`:mode==='savi'?`1.5*(${n}-${r})/(${n}+${r}+0.5)`:`(${n}-${r})/(${n}+${r})`;}
  return {assets:[...used],expression,range:FIELD_INDICES[mode].range,resolution:sensor==='landsat'?'30 m':['ndre','ndmi'].includes(mode)?'20 m':'10 m',note:sensor==='sentinel'?'BOA reflectance: Sentinel processing-baseline offset and 0.0001 scale.':'Surface reflectance uses source scale and offset.'};
 }
 
@@ -43,6 +44,7 @@ export function indexMeaning(mode,value,stage='mixed'){
  if(mode==='smi')return (value<.25?'Near the supplied dry endmember. ':value>.75?'Near the supplied wet endmember. ':'Between the supplied dry and wet endmembers. ')+'This relative proxy does not measure root-zone water.';
  if(mode==='ndmi')return (value<0?'Low canopy-moisture contrast. ':'Positive canopy-moisture contrast. ')+'Crop cover, bare soil, variety and rainfall affect this signal; compare with station VPD and field moisture checks.';
  if(mode==='ndwi')return value>0?'Water-like spectral response; check whether this is irrigation, standing water or another surface.':'No strong water-like response; this does not establish dry soil.';
+ if(mode==='msavi')return (value<.2?'Little green vegetation after correcting for soil. ':value<.4?'Sparse or developing cover once soil is accounted for. ':value<.6?'Moderate green cover once soil is accounted for. ':'Dense green cover once soil is accounted for. ')+(early?'Low cover may be expected before emergence. ':'Compare with the same crop stage and previous clear passes. ')+'Disease and yield are not diagnosed from this reading.';
  if(mode==='ndre')return (value>.35?'Stronger red-edge vegetation response. ':'Lower red-edge vegetation response. ')+'Compare similar crop stages; this cannot identify a nitrogen deficiency or set a fertilizer rate.';
  return (value<.2?'Little green vegetation signal. ':value<.4?'Sparse or developing green vegetation. ':value<.6?'Moderate green vegetation signal. ':'Strong green vegetation signal. ')+(early?'Low cover may be expected before emergence; it is not automatically crop damage. ':'Compare with the same crop stage and previous clear acquisitions. ')+'Disease and yield are not diagnosed from this reading.';
 }
