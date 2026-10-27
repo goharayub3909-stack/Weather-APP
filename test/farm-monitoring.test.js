@@ -127,3 +127,15 @@ test('monthly means group clear passes by Pakistan month and skip gaps', async (
   // 31 Jan 20:00 UTC is already 1 Feb in Pakistan
   assert.equal(monthlyMeans([{time: t('2026-01-31T20:00Z'), value: 1}])[0].key, '2026-02');
 });
+
+test('field-relative colour range uses percentiles, falls back to min / max, and widens a uniform field', async () => {
+  const {stretchRange} = await import('../public/farm-indices.js');
+  assert.deepEqual(stretchRange({percentile_2: 0.1, percentile_98: 0.5, min: -1, max: 2}), {lo: 0.1, hi: 0.5});
+  assert.deepEqual(stretchRange({min: 0.2, max: 0.6}), {lo: 0.2, hi: 0.6});
+  const flat = stretchRange({percentile_2: 0.3, percentile_98: 0.3});
+  assert.ok(Math.abs(flat.hi - flat.lo - 0.04) < 1e-9 && Math.abs((flat.lo + flat.hi) / 2 - 0.3) < 1e-9);
+  assert.deepEqual(stretchRange({percentile_2: 0.5, percentile_98: 0.1}), {lo: 0.1, hi: 0.5});
+  assert.equal(stretchRange({}), null);
+  assert.equal(stretchRange({percentile_2: NaN, percentile_98: 1}), null, 'no usable low value at all');
+  assert.deepEqual(stretchRange({percentile_2: NaN, percentile_98: 1, min: 0.2, max: 0.9}), {lo: 0.2, hi: 1}, 'a NaN percentile falls back to min');
+});

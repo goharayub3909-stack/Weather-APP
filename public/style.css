@@ -258,7 +258,8 @@ body.farm-view .rail{display:none!important}
 #fw-map-layer{z-index:0;isolation:isolate}
 #fw-map-layer .farm-map-frame{position:absolute;inset:0;margin:0;height:100%;border:0;border-radius:0;box-shadow:none;overflow:hidden}
 #fw-map-layer #agri-satellite-map{position:absolute;inset:0;width:100%;height:100%!important;min-height:0}
-#fw-root .leaflet-top.leaflet-left{top:auto;bottom:calc(var(--fw-sheet) + 6px)}
+/* Zoom buttons sit bottom-right of the map (beside the sidebar), clear of the tall layer card. */
+#fw-root .leaflet-top.leaflet-left{top:auto;left:auto;bottom:calc(var(--fw-sheet) + 8px);right:calc(var(--fw-sidebar) + 8px)}
 #fw-root .leaflet-control-zoom a{width:44px;height:44px;line-height:44px;font-size:20px}
 #fw-root .field-map-actions{position:absolute;top:calc(var(--fw-ticker) + 12px)!important;right:calc(var(--fw-sidebar) + 12px)!important;left:auto!important;bottom:auto!important;z-index:500}
 #fw-root .field-map-actions .field-point-button,#fw-root .field-map-actions summary{min-height:44px}
@@ -277,3 +278,8 @@ body.farm-view .rail{display:none!important}
 #fw-setup-body .farm-controls{margin:0}
 #fw-setup-body .location-bar{flex-wrap:wrap}
 @media(max-width:999px){#fw-root{--fw-sidebar:0px;--fw-sheet-right:0px}}
+#fw-point-slot.fw-point-collapsed #agri-point-panel{display:none!important}
+#fw-point-slot #agri-point-panel{margin:0;border-radius:0 0 12px 12px;border-top:0}
+#fw-root .fw-flash{outline:2px solid #6ee7b7;outline-offset:3px;border-radius:12px;transition:outline-color 1.2s}
+/* The sheet only keeps detail: these summaries already appear in the ticker and decisions panel. */
+#fw-sheet-body #farm-summary,#fw-sheet-body #field-decision-context{display:none}

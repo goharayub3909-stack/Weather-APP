@@ -64,3 +64,14 @@ export function indexMeaning(mode,value,stage='mixed'){
  if(mode==='ndre')return (value>.35?'Stronger red-edge vegetation response. ':'Lower red-edge vegetation response. ')+'Compare similar crop stages; this cannot identify a nitrogen deficiency or set a fertilizer rate.';
  return (value<.2?'Little green vegetation signal. ':value<.4?'Sparse or developing green vegetation. ':value<.6?'Moderate green vegetation signal. ':'Strong green vegetation signal. ')+(early?'Low cover may be expected before emergence; it is not automatically crop damage. ':'Compare with the same crop stage and previous clear acquisitions. ')+'Disease and yield are not diagnosed from this reading.';
 }
+
+// Colour range for the "relative to this field" palette: the field's own 2nd to 98th percentile,
+// falling back to min / max, widened a little when the field is nearly uniform.
+export function stretchRange(stat,minSpan=0.04){
+ const pick=(a,b)=>Number.isFinite(a)?a:b;
+ let lo=pick(stat?.percentile_2,stat?.min),hi=pick(stat?.percentile_98,stat?.max);
+ if(!Number.isFinite(lo)||!Number.isFinite(hi))return null;
+ if(hi<lo)[lo,hi]=[hi,lo];
+ if(hi-lo<minSpan){const mid=(hi+lo)/2;lo=mid-minSpan/2;hi=mid+minSpan/2;}
+ return {lo,hi};
+}

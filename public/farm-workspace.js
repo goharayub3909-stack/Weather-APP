@@ -125,11 +125,12 @@ const TEMPLATE = `
     <div id="fw-legend-slot"></div>
     <div id="fw-actions-slot"></div>
     <p id="fw-status-slot" class="text-xs leading-snug text-slate-200"></p>
+    <button id="fw-report-btn" type="button" class="min-h-[44px] w-full rounded-xl border border-slate-500 bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800">Field report, trend &amp; timeline ↓</button>
     <details id="fw-imagery" class="rounded-xl border border-slate-600 bg-slate-900/70"><summary class="flex min-h-[44px] cursor-pointer items-center px-3 text-sm font-semibold text-white">Satellite, date &amp; display</summary><div id="fw-imagery-body" class="space-y-3 p-3"></div></details>
   </div>
 </section>
 
-<div id="fw-point-slot" class="absolute left-3 z-10 w-[min(22rem,calc(100%-1.5rem))]" style="bottom:calc(var(--fw-sheet) + 3.5rem)"></div>
+<div id="fw-point-slot" class="absolute z-10 w-[min(22rem,calc(100%-1.5rem))]" style="right:calc(var(--fw-sidebar) + .75rem);bottom:calc(var(--fw-sheet) + 6.25rem)"></div>
 
 <aside id="fw-sidebar" aria-label="Actions" class="absolute bottom-0 right-0 z-20 transition-transform duration-300 ease-out motion-reduce:transition-none" style="top:var(--fw-ticker);width:var(--fw-sidebar-w)">
   <button id="fw-sidebar-toggle" type="button" aria-expanded="true" aria-controls="fw-sidebar-body" aria-label="Hide actions panel" class="absolute left-[-3rem] top-4 flex h-14 w-12 items-center justify-center rounded-l-xl border border-r-0 border-slate-500/70 bg-slate-950/95 text-xl text-white shadow-xl backdrop-blur"><span id="fw-toggle-icon">›</span><span id="fw-toggle-badge" class="absolute -left-2 -top-2 grid h-6 min-w-[1.5rem] place-items-center rounded-full bg-red-500 px-1 text-xs font-bold text-white"></span></button>
@@ -164,8 +165,12 @@ function relocate(node, target, { keepHome = false } = {}) {
 }
 function restoreHomes() { for (const [node, marker] of state.restore.splice(0)) marker.parentNode?.insertBefore(node, marker); }
 
+// Each ticker widget opens the matching detail section in the bottom sheet.
+const WIDGET_TARGET = { 'Temperature · 24 h': 'overview|#agri-charts', 'Rain · next 24 h': 'overview|#agri-charts', Wind: 'operations|#field-calendar' };
 function widget(label, body, extra = '') {
-  return `<div class="flex shrink-0 flex-col justify-center rounded-xl border border-slate-600 bg-slate-900 px-3 py-1 ${extra}"><span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">${label}</span>${body}</div>`;
+  const open = WIDGET_TARGET[label] || (/^(Spraying|Best spray)/.test(label) ? 'operations|#field-calendar' : '');
+  const inner = `<span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">${label}</span>${body}`, cls = `flex shrink-0 flex-col justify-center rounded-xl border border-slate-600 bg-slate-900 px-3 py-1 ${extra}`;
+  return open ? `<button type="button" data-open="${open}" aria-label="Show details: ${label}" class="${cls} text-left hover:bg-slate-800">${inner}</button>` : `<div class="${cls}">${inner}</div>`;
 }
 
 function renderTicker() {
@@ -245,7 +250,7 @@ function renderTriage() {
       <p class="text-sm leading-snug text-slate-100">Next 7 days: <strong>${esc(o.label)}</strong>. ${o.hits} matching hours, longest run ${o.longest} h. Past 72 h: ${esc(it.past.label)}.</p>
       <p class="text-xs leading-snug text-slate-300">Weather screen only. Check the field before treating; stage match: ${esc(it.stage || 'not specified')}.</p>
       <div class="grid grid-cols-2 gap-2">${ref}${mine}</div>
-      <div class="flex gap-2"><button type="button" data-triage="${esc(it.key)}|scouting" aria-pressed="${it.status === 'scouting'}" class="min-h-[44px] flex-1 rounded-lg border px-2 text-sm font-bold ${it.status === 'scouting' ? 'border-white bg-white text-slate-950' : 'border-slate-300 bg-slate-950/60 text-white hover:bg-slate-900'}">${it.status === 'scouting' ? 'Scouting ✓' : 'Start scouting'}</button><button type="button" data-triage="${esc(it.key)}|resolved" aria-pressed="${done}" class="min-h-[44px] flex-1 rounded-lg border px-2 text-sm font-bold ${done ? 'border-white bg-white text-slate-950' : 'border-slate-300 bg-slate-950/60 text-white hover:bg-slate-900'}">${done ? 'Resolved ✓' : 'Mark resolved'}</button></div></div></article>`;
+      <div class="flex gap-2"><button type="button" data-triage="${esc(it.key)}|scouting" aria-pressed="${it.status === 'scouting'}" class="min-h-[44px] flex-1 rounded-lg border px-2 text-sm font-bold ${it.status === 'scouting' ? 'border-white bg-white text-slate-950' : 'border-slate-300 bg-slate-950/60 text-white hover:bg-slate-900'}">${it.status === 'scouting' ? 'Scouting ✓' : 'Start scouting'}</button><button type="button" data-triage="${esc(it.key)}|resolved" aria-pressed="${done}" class="min-h-[44px] flex-1 rounded-lg border px-2 text-sm font-bold ${done ? 'border-white bg-white text-slate-950' : 'border-slate-300 bg-slate-950/60 text-white hover:bg-slate-900'}">${done ? 'Resolved ✓' : 'Mark resolved'}</button></div><button type="button" data-detail="${esc(it.id)}" class="min-h-[40px] w-full rounded-lg border border-slate-500 px-3 text-xs font-semibold text-slate-100 hover:bg-slate-900">Weather timeline &amp; criteria in the guide ↓</button></div></article>`;
   }).join('');
 }
 
@@ -292,9 +297,17 @@ function setSidebar(open) {
   $('fw-sidebar-toggle').setAttribute('aria-label', open ? 'Hide actions panel' : 'Show actions panel'); $('fw-toggle-icon').textContent = open ? '›' : '‹';
   $('fw-sidebar-body').inert = !open; prefStore.set('sidebar', open ? 1 : 0); setVars(); refit();
 }
-function openTab(name) {
+function openTab(name, target) {
   document.querySelector(`[data-agri-tab="${name}"]`)?.click();
   if (state.sheet === 'peek') setSheet('half');
+  if (!target) return;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const el = document.querySelector(target);
+    if (!el) return;
+    el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+    el.classList.add('fw-flash'); setTimeout(() => el.classList.remove('fw-flash'), 1800);
+  }));
 }
 function refit() {
   // Re-centre the field after panels open or close.
@@ -343,6 +356,22 @@ export function initFarmWorkspace() {
     relocate(toolbar, imagery); relocate(display, imagery);
     relocate(document.querySelector('.satellite-primary-actions'), $('fw-actions-slot'));
     relocate($('agri-point-panel'), $('fw-point-slot'));
+    {
+      const slot = $('fw-point-slot'), panel = $('agri-point-panel');
+      slot.insertAdjacentHTML('afterbegin', `<div id="fw-point-head" hidden class="flex items-center gap-1 rounded-t-xl border border-slate-500 bg-slate-950/95 px-2 backdrop-blur"><span class="flex-1 px-1 text-xs font-bold uppercase tracking-wider text-slate-200">Point readings</span><button id="fw-point-collapse" type="button" aria-expanded="true" aria-controls="agri-point-panel" aria-label="Collapse point readings" class="grid h-10 w-10 place-items-center rounded-lg text-lg text-white hover:bg-slate-800">⌄</button><button id="fw-point-close" type="button" aria-label="Close point readings" class="grid h-10 w-10 place-items-center rounded-lg text-lg text-white hover:bg-slate-800">×</button></div>`);
+      let wasHidden = panel.hidden;
+      const sync = () => {
+        $('fw-point-head').hidden = panel.hidden;
+        if (wasHidden && !panel.hidden) { slot.classList.remove('fw-point-collapsed'); $('fw-point-collapse').setAttribute('aria-expanded', 'true'); $('fw-point-collapse').style.transform = ''; }
+        wasHidden = panel.hidden;
+      };
+      new MutationObserver(sync).observe(panel, { attributes: true, attributeFilter: ['hidden'] }); sync();
+      $('fw-point-collapse').addEventListener('click', () => { const c = slot.classList.toggle('fw-point-collapsed'); $('fw-point-collapse').setAttribute('aria-expanded', String(!c)); $('fw-point-collapse').setAttribute('aria-label', c ? 'Expand point readings' : 'Collapse point readings'); $('fw-point-collapse').style.transform = c ? 'rotate(180deg)' : ''; });
+      $('fw-point-close').addEventListener('click', () => { panel.hidden = true; });
+    }
+    // Rename sheet headings that repeated the main screen (the summary lives there; the sheet holds the detail).
+    const renames = { 'Field decisions': 'Calendar, windows & soil', 'Frost & heat warnings': 'Frost & heat alert settings' };
+    for (const h of document.querySelectorAll('[data-agri-pane="operations"] h3')) { const t = h.textContent.trim(); if (renames[t]) h.textContent = renames[t]; }
     $('crop-step-2')?.setAttribute('hidden', '');
     // 3 · detailed panels live in the bottom sheet, with renamed tabs
     const tabs = dash.querySelector('[role="tablist"]') || dash.querySelector('.agri-tabs');
@@ -364,7 +393,10 @@ export function initFarmWorkspace() {
     $('fw-sheet-toggle').addEventListener('click', () => setSheet(state.sheet === 'peek' ? 'half' : state.sheet === 'half' ? 'full' : 'peek'));
     for (const b of document.querySelectorAll('[data-agri-tab]')) b.addEventListener('click', () => { if (state.sheet === 'peek') setSheet('half'); });
     $('fw-guide-btn').addEventListener('click', () => openTab('intelligence'));
-    $('fw-calendar-btn').addEventListener('click', () => openTab('operations'));
+    $('fw-calendar-btn').addEventListener('click', () => openTab('operations', '#field-calendar'));
+    $('fw-report-btn').addEventListener('click', () => openTab('satellite', '#agri-field-history-panel'));
+    $('fw-ticker-widgets').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) { const [tab, target] = b.dataset.open.split('|'); openTab(tab, target); } });
+    $('fw-triage-feed').addEventListener('click', (e) => { const d = e.target.closest('[data-detail]'); if (d) openTab('intelligence', `[data-disease="${d.dataset.detail.replace(/"/g, '')}"]`); });
     // stepper: "Satellite data" now lives in the layer card
     document.querySelector('#crop-stepper [data-step="2"] button')?.addEventListener('click', () => { if (!state.cardOpen) $('fw-card-toggle').click(); $('fw-imagery').open = true; $('fw-layer-card').scrollIntoView?.({ block: 'nearest' }); });
     for (const b of document.querySelectorAll('#crop-stepper [data-scroll]')) b.addEventListener('click', () => { if (b.dataset.scroll !== 'crop-step-2' && state.sheet === 'peek') setSheet('half'); }, true);
@@ -393,6 +425,12 @@ export function initFarmWorkspace() {
     document.addEventListener('farmviewchange', (e) => enterView(!!e.detail));
 
     // The satellite map keeps the field clear of the floating panels when it fits bounds.
+    window.farmMapAnchor = () => {
+      const wide = innerWidth >= 1000, box = $('fw-map-layer').getBoundingClientRect(), card = $('fw-layer-card').getBoundingClientRect();
+      const left = wide ? card.right : box.left, right = state.sidebar && wide ? $('fw-sidebar').getBoundingClientRect().left : box.right;
+      const top = $('fw-ticker').offsetHeight, bottom = innerHeight - (parseFloat(getComputedStyle(root).getPropertyValue('--fw-sheet')) || 56);
+      return L.point((left + right) / 2 - box.left, (top + bottom) / 2 - box.top);
+    };
     window.farmMapPadding = (n) => {
       const wide = innerWidth >= 1000, card = $('fw-layer-card').getBoundingClientRect(), side = state.sidebar && wide ? $('fw-sidebar').getBoundingClientRect().width : 0;
       const top = $('fw-ticker').offsetHeight + (wide ? n : (state.cardOpen ? card.height : 56) + n);

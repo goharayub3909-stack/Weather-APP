@@ -4,7 +4,7 @@ import { vegetationSamples, finite, thermalMoistureIndex, validField, fieldSampl
 import { currentValue, distanceKm } from "./current-weather.js";
 import { darkMap, pkt } from "./map-utils.js";
 import { fieldAreaHa } from "./agri-models.js";
-import { FIELD_INDICES, ZONE_COLORS, fieldColormap, indexRecipe, zoneExpression, indexMeaning, indexColors, falseColourRecipe } from "./farm-indices.js";
+import { FIELD_INDICES, ZONE_COLORS, fieldColormap, indexRecipe, zoneExpression, indexMeaning, indexColors, falseColourRecipe, stretchRange } from "./farm-indices.js";
 // How far back scenes and the field report go.
 export const HISTORY_DAYS = 365;
 // A pass counts toward the field mean only when at least this share of the field is clear.
@@ -262,9 +262,14 @@ export function initFarmSatellite() {
     $("agri-field-delete-point").disabled = selectedPoint < 0;
     $("agri-field-edit").disabled = vertices.length < 3;
     $("agri-field-area").hidden = !vertices.length;
-    $("agri-field-area").textContent = !finite(area)
-      ? "No valid field boundary. Use at least three distinct points without crossing edges."
-      : area.toLocaleString("en-GB", { maximumFractionDigits: 2 }) + " ha · drawn boundary, not a surveyed area";
+    $("agri-field-area").textContent = drawing
+      ? vertices.length +
+        (vertices.length === 1 ? " point" : " points") +
+        (finite(area) ? " · " + area.toLocaleString("en-GB", { maximumFractionDigits: 2 }) + " ha so far" : "") +
+        ". Click the first point, double-click or press Enter to finish; Esc cancels."
+      : !finite(area)
+        ? "No valid field boundary. Use at least three distinct points without crossing edges."
+        : area.toLocaleString("en-GB", { maximumFractionDigits: 2 }) + " ha · drawn boundary, not a surveyed area";
     $("agri-field-coverage").textContent = sceneBounds
       ? vertices.some((p) => !sceneBounds.contains(p))
         ? "The boundary extends beyond this scene’s coverage. The dashed rectangle marks the selected scene. Load scenes for the boundary and choose another scene, or zoom to the scene to inspect its imagery."
@@ -280,11 +285,72 @@ export function initFarmSatellite() {
     undo.push(vertices.map((p) => [...p]));
     if (undo.length > 40) undo.shift();
   }
+  // The polygon is updated in place (no remove / re-add), so dragging and drawing stay smooth.
+  let preview = null,
+    firstRing = null,
+    refreshTimer = null,
+    drawBackup = null;
+  function paintPolygon() {
+    if (!vertices.length) {
+      if (polygon) map.removeLayer(polygon);
+      polygon = null;
+      return;
+    }
+    const color = validField(vertices) ? "#bbef72" : "#ed8c75";
+    if (polygon) {
+      polygon.setLatLngs(vertices);
+      polygon.setStyle({ color });
+    } else polygon = L.polygon(vertices, { color, weight: 2, fillOpacity: 0.03, interactive: false }).addTo(map);
+  }
+  // Ring on the first point while drawing: clicking it closes the shape.
+  function paintFirstRing() {
+    if (!drawing || vertices.length < 3) {
+      if (firstRing) map.removeLayer(firstRing);
+      firstRing = null;
+      return;
+    }
+    if (firstRing) firstRing.setLatLng(vertices[0]);
+    else firstRing = L.circleMarker(vertices[0], { radius: 11, color: "#bbef72", weight: 2, fillOpacity: 0.25, interactive: false }).addTo(map);
+  }
+  function clearDrawingAids() {
+    if (preview && map) map.removeLayer(preview);
+    if (firstRing && map) map.removeLayer(firstRing);
+    preview = firstRing = null;
+  }
+  // Edits in quick succession trigger one imagery + report refresh, not one each.
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      if (drawing || !validField(vertices)) return;
+      if (scenes.length) draw();
+      else load();
+      loadHistory();
+    }, 450);
+  }
+  const midpoint = (i) => {
+    const a = vertices[i],
+      b = vertices[(i + 1) % vertices.length];
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  };
+  const moveMidpoints = () => vertices.forEach((_, i) => handles[2 * i + 1]?.setLatLng(midpoint(i)));
+  function finishDrawing() {
+    if (drawing) $("agri-field-draw").click();
+  }
+  function cancelDrawing() {
+    if (!drawing) return;
+    if (drawBackup) {
+      vertices = drawBackup.vertices;
+      undo.length = Math.min(undo.length, drawBackup.undoLength);
+    } else vertices = [];
+    drawing = false;
+    pointMode = true;
+    $("agri-field-draw").textContent = "Draw field boundary";
+    syncModeButtons();
+    syncBoundary(false);
+  }
   function syncBoundary(redraw = true) {
-    if (polygon) map.removeLayer(polygon);
-    polygon = vertices.length
-      ? L.polygon(vertices, { color: validField(vertices) ? "#bbef72" : "#ed8c75", weight: 2, fillOpacity: 0.03 }).addTo(map)
-      : null;
+    paintPolygon();
+    paintFirstRing();
     handles.forEach((h) => map.removeLayer(h));
     handles = [];
     selectedPoint = -1;
@@ -296,10 +362,26 @@ export function initFarmSatellite() {
           icon: L.divIcon({ className: "field-vertex", html: String(i + 1), iconSize: [26, 26], iconAnchor: [13, 13] }),
         }).addTo(map);
         handle.on("dragstart", snapshot);
-        handle.on("dragend", () => {
+        let frame = 0;
+        const apply = () => {
           const p = handle.getLatLng();
           vertices[i] = [p.lat, p.lng];
-          syncBoundary();
+          paintPolygon();
+          moveMidpoints();
+          fieldNote();
+        };
+        handle.on("drag", () => {
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            apply();
+          });
+        });
+        handle.on("dragend", () => {
+          apply();
+          historyController?.abort();
+          historyVersion++;
+          scheduleRefresh();
         });
         handle.on("click", () => {
           selectedPoint = i;
@@ -312,14 +394,13 @@ export function initFarmSatellite() {
           removePoint();
         });
         handles.push(handle);
-        const next = vertices[(i + 1) % vertices.length],
-          middle = L.marker([(point[0] + next[0]) / 2, (point[1] + next[1]) / 2], {
-            bubblingMouseEvents: false,
-            icon: L.divIcon({ className: "field-midpoint", html: "+", iconSize: [20, 20], iconAnchor: [10, 10] }),
-          }).addTo(map);
+        const middle = L.marker(midpoint(i), {
+          bubblingMouseEvents: false,
+          icon: L.divIcon({ className: "field-midpoint", html: "+", iconSize: [20, 20], iconAnchor: [10, 10] }),
+        }).addTo(map);
         middle.on("click", () => {
           snapshot();
-          vertices.splice(i + 1, 0, [(point[0] + next[0]) / 2, (point[1] + next[1]) / 2]);
+          vertices.splice(i + 1, 0, midpoint(i));
           syncBoundary();
         });
         handles.push(middle);
@@ -328,10 +409,11 @@ export function initFarmSatellite() {
     if (redraw && !drawing) {
       historyController?.abort();
       historyVersion++;
-      if (scenes.length) draw();
-      else if (validField(vertices)) load();
-      if (validField(vertices)) loadHistory();
-      else clearHistory();
+      if (validField(vertices)) scheduleRefresh();
+      else {
+        if (scenes.length) draw();
+        clearHistory();
+      }
     }
   }
   function removeLast() {
@@ -353,7 +435,13 @@ export function initFarmSatellite() {
     queueMicrotask(applyBasemap);
     map.getContainer().addEventListener("keydown", (e) => {
       if (e.target !== map.getContainer()) return;
-      if (drawing && ["Backspace", "Delete"].includes(e.key)) {
+      if (drawing && e.key === "Enter") {
+        e.preventDefault();
+        if (vertices.length >= 3) finishDrawing();
+      } else if (drawing && e.key === "Escape") {
+        e.preventDefault();
+        cancelDrawing();
+      } else if (drawing && ["Backspace", "Delete"].includes(e.key)) {
         e.preventDefault();
         removeLast();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -364,10 +452,49 @@ export function initFarmSatellite() {
         $("agri-field-redo").click();
       }
     });
+    // The zoom buttons keep the field (or, without one, the centre of the free area between the floating
+    // panels) fixed on screen, so it stays in view as you zoom in or out.
+    for (const [name, sign] of [["zoomIn", 1], ["zoomOut", -1]])
+      map[name] = function (delta, options) {
+        const zoom = this._limitZoom(this._zoom + sign * (delta || this.options.zoomDelta));
+        let anchor = window.farmMapAnchor?.();
+        if (validField(vertices)) {
+          // With a field on screen, zoom around the field so it stays where it is.
+          const at = this.latLngToContainerPoint(L.latLngBounds(vertices).getCenter()),
+            size = this.getSize();
+          if (at.x >= 0 && at.y >= 0 && at.x <= size.x && at.y <= size.y) anchor = at;
+        }
+        return anchor ? this.setZoomAround(anchor, zoom, options) : this.setView(this.getCenter(), zoom, { zoom: options });
+      };
     map.createPane("farm-imagery");
     map.getPane("farm-imagery").style.zIndex = 300;
+    // Dashed preview edge from the last point to the cursor (and back to the first point).
+    let previewFrame = 0;
+    map.on("mousemove", (e) => {
+      if (!drawing || !vertices.length || previewFrame) return;
+      const at = [e.latlng.lat, e.latlng.lng];
+      previewFrame = requestAnimationFrame(() => {
+        previewFrame = 0;
+        if (!drawing || !vertices.length) return;
+        const pts = vertices.length > 1 ? [vertices.at(-1), at, vertices[0]] : [vertices[0], at];
+        if (preview) preview.setLatLngs(pts);
+        else preview = L.polyline(pts, { color: "#bbef72", weight: 2, dashArray: "6 6", opacity: 0.85, interactive: false }).addTo(map);
+      });
+    });
+    map.on("dblclick", () => {
+      if (!drawing) return;
+      // The two clicks of a double-click each added a point; keep just one of them.
+      if (vertices.length > 1 && map.latLngToContainerPoint(vertices.at(-1)).distanceTo(map.latLngToContainerPoint(vertices.at(-2))) < 8) vertices.pop();
+      if (vertices.length >= 3) finishDrawing();
+      else syncBoundary(false);
+    });
     map.on("click", (e) => {
       if (drawing) {
+        // Clicking the first point (ringed once there are three) closes the boundary.
+        if (vertices.length >= 3 && map.latLngToContainerPoint(e.latlng).distanceTo(map.latLngToContainerPoint(vertices[0])) <= 14) {
+          finishDrawing();
+          return;
+        }
         snapshot();
         vertices.push([e.latlng.lat, e.latlng.lng]);
         syncBoundary(false);
@@ -488,6 +615,22 @@ export function initFarmSatellite() {
       if (!signal.aborted) status("Satellite unavailable: " + e.message + ". Use Load recent satellite scenes to retry.");
     }
   }
+  // Field-relative colour range: the field's own 2nd–98th percentile, so variation shows even when the
+  // whole field sits in one fixed zone (for example a freshly sown field).
+  const stretchCache = new Map();
+  async function fieldStretch(scene, sensor, mode, recipe, signal) {
+    if (!recipe?.expression || !validField(vertices)) return null;
+    const key = [sensor, scene.id, mode, JSON.stringify(vertices)].join("|");
+    if (stretchCache.has(key)) return stretchCache.get(key);
+    const u = new URL(base + "/api/data/v1/item/statistics");
+    u.search = new URLSearchParams({ collection: collections[sensor].id, item: scene.id });
+    for (const a of recipe.assets) u.searchParams.append("assets", a);
+    u.searchParams.set("expression", recipe.expression);
+    const d = await statsFetch(u, fieldFeature(), signal),
+      range = stretchRange(Object.values(d.properties?.statistics || {})[0]);
+    if (range) stretchCache.set(key, range);
+    return range;
+  }
   async function draw() {
     clearImagery();
     const version = drawVersion,
@@ -506,10 +649,19 @@ export function initFarmSatellite() {
       status(e.message);
       return;
     }
-    $("agri-satellite-palette").options[0].disabled = sensor === "modis";
+    for (const o of $("agri-satellite-palette").options) o.disabled = sensor === "modis" && o.value !== "continuous";
     if (sensor === "modis") $("agri-satellite-palette").value = "continuous";
     $("agri-satellite-palette").disabled = !index;
     $("agri-index-legend").hidden = !index;
+    let stretch = null;
+    if (index && recipe && $("agri-satellite-palette").value === "relative") {
+      try {
+        stretch = await fieldStretch(scene, sensor, mode, recipe, signal);
+      } catch {
+        stretch = null; // fall back to the fixed colour range
+      }
+      if (version !== drawVersion || signal?.aborted) return;
+    }
     if (index) {
       const legend = $("agri-index-legend");
       legend.replaceChildren();
@@ -528,7 +680,9 @@ export function initFarmSatellite() {
         const ramp = document.createElement("span");
         ramp.className = "index-continuous-ramp";
         if (mode === "lst") ramp.style.background = "linear-gradient(90deg,#4a6dd0,#4cb894,#f4d046,#da4b31)";
-        ramp.textContent = index.range[0] + " → " + index.range[1] + (index.unit ? " " + index.unit : "");
+        ramp.textContent = stretch
+          ? stretch.lo.toFixed(2) + " → " + stretch.hi.toFixed(2) + (index.unit ? " " + index.unit : "") + " · this field’s range"
+          : (index.display || index.range)[0] + " → " + (index.display || index.range)[1] + (index.unit ? " " + index.unit : "");
         legend.append(ramp);
       }
       const note = document.createElement("p");
@@ -538,7 +692,9 @@ export function initFarmSatellite() {
         recipe.note +
         (zones
           ? " Colours are fixed display zones, not calibrated crop-health classes."
-          : " Continuous red → yellow → green spectral-index gradient; not a calibrated crop-health score.");
+          : stretch
+            ? " Colours are stretched between this field’s own low and high values so variation inside the field is visible. They are relative and change with each date: use Field zones to compare dates. Not a calibrated crop-health score."
+            : " Continuous red → yellow → green spectral-index gradient; not a calibrated crop-health score.");
       const explanation = document.createElement("details"),
         explanationTitle = document.createElement("summary");
       explanationTitle.textContent = "Interpretation & source resolution";
@@ -553,6 +709,7 @@ export function initFarmSatellite() {
       if (recipe.expression) u.searchParams.set("expression", recipe.expression);
       u.searchParams.set("unscale", "false");
       u.searchParams.set("rescale", (recipe.display || recipe.range).join(","));
+      if (stretch) u.searchParams.set("rescale", stretch.lo + "," + stretch.hi);
       if ($("agri-satellite-palette").value === "zones") {
         u.searchParams.set("expression", zoneExpression(mode, recipe.expression || "(250m_16_days_NDVI_b1*0.0001)"));
         u.searchParams.set("rescale", "0,255");
@@ -666,8 +823,8 @@ export function initFarmSatellite() {
         keepBuffer: 0,
         updateWhenIdle: true,
         updateWhenZooming: false,
-        maxZoom: 18,
-        maxNativeZoom: source.id === "modis-11A1-061" ? 7 : source.id.startsWith("modis") ? 9 : source.red === "red" ? 13 : 14,
+        maxZoom: 22,
+        maxNativeZoom: source.id === "modis-11A1-061" ? 7 : source.id.startsWith("modis") ? 9 : source.red === "red" ? 15 : 17,
         opacity: Number($("agri-imagery-opacity").value) / 100,
         attribution: "Copernicus / USGS / NASA via Microsoft Planetary Computer",
       });
@@ -720,8 +877,8 @@ export function initFarmSatellite() {
               bounds: sceneBounds,
               noWrap: true,
               keepBuffer: 0,
-              maxNativeZoom: sensor === "landsat" ? 13 : 14,
-              maxZoom: 18,
+              maxNativeZoom: sensor === "landsat" ? 15 : 17,
+              maxZoom: 22,
             }).addTo(map);
           })
           .catch(() => {});
@@ -1885,8 +2042,8 @@ export function initFarmSatellite() {
     map.getPane("dark-base").classList.toggle("dark-osm-basemap", choice === "dark");
     const layers = {
       google: [url, 22, 22, "Map data ©" + new Date().getFullYear() + " Google · Imagery ©" + new Date().getFullYear() + " Google"],
-      imagery: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 19, 18, "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics and the GIS User Community"],
-      dark: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", 19, 19, "© OpenStreetMap contributors"],
+      imagery: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 20, 18, "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics and the GIS User Community"],
+      dark: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", 20, 19, "© OpenStreetMap contributors"],
     };
     const [tiles, maxZoom, maxNativeZoom, attribution] = layers[choice];
     L.tileLayer(tiles, { pane: "dark-base", maxZoom, maxNativeZoom, attribution }).addTo(map);
@@ -1903,6 +2060,7 @@ export function initFarmSatellite() {
       map.closePopup();
       editing = false;
       pointMode = false;
+      drawBackup = { vertices: vertices.map((p) => [...p]), undoLength: undo.length };
       syncModeButtons();
     }
     drawing = !drawing;
@@ -1918,7 +2076,12 @@ export function initFarmSatellite() {
     $("agri-point-toggle").textContent = pointMode ? "⌖ Point picker on" : "⌖ Inspect point";
     $("agri-point-toggle").title = pointMode ? "Turn off point picking" : "Select a satellite pixel";
     $("agri-point-hint").hidden = !pointMode;
-    if (map) map.getContainer().classList.toggle("point-inspecting", pointMode);
+    if (map) {
+      map.getContainer().classList.toggle("point-inspecting", pointMode);
+      if (drawing) map.doubleClickZoom.disable();
+      else map.doubleClickZoom.enable();
+    }
+    if (!drawing) clearDrawingAids();
   }
   $("agri-field-edit").addEventListener("click", () => {
     ensureMap();
