@@ -1,3 +1,4 @@
+import { initFarmWorkspace } from './farm-workspace.js';
 import {dewPoint,assessMetric,applyAssessment,reportCapabilities} from './virtual-sensors.js';
 import {addTileHelp} from './tile-help.js';
 import {BASE_TEMPERATURES,vaporPressureDeficit,deltaT,growingDegreeDay,chillHours,total,irrigationPlan,finite} from './agri-models.js';
@@ -22,7 +23,8 @@ export function agriChart(target,{title,unit,labels,series,bars=false,observed=n
  root.append(svg);const legend=el('div','agri-chart-legend');for(const s of series){const label=el('span','',s.label);label.style.setProperty('--series',s.color);legend.append(label);}if(finite(observed))legend.append(el('span','',num(observed,' '+unit)+' · derived from observation'));root.append(legend);target.append(root);
 }
 export function initAgriDSS(){
- let context=null,lastCrop='',lastStage='',lastPlace='',history=null,kcManual=false;const satellite=initFarmSatellite(),diseasePanel=initDiseasePanel(),operations=initFieldOperations();
+ let context=null,lastCrop='',lastStage='',lastPlace='',history=null,kcManual=false;const satellite=initFarmSatellite(),diseasePanel=initDiseasePanel(),operations=initFieldOperations(),workspace=initFarmWorkspace();
+document.addEventListener('farmviewchange',event=>{if(event.detail){satellite.show();diseasePanel.show();}});
  $('agri-kc').addEventListener('change',()=>{kcManual=true;});
  const input=id=>{const value=$(id).value;return value.trim()===''?null:Number(value);};
  const defaults={base:10,cap:35,kc:1};for(const [id,v]of Object.entries(defaults))$('agri-'+id).value=v;
@@ -75,7 +77,7 @@ export function initAgriDSS(){
   if(history&&history.start===$('agri-planting').value){const valid=history.daily.map(r=>growingDegreeDay(r.low,r.high,base,cap)),c=chillHours(history.temperatures);$('agri-history-status').textContent='MODELED HISTORY · ERA5-Land reanalysis + recent ECMWF archive, not station measurements. '+history.daily.length+'/'+history.expected+' days, GDD '+num(total(valid),' °C·days')+' (available days), chill '+c.hours+' h in '+c.coverage+' valid hours. Missing days are not zero-filled.';}
   satellite.setContext(context);diseasePanel.update(context);operations.update(context);
  }
- return {update(next){context=next;const key=next.place.slice(1).join(',');if(lastPlace!==key){lastPlace=key;history=null;$('agri-history-status').textContent='Observed station accumulations need station history. Optional model history is separate.';satellite.setLocation(next.place);}
+ return {update(next){context=next;workspace.update(next);const key=next.place.slice(1).join(',');if(lastPlace!==key){lastPlace=key;history=null;$('agri-history-status').textContent='Observed station accumulations need station history. Optional model history is separate.';satellite.setLocation(next.place);}
 
   if(next.crop?.id!==lastCrop){lastCrop=next.crop?.id||'';$('agri-base').value=BASE_TEMPERATURES[lastCrop]??10;kcManual=false;}if(next.stage!==lastStage||!kcManual){lastStage=next.stage;if(!kcManual)$('agri-kc').value=CROP_FIELD_GUIDES[lastCrop]?.kc[next.stage]??1;}render();}};
 }

@@ -1,22 +1,10 @@
 import { FIELD_LIBRARY_KEY, readFieldLibrary, sameFieldLocation, boundaryGeoJSON, fieldChangeSummary } from "./field-workspace.js";
 import { addTileHelp } from "./tile-help.js";
-import {
-  vegetationSamples,
-  finite,
-  thermalMoistureIndex,
-  validField,
-  fieldSamplePoints,
-  rasterValue,
-  validPixel,
-  qualityAsset,
-  recentSceneDays,
-  historyNarrative,
-  renderFieldChart,
-} from "./farm-monitoring.js";
+import { vegetationSamples, finite, thermalMoistureIndex, validField, fieldSamplePoints, rasterValue, validPixel, qualityAsset, recentSceneDays, historyNarrative, renderFieldChart, renderMonthlyChart } from "./farm-monitoring.js";
 import { currentValue, distanceKm } from "./current-weather.js";
 import { darkMap, pkt } from "./map-utils.js";
 import { fieldAreaHa } from "./agri-models.js";
-import { FIELD_INDICES, ZONE_COLORS, fieldColormap, indexRecipe, zoneExpression, indexMeaning, indexColors } from "./farm-indices.js";
+import { FIELD_INDICES, ZONE_COLORS, fieldColormap, indexRecipe, zoneExpression, indexMeaning, indexColors, falseColourRecipe } from "./farm-indices.js";
 // How far back scenes and the field report go.
 export const HISTORY_DAYS = 365;
 // A pass counts toward the field mean only when at least this share of the field is clear.
@@ -45,6 +33,11 @@ export function maskedStatsExpression(sensor, indexExpression) {
  * fetch() with retries for the satellite service, which rate-limits bursts with HTTP 429
  * (sent without CORS headers, so the browser reports a network error) and sometimes 5xx.
  */
+// In the full-screen workspace the map sits under floating panels; this keeps fitted bounds clear of them.
+function mapPad(n) {
+  return window.farmMapPadding?.(n) || { padding: [n, n] };
+}
+
 export async function fetchRetry(url, options = {}, { attempts = 4, delay = 1200 } = {}) {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -219,7 +212,7 @@ export function initFarmSatellite() {
     syncModeButtons();
     clearHistory();
     syncBoundary(false);
-    map.fitBounds(L.latLngBounds(vertices), { padding: [35, 35], maxZoom: 17 });
+    map.fitBounds(L.latLngBounds(vertices), { ...mapPad(35), maxZoom: 17 });
     load();
     $("farm-boundary-status").textContent = "Loaded " + record.name + ". Weather location, crop and confirmed stage were not changed.";
   });
@@ -402,7 +395,7 @@ export function initFarmSatellite() {
   function historyMode() {
     const selected = $("agri-history-mode").value,
       display = $("agri-satellite-mode").value;
-    return selected === "follow" ? (display === "rgb" ? "ndvi" : display) : selected;
+    return selected === "follow" ? (display === "rgb" || display === "fcc" ? "ndvi" : display) : selected;
   }
   function syncModes() {
     const sensor = $("agri-satellite-source").value;
@@ -559,12 +552,28 @@ export function initFarmSatellite() {
       recipe.assets.forEach((asset) => u.searchParams.append("assets", asset));
       if (recipe.expression) u.searchParams.set("expression", recipe.expression);
       u.searchParams.set("unscale", "false");
-      u.searchParams.set("rescale", recipe.range.join(","));
+      u.searchParams.set("rescale", (recipe.display || recipe.range).join(","));
       if ($("agri-satellite-palette").value === "zones") {
         u.searchParams.set("expression", zoneExpression(mode, recipe.expression || "(250m_16_days_NDVI_b1*0.0001)"));
         u.searchParams.set("rescale", "0,255");
         u.searchParams.set("colormap", JSON.stringify(fieldColormap(mode)));
       } else u.searchParams.set("colormap_name", mode === "lst" ? "turbo" : "rdylgn");
+    } else if (mode === "fcc") {
+      let fc;
+      try {
+        fc = falseColourRecipe(sensor, scene);
+      } catch (e) {
+        status(e.message);
+        return;
+      }
+      if (!fc) {
+        status("False colour needs Sentinel-2 or Landsat imagery.");
+        return;
+      }
+      fc.assets.forEach((asset) => u.searchParams.append("assets", asset));
+      u.searchParams.set("expression", fc.expression);
+      u.searchParams.set("rescale", fc.rescale);
+      u.searchParams.set("color_formula", fc.colorFormula);
     } else {
       source.assets.forEach((asset) => u.searchParams.append("assets", asset));
       if (source.red === "red") {
@@ -591,7 +600,7 @@ export function initFarmSatellite() {
       $("agri-satellite-zoom").disabled = false;
       fieldNote();
       const metadata =
-        (index ? index.label : "Natural colour") +
+        (index ? index.label : mode === "fcc" ? "False colour (NIR · red · green)" : "True colour") +
         " · " +
         (recipe?.resolution || source.resolution) +
         " · acquisition " +
@@ -631,8 +640,19 @@ export function initFarmSatellite() {
             }
             done(null, canvas);
           };
-          image.onerror = () => done(new Error("Image tile unavailable"), canvas);
-          image.src = this.getTileUrl(coords);
+          // The imagery service briefly rate-limits bursts (HTTP 429, seen by the browser as a failed
+          // image). Retry a few times with a growing pause before reporting the tile as unavailable.
+          const tileUrl = this.getTileUrl(coords);
+          let attempts = 0;
+          image.onerror = () => {
+            if (attempts < 3 && current()) {
+              attempts++;
+              setTimeout(() => {
+                if (current()) image.src = tileUrl;
+              }, 1200 * 2 ** (attempts - 1) + Math.random() * 400);
+            } else done(new Error("Image tile unavailable"), canvas);
+          };
+          image.src = tileUrl;
           return canvas;
         },
       });
@@ -799,7 +819,7 @@ export function initFarmSatellite() {
     root.textContent = "Reading source pixels and checking cloud / quality flags…";
     pointPopup();
     const currentMode = $("agri-satellite-mode").value,
-      mode = currentMode === "rgb" ? "ndvi" : currentMode;
+      mode = currentMode === "rgb" || currentMode === "fcc" ? "ndvi" : currentMode;
     const modes = [
       ...new Set([
         mode,
@@ -934,6 +954,10 @@ export function initFarmSatellite() {
     reportSubtitle();
     lastChart = null;
     lastRisks = [];
+    stopPlay();
+    $("crop-monthly-chart").replaceChildren();
+    $("crop-pass-label").textContent = "";
+    for (const id of ["crop-prev", "crop-next", "crop-play"]) $(id).disabled = true;
     $("crop-risk-list").replaceChildren(Object.assign(document.createElement("p"), { className: "farm-explainer", textContent: "Risks appear once the field report has loaded." }));
     $("crop-zones").replaceChildren();
     $("crop-weather-chart").replaceChildren();
@@ -1285,10 +1309,78 @@ export function initFarmSatellite() {
       if (e.type !== "sowing" || !sown) events.push({ time: Date.parse(e.date + "T12:00:00+05:00"), label: ACTIVITY[e.type] || "Activity", color: "#e4bc60" });
     return events;
   }
+  // ---- Timeline over the 12-month record: click a dot, step, or play the year as a time-lapse ----
+  const validPasses = () => historyRows.filter((r) => finite(r.value)).sort((a, b) => a.time - b.time);
+  function selectedSceneTime() {
+    const sc = scenes[Number($("agri-scene").value)],
+      t = Date.parse(sc?.properties?.datetime || sc?.properties?.start_datetime);
+    return finite(t) ? t : null;
+  }
+  function pickRow(row) {
+    const i = scenes.findIndex((f) => f.id === row.scene);
+    if (i < 0) return false;
+    $("agri-scene").value = String(i);
+    $("agri-scene").dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+  function currentPassIndex() {
+    const t = selectedSceneTime(),
+      p = validPasses();
+    if (!p.length || t === null) return -1;
+    let best = 0;
+    p.forEach((r, i) => {
+      if (Math.abs(r.time - t) < Math.abs(p[best].time - t)) best = i;
+    });
+    return best;
+  }
+  function stepPass(d) {
+    const p = validPasses();
+    if (!p.length) return false;
+    let i = currentPassIndex();
+    i = i < 0 ? (d > 0 ? 0 : p.length - 1) : i + d;
+    return i >= 0 && i < p.length && pickRow(p[i]);
+  }
+  function updatePassLabel() {
+    const p = validPasses(),
+      i = currentPassIndex(),
+      label = $("crop-pass-label");
+    for (const id of ["crop-prev", "crop-next", "crop-play"]) $(id).disabled = !p.length;
+    label.textContent = i < 0 ? "" : "Pass " + (i + 1) + " of " + p.length + " · " + niceDay(p[i].time) + " · " + fmtValue(historyMode(), p[i].value);
+  }
+  let playTimer = null;
+  function stopPlay() {
+    if (playTimer) clearInterval(playTimer);
+    playTimer = null;
+    $("crop-play").textContent = "▶ Play 12 months";
+    $("crop-play").setAttribute("aria-pressed", "false");
+  }
   function drawTrend() {
     if (!lastChart) return;
-    renderFieldChart($("agri-field-history-chart"), historyRows, { ...lastChart, events: fieldEvents() });
+    const mode = historyMode();
+    renderFieldChart($("agri-field-history-chart"), historyRows, { ...lastChart, events: fieldEvents(), marker: selectedSceneTime(), onPick: pickRow });
+    renderMonthlyChart($("crop-monthly-chart"), historyRows, { title: FIELD_INDICES[mode].label.split(" · ")[0] + " · monthly average", unit: FIELD_INDICES[mode].unit || "", color: lastChart.color, start: lastChart.start });
+    updatePassLabel();
   }
+  $("agri-scene").addEventListener("change", drawTrend);
+  $("crop-prev").addEventListener("click", () => {
+    stopPlay();
+    stepPass(-1);
+  });
+  $("crop-next").addEventListener("click", () => {
+    stopPlay();
+    stepPass(1);
+  });
+  $("crop-play").addEventListener("click", () => {
+    if (playTimer) return stopPlay();
+    const p = validPasses();
+    if (!p.length) return;
+    pickRow(p[0]);
+    $("crop-play").textContent = "❚❚ Pause";
+    $("crop-play").setAttribute("aria-pressed", "true");
+    playTimer = setInterval(() => {
+      if (!stepPass(1)) stopPlay();
+    }, 2200);
+  });
   // Shared statistics request with retry (the service rate-limits bursts without CORS headers).
   async function statsFetch(u, body, signal) {
     for (let attempt = 0; ; attempt++) {
@@ -1599,7 +1691,7 @@ export function initFarmSatellite() {
     }
     if (version !== historyVersion) return;
     renderZones(lastZones, latest?.time);
-    lastRisks = ["ndvi", "evi", "savi", "msavi"].includes(mode) ? computeRisks(historyRows, lastZones, ndmi, ndwi) : [["info", "Risks use NDVI", "Switch the graph parameter to NDVI to check vegetation risks."], ...weatherRisks()];
+    lastRisks = ["ndvi", "evi", "evi2", "savi", "msavi"].includes(mode) ? computeRisks(historyRows, lastZones, ndmi, ndwi) : [["info", "Risks use NDVI", "Switch the graph parameter to NDVI to check vegetation risks."], ...weatherRisks()];
     renderRisks(lastRisks);
     $("crop-scout-empty").hidden = !$("agri-zone-details").hidden;
     updateSteps();
@@ -1665,7 +1757,7 @@ export function initFarmSatellite() {
       syncModeButtons();
       clearHistory();
       syncBoundary(false);
-      map.fitBounds(L.latLngBounds(vertices), { padding: [35, 35], maxZoom: 17 });
+      map.fitBounds(L.latLngBounds(vertices), { ...mapPad(35), maxZoom: 17 });
       load();
       $("farm-boundary-status").textContent = "Loaded " + file.name + ". Save it to keep it in this browser.";
     } catch (e) {
@@ -1743,7 +1835,7 @@ export function initFarmSatellite() {
     });
   $("agri-satellite-retry").addEventListener("click", draw);
   $("agri-satellite-zoom").addEventListener("click", () => {
-    if (sceneBounds) map.fitBounds(sceneBounds, { padding: [18, 18], maxZoom: 12 });
+    if (sceneBounds) map.fitBounds(sceneBounds, { ...mapPad(18), maxZoom: 12 });
   });
   $("agri-imagery-opacity").addEventListener("input", () => {
     layer?.setOpacity(Number($("agri-imagery-opacity").value) / 100);
@@ -1837,7 +1929,7 @@ export function initFarmSatellite() {
     if (!editing) pointMode = true;
     $("agri-field-draw").textContent = "Draw field boundary";
     syncModeButtons();
-    if (editing && validField(vertices)) map.fitBounds(L.latLngBounds(vertices), { padding: [55, 55], maxZoom: 17, animate: false });
+    if (editing && validField(vertices)) map.fitBounds(L.latLngBounds(vertices), { ...mapPad(55), maxZoom: 17, animate: false });
     syncBoundary(false);
   });
   $("agri-point-toggle").addEventListener("click", () => {
@@ -1865,7 +1957,7 @@ export function initFarmSatellite() {
     syncBoundary(!drawing);
   });
   $("agri-field-fit").addEventListener("click", () => {
-    if (validField(vertices)) map.fitBounds(L.latLngBounds(vertices), { padding: [30, 30], maxZoom: 17 });
+    if (validField(vertices)) map.fitBounds(L.latLngBounds(vertices), { ...mapPad(30), maxZoom: 17 });
   });
   $("agri-field-clear").addEventListener("click", () => {
     if (vertices.length) snapshot();

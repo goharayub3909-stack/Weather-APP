@@ -82,3 +82,48 @@ test('MSAVI and NDWI recipes use the right bands and match the textbook formulas
   assert.ok(FIELD_INDICES.msavi && FIELD_INDICES.ndwi);
   assert.match(indexMeaning('msavi', 0.1), /soil/);
 });
+
+test('EVI2, NRI and DSWI match their published formulas on Sentinel-2 and Landsat', async () => {
+  const {indexRecipe, falseColourRecipe, FIELD_INDICES, indexMeaning} = await import('../public/farm-indices.js');
+  const mk = (names, scale, offset) => ({properties: {'s2:processing_baseline': '05.13'}, assets: Object.fromEntries(names.map(k => [k, {'raster:bands': [{scale, offset}]}]))});
+  const s2 = mk(['B02', 'B03', 'B04', 'B08', 'B11', 'B05', 'B8A', 'SCL'], 0.0001, -0.1);
+  const ls = mk(['blue', 'green', 'red', 'nir08', 'swir16', 'qa_pixel'], 0.0000275, -0.2);
+  const cases = [
+    ['sentinel', s2, {B02: 1200, B03: 1500, B04: 1800, B08: 4200, B11: 3000}, 0.0001, -0.1],
+    ['landsat', ls, {blue: 9000, green: 11000, red: 10000, nir08: 25000, swir16: 18000}, 0.0000275, -0.2],
+  ];
+  for (const [sensor, scene, dn, scale, offset] of cases) {
+    const raw = Object.keys(dn), refl = Object.fromEntries(raw.map(k => [k, dn[k] * scale + offset]));
+    const [n, r, g, sw] = sensor === 'sentinel' ? [refl.B08, refl.B04, refl.B03, refl.B11] : [refl.nir08, refl.red, refl.green, refl.swir16];
+    const run = expr => Function('return ' + expr.replace(/(\w+)_b1/g, (_, k) => dn[k]))();
+    const expected = {evi2: 2.5 * (n - r) / (n + 2.4 * r + 1), nri: (g - r) / (g + r), dswi: (n + g) / (sw + r)};
+    for (const mode of ['evi2', 'nri', 'dswi']) {
+      const rec = indexRecipe(sensor, mode, scene);
+      assert.ok(Math.abs(run(rec.expression) - expected[mode]) < 1e-9, sensor + ' ' + mode);
+      assert.ok(FIELD_INDICES[mode].label);
+    }
+    // DSWI is a ratio near 1.4 here: the validity range must not discard it.
+    const [lo, hi] = FIELD_INDICES.dswi.range; assert.ok(expected.dswi > lo && expected.dswi < hi);
+    const dswiAssets = indexRecipe(sensor, 'dswi', scene).assets;
+    assert.equal(dswiAssets.length, 4);
+    const fc = falseColourRecipe(sensor, scene);
+    assert.equal(fc.assets.length, 3); assert.equal(fc.expression.split(';').length, 3);
+    assert.ok(Math.abs(run(fc.expression.split(';')[0]) - n) < 1e-9, 'first channel is near-infrared');
+    assert.ok(Math.abs(run(fc.expression.split(';')[1]) - r) < 1e-9, 'second channel is red');
+  }
+  assert.equal(falseColourRecipe('modis', s2), null);
+  assert.deepEqual(FIELD_INDICES.dswi.display, [0.5, 2.5]);
+  assert.match(indexMeaning('dswi', 1.2), /cannot separate drought from disease/);
+  assert.match(indexMeaning('nri', 0.05), /cannot set a fertilizer rate/);
+});
+
+test('monthly means group clear passes by Pakistan month and skip gaps', async () => {
+  const {monthlyMeans} = await import('../public/farm-monitoring.js');
+  const t = s => Date.parse(s);
+  const rows = [{time: t('2026-01-05T06:00Z'), value: 0.2}, {time: t('2026-01-20T06:00Z'), value: 0.4}, {time: t('2026-03-02T06:00Z'), value: 0.6}, {time: t('2026-03-03T06:00Z'), value: null}, {time: t('2025-01-01T06:00Z'), value: 0.9}];
+  const m = monthlyMeans(rows, t('2026-01-01T00:00Z'), t('2026-12-31T00:00Z'));
+  assert.deepEqual(m.map(x => x.key), ['2026-01', '2026-03']);
+  assert.ok(Math.abs(m[0].mean - 0.3) < 1e-9); assert.equal(m[0].n, 2); assert.equal(m[1].n, 1);
+  // 31 Jan 20:00 UTC is already 1 Feb in Pakistan
+  assert.equal(monthlyMeans([{time: t('2026-01-31T20:00Z'), value: 1}])[0].key, '2026-02');
+});

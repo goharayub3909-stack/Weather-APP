@@ -158,3 +158,17 @@ Reference disease photographs retain source, author, license and modification re
 The Crop health tab builds a 12-month field report for a drawn or saved boundary. Each Sentinel-2 or Landsat pass (the least cloudy per 5-day window) is reduced to a whole-field mean by Microsoft Planetary Computer's statistics service, masked with the pass's own quality band (Sentinel-2 SCL 4/5/6; Landsat QA fill/cloud/shadow/cirrus/snow clear). A pass counts only when at least 60% of the field is clear. Reflectance uses the published scale and offsets, including the Sentinel-2 processing-baseline 04.00 offset (without it NDVI reads roughly 0.1 low). Results are cached in the browser; the service rate-limits bursts, so requests are retried with backoff. MODIS products and SMI use five interior sample points.
 
 The field map basemap defaults to Google satellite through the official Google Maps Platform Map Tiles API. Put a key in `public/maps-config.json` (`googleMapsApiKey`), enable the Map Tiles API and billing for it, and restrict the key to this site's address. With no key the map falls back to Esri World Imagery. Unofficial Google tile URLs are not used.
+
+
+## Farmers workspace and Tailwind
+
+The Farmers screen is a full-screen map workspace (`public/farm-workspace.js`): weather ticker on top, raster-layer card top-left, pest and disease triage plus field decisions in a right sidebar, and the detailed panels (field report, decisions, pest guide, outlook) in a bottom sheet. Existing panels are moved into it, not rebuilt, so element ids and stored settings are unchanged.
+
+Styling for the new components uses Tailwind CSS 3.4, scoped to `#fw-root` with its CSS reset disabled so the rest of the site is unaffected. The built stylesheet `public/tailwind.css` is committed. After changing Tailwind classes in `public/index.html` or `public/farm-workspace.js`, rebuild it:
+
+```
+npm install
+npm run build:css
+```
+
+Satellite layers (Sentinel-2 and Landsat via Microsoft Planetary Computer): True colour, False colour (NIR/red/green), NDVI, EVI, EVI2, NDWI, NRI, DSWI, plus NDRE, SAVI, MSAVI, NDMI, LST and SMI. NRI and DSWI are spectral indicators with relative display breaks, not calibrated thresholds.
