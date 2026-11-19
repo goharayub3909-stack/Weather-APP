@@ -21,3 +21,9 @@ test('backend K index rejects below-terrain soundings and lightning evidence exp
  const now=Date.parse('2026-10-23T07:00:00Z'),backend={weatherThunder:false,lightningThunder:true,lightning_valid_until:new Date(now+60000).toISOString(),reason:'Nearby observed lightning and near-term forecast rain'};assert.ok(ecmwfDailyCondition({amount:.5,code:3,hourly:{},date:'2026-10-23',backend,now}).thunder);assert.equal(ecmwfDailyCondition({amount:.5,code:3,hourly:{},date:'2026-10-23',backend,now:now+120000}).thunder,false);
  const d={weather_fetched_at:new Date(now).toISOString(),cities:[{lat:31,lon:73,outlook:[{date:'2026-10-23',...backend}]}]};assert.ok(backendStormDay(d,31,73,'2026-10-23',now));assert.equal(backendStormDay(d,33,73,'2026-10-23',now),null);assert.equal(backendStormDay(d,31,73,'2026-10-23',now+7*3600000),null);
 });
+
+test('thunderstorm labels always start with a capital letter',async()=>{
+ const {ecmwfDailyCondition}=await import('../public/storms.js');
+ for(const amount of [.2,1.5,5,25,null]){const label=ecmwfDailyCondition({amount,code:95,hourly:{},date:'2026-10-23'}).label;assert.match(label,/^[A-Z]/,label);assert.match(label,/hunderstorm chances$/);}
+ assert.equal(ecmwfDailyCondition({amount:1.5,code:95,hourly:{},date:'2026-10-23'}).label,'Thunderstorm chances');
+});

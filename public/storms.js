@@ -51,7 +51,7 @@ export function ecmwfDailyCondition({amount,code,hourly,date,backend=null,now=Da
  if([56,57,66,67].includes(code)&&!explicit)return {icon:'rain',label:'Freezing rain possible',band:rainBand(amount),thunder:false,reason:'ECMWF freezing precipitation weather code'};
  if(!explicit&&!local.weatherThunder&&!remote){const base=dailyCondition({amount,code});if(base.band.rain)base.label=amount<=1?'Isolated rain chances':amount<=10&&amount>=2?'Scattered rain chances':amount<2?'Rain chances':'Rain expected';return {...base,thunder:false,reason:''};}
  const prefix=finite(amount)&&amount>=.2&&amount<=1?'Isolated ':finite(amount)&&amount>=2&&amount<=10?'Scattered ':'';
- return {icon:'storm',label:prefix+'thunderstorm chances',band:rainBand(amount),thunder:true,reason:remote?'Backend · '+backend.reason:local.reason};
+ return {icon:'storm',label:prefix?prefix+'thunderstorm chances':'Thunderstorm chances',band:rainBand(amount),thunder:true,reason:remote?'Backend · '+backend.reason:local.reason};
 }
 
 // K index uses actual model temperature / humidity at 850, 700 and 500 hPa.
@@ -66,7 +66,8 @@ export function thunderEvidence(hourly,date){
  const rows=(hourly?.time||[]).flatMap((t,i)=>t.startsWith(date)?[i]:[]);
  let explicit=false,hail=false,ingredients=false,maximumK=null,valid=0;
  for(const i of rows){const code=hourly.weather_code?.[i],cape=hourly.cape?.[i],showers=hourly.showers?.[i],k=kIndex(hourly,i);if(finite(code))valid++;if([95,96,99].includes(code))explicit=true;if([96,99].includes(code))hail=true;if(k!==null)maximumK=maximumK===null?k:Math.max(maximumK,k);
-  if(finite(cape)&&finite(showers)&&((cape>=500&&showers>=.2&&(k===null||k>=20))||(cape>=200&&showers>=.5&&k!==null&&k>=30)))ingredients=true;
+  // ECMWF supplies no convective-rain (showers) field and no thunder weather codes, so rain of 0.5 mm/h or more in a high-CAPE hour counts as well.
+  if(finite(cape)&&((cape>=500&&(showers>=.2||hourly.precipitation?.[i]>=.5)&&(k===null||k>=20))||(cape>=200&&showers>=.5&&k!==null&&k>=30)))ingredients=true;
  }
- return {weatherThunder:explicit||ingredients,explicit,hail,ingredients,kIndexMax:maximumK,validHours:valid,reason:explicit?'ECMWF thunderstorm weather code':ingredients?'ECMWF simultaneous CAPE / convective rain, with K-index moisture screening where above terrain':'No supported convective trigger'};
+ return {weatherThunder:explicit||ingredients,explicit,hail,ingredients,kIndexMax:maximumK,validHours:valid,reason:explicit?'ECMWF thunderstorm weather code':ingredients?'ECMWF simultaneous CAPE and rain, with K-index moisture screening where above terrain':'No supported convective trigger'};
 }

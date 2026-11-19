@@ -1,0 +1,90 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseStationPage, parseCities, pktIso, labelPkt, compassDegrees, applyPmdFfd} from '../scripts/pmd-ffd.mjs';
+import {parseLabel} from '../public/realtime/core.js';
+
+// The structure of ffd.pmd.gov.pk/staff/weather-display?city=..., reduced: the station block, the FORECAST block (must be ignored) and the footer.
+const page = ({name = 'LAHORE', sub = 'Punjab, Pakistan &bull; 31.5&deg;N &nbsp;74.3&deg;E', wmo = 'WMO &nbsp;41640 / 41641', temp = '25.0', source = 'SYNOP', time = '17:00 PKT', max = '28.0', min = '13.8',
+  hum = '35%', wind = '0 km/h', dir = 'N direction', pres = '1,014.1', vis = '—', dew = '8.4', rain = 'NIL', observed = 'Observed 17:00 PKT 17 Nov 2026'} = {}) => `<html><body>
+<select name="city"><optgroup label="Punjab"><option value="lahore" selected>Lahore</option><option value="tt-singh" >T.T. Singh</option></optgroup></select>
+<div class="city-hdr"><div><div class="city-name" style="font-size:30px;">${name}</div><div class="city-sub">${sub}</div></div><div class="city-badge">${wmo}</div></div>
+<div class="icon-temp-hero"><div class="wx-condition">PARTLY CLOUDY</div><div class="temp-col">
+  <div class="temp-val">${temp}<span class="temp-unit">&deg;C</span></div><div class="temp-source">${source}
+   &bull; ${time}
+   &bull; 29 minutes ago</div></div></div>
+<div class="minmax-row" style="x"><div class="mm-cell mm-max"><div class="mm-label">Max Today </div><div class="mm-vals"><div class="mm-val hot">${max}°C</div>
+ <div class="mm-yda"><div class="mm-yda-label">Yesterday</div><div class="mm-yda-val hot">27.5°C</div></div></div></div>
+<div class="mm-cell mm-min"><div class="mm-label">Min Today</div><div class="mm-vals"><div class="mm-val cool">${min}°C</div>
+ <div class="mm-yda"><div class="mm-yda-label">Yesterday</div><div class="mm-yda-val cool">14.4°C</div></div></div></div></div>
+<div class="metrics-grid">
+ <div class="m-card"><div class="m-label">Humidity</div><div class="m-val">${hum}</div><div class="m-sub">Relative</div></div>
+ <div class="m-card"><div class="m-label">Wind</div><div class="m-val">${wind}</div><div class="m-sub">${dir}</div></div>
+ <div class="m-card"><div class="m-label">Pressure</div><div class="m-val">${pres}</div><div class="m-sub">hPa</div></div>
+ <div class="m-card"><div class="m-label">Visibility</div><div class="m-val">${vis}</div><div class="m-sub">Horizontal</div></div>
+ <div class="m-card"><div class="m-label">Dew Pt</div><div class="m-val">${dew}°C</div><div class="m-sub">Condensation</div></div>
+ <div class="m-card"><div class="m-label">Rainfall</div><div class="m-val">${rain}</div><div class="m-sub">Since 08:00 PKT</div></div></div>
+<div>ICON Model Next 4 Days FORECAST TOMORROW CLEAR 27 14 WNW 10 km/h</div>
+<div class="footer">LIVE Data via SYNOP &middot; LAHORE,CITY &middot; ${observed} &middot; WMO 41640 / 41641 &middot; ICAO OPLA</div></body></html>`;
+
+test('a station page gives the observed values, the time stamp and the extremes, and nothing of the forecast', () => {
+  const r = parseStationPage(page());
+  assert.equal(r.name, 'LAHORE'); assert.deepEqual(r.wmo, [41640, 41641]); assert.equal(r.icao, 'OPLA'); assert.equal(r.source, 'SYNOP');
+  assert.equal(r.observed_at, '2026-11-17T17:00:00+05:00'); assert.equal(r.observed_label, '17:00 PKT');
+  assert.equal(r.temperature, 25); assert.equal(r.max_today, 28); assert.equal(r.min_today, 13.8); assert.equal(r.max_yesterday, 27.5); assert.equal(r.min_yesterday, 14.4);
+  assert.equal(r.humidity, 35); assert.equal(r.wind_kmh, 0); assert.equal(r.wind_direction, 'N'); assert.equal(r.wind_direction_deg, 0);
+  assert.equal(r.pressure_hpa, 1014.1); assert.equal(r.dew_point, 8.4); assert.equal(r.rain_mm, 0); assert.equal(r.rain_since, '08:00 PKT');
+  assert.equal(r.visibility_km, null);                                                  // a dash is "not given", not zero
+  assert.ok(!/CLEAR|FORECAST|ICON|WNW/.test(JSON.stringify(r)));
+  assert.equal(r.lat, 31.5); assert.equal(r.lon, 74.3);
+});
+test('units and gaps: visibility in km or m, rain in mm, a missing station page and a station without an observation', () => {
+  assert.equal(parseStationPage(page({vis: '10.0 km'})).visibility_km, 10);
+  assert.equal(parseStationPage(page({vis: '800 m'})).visibility_km, 0.8);
+  assert.equal(parseStationPage(page({rain: '3.4 mm'})).rain_mm, 3.4);
+  assert.equal(parseStationPage(page({wind: '12 km/h', dir: 'WSW direction'})).wind_direction_deg, 247.5);
+  assert.equal(parseStationPage(page({temp: '-3.5'})).temperature, -3.5);
+  assert.equal(parseStationPage('<html>nothing here</html>'), null);
+  const none = parseStationPage(page({temp: '—', source: '—', time: '', observed: '', hum: '—', dew: '—'}));
+  assert.equal(none.temperature, null); assert.equal(none.observed_at, null); assert.equal(none.humidity, null);
+});
+test('station list, PKT time labels and compass points', () => {
+  assert.deepEqual(parseCities(page()).map(c => c.slug), ['lahore', 'tt-singh']);
+  assert.equal(pktIso('17:00 PKT', '17 Nov 2026'), '2026-11-17T17:00:00+05:00'); assert.equal(pktIso('', '17 Nov 2026'), null); assert.equal(pktIso('17:00 PKT', 'soon'), null);
+  assert.equal(labelPkt('2026-11-17T17:00:00+05:00'), '05:00 pm, 17 November'); assert.equal(labelPkt('2026-11-09T00:05:00+05:00'), '12:05 am, 9 November');
+  assert.equal(labelPkt('2026-11-09T12:30:00+05:00'), '12:30 pm, 9 November');
+  assert.equal(parseLabel(labelPkt('2026-11-17T17:00:00+05:00'), Date.parse('2026-11-17T12:30:00Z')), Date.parse('2026-11-17T12:00:00Z'));   // realtime.json's own reader agrees
+  assert.equal(compassDegrees('NNW'), 337.5); assert.equal(compassDegrees('x'), null); assert.equal(compassDegrees(null), null);
+});
+
+const NOW = Date.parse('2026-11-17T12:30:00Z');                                         // 17:30 PKT
+const row = (id, name, patch = {}) => { const v = Array(178).fill(null); v[0] = id; v[1] = name; v[4] = 'PMD'; v[5] = 1; v[161] = '11:53 am, 13 November'; v[91] = 9; v[106] = 7; v[8] = 20; return {key: String(id), id, name, network: 'PMD', v: Object.assign(v, patch)}; };
+const ffd = stations => ({source: 'test', fetched_at: '2026-11-17T12:30:00Z', failed: [], stations});
+const rec = (extra = {}) => ({slug: 'lahore', label: 'Lahore', name: 'LAHORE', wmo: [41640, 41641], source: 'SYNOP', observed_at: '2026-11-17T17:00:00+05:00', observed_label: '17:00 PKT', temperature: 25, max_today: 28, min_today: 13.8,
+  max_yesterday: 27.5, min_yesterday: 14.4, humidity: 35, wind_kmh: null, wind_direction: null, wind_direction_deg: null, pressure_hpa: 1014.1, visibility_km: 10, dew_point: 8.4, rain_mm: 0, rain_since: '08:00 PKT', lat: 31.5, lon: 74.3, icao: 'OPLA', ...extra});
+test('the page values go into the PMD row with their own time stamps, and stale values that share the sync stamp are cleared', () => {
+  const data = {stations: [row(41641, 'Lahore Airport'), row(41640, 'Lahore City'), {...row(1, 'Davis one'), network: 'Davis'}]};
+  const sum = applyPmdFfd(data, ffd([rec()]), parseLabel, NOW);
+  assert.equal(sum.updated, 1);
+  assert.equal(data.stations[0].v[5], 1);                                               // the first WMO number of the page that has a row is 41640 (Lahore City): the airport is not touched
+  const c = data.stations[1].v;
+  assert.equal(c[5], 25); assert.equal(c[24], '05:00 pm, 17 November'); assert.equal(c[25], 8.4); assert.equal(c[32], '05:00 pm, 17 November');
+  assert.equal(c[73], 35); assert.equal(c[80], '05:00 pm, 17 November'); assert.equal(c[127], 1014.1); assert.equal(c[162], '05:00 pm, 17 November');
+  assert.equal(c[164], 10000); assert.equal(c[170], '05:00 pm, 17 November');          // km to the metres of realtime.json
+  assert.equal(c[105], 0); assert.equal(c[161], '05:00 pm, 17 November');
+  assert.equal(c[91], null); assert.equal(c[106], null);                                // wind is not on the page: the old 13 November value is not left under the new stamp
+  assert.equal(c[8], 20);                                                               // a normal is not an observation: kept
+  assert.equal(data.stations[0].v[161], '11:53 am, 13 November');
+  assert.equal(data.stations[1].pmd_ffd.max_today, 28); assert.equal(data.stations[1].pmd_ffd.observed_at, '2026-11-17T17:00:00+05:00');
+  assert.equal(data.stations[2].v[5], 1);                                               // other networks are never touched
+  assert.equal(data.pmd_ffd.updated, 1);
+});
+test('matching by name, newer rows kept, no-observation pages skipped, unmatched pages reported', () => {
+  const newer = row(41599, 'Sialkot Airport', {161: '05:10 pm, 17 November', 5: 24.1});
+  const data = {stations: [row('41SKP', 'Sheikhupura'), newer, row(41640, 'Lahore')]};
+  const sum = applyPmdFfd(data, ffd([rec({slug: 'sheikhupura', label: 'Sheikhupura', name: 'SHEIKHUPURA', wmo: []}), rec({slug: 'sialkot', label: 'Sialkot', name: 'SIALKOT', wmo: [41599]}),
+    rec({slug: 'kamra', observed_at: null, wmo: [41640]}), rec({slug: 'nowhere', label: 'Nowhere', name: 'NOWHERE', wmo: [99999]})]), parseLabel, NOW);
+  assert.deepEqual({u: sum.updated, k: sum.kept_newer, n: sum.no_observation, m: sum.unmatched}, {u: 1, k: 1, n: 1, m: ['nowhere']});
+  assert.equal(data.stations[0].v[5], 25);                                              // Sheikhupura by name
+  assert.equal(newer.v[5], 24.1);                                                       // its own sync (05:10 pm) is newer than the page's 05:00 pm
+  assert.equal(data.stations[2].v[5], 1);
+});

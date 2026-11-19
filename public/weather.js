@@ -1,5 +1,5 @@
-export const hourlyFields=['temperature_2m','apparent_temperature','relative_humidity_2m','dew_point_2m','precipitation','precipitation_probability','rain','snowfall','weather_code','cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','pressure_msl','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m','shortwave_radiation','cape','showers','et0_fao_evapotranspiration'];
-export const dailyFields=['weather_code','temperature_2m_max','temperature_2m_min','precipitation_sum','precipitation_probability_max','sunrise','sunset','daylight_duration','et0_fao_evapotranspiration'];
+export const hourlyFields=['temperature_2m','apparent_temperature','relative_humidity_2m','dew_point_2m','precipitation','precipitation_probability','rain','snowfall','weather_code','cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','pressure_msl','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m','shortwave_radiation','cape','showers','temperature_500hPa','wind_speed_500hPa','wind_direction_500hPa','et0_fao_evapotranspiration'];
+export const dailyFields=['weather_code','temperature_2m_max','temperature_2m_min','precipitation_sum','snowfall_sum','precipitation_probability_max','sunrise','sunset','daylight_duration','et0_fao_evapotranspiration'];
 export function forecastURL(lat,lon){
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<23||lat>38||lon<60||lon>78)throw Error('Choose a location in Pakistan.');
  const url=new URL('https://api.open-meteo.com/v1/forecast');
@@ -9,7 +9,9 @@ export function forecastURL(lat,lon){
 export function weather(code){
  if(code===null||code===undefined)return ['Unavailable','—'];
  if(code===0)return ['Clear skies','☀'];if(code<=3)return [code===3?'Overcast':'Partly cloudy','☁'];
- if([45,48].includes(code))return ['Fog','≋'];if(code>=51&&code<=67)return ['Rain','☂'];
+ if([45,48].includes(code))return ['Fog','≋'];
+ // Freezing precipitation is a different hazard from rain, so it keeps its own wording.
+ if([56,57].includes(code))return ['Freezing drizzle','☂'];if([66,67].includes(code))return ['Freezing rain','☂'];if(code>=51&&code<=55)return ['Drizzle','☂'];if(code>=61&&code<=65)return ['Rain','☂'];
  if((code>=71&&code<=77)||[85,86].includes(code))return ['Snow','❄'];
  if([96,99].includes(code))return ['Thunderstorm with hail','⛈'];if(code>=80&&code<=82)return ['Rain showers','☂'];if(code>=95)return ['Thunderstorms','ϟ'];return ['Unavailable','—'];
 }
@@ -19,4 +21,4 @@ export function hourIndex(times,now=new Date()){
 }
 export const isNumber=v=>typeof v==='number'&&Number.isFinite(v);
 export function aqiCategory(value){if(!isNumber(value))return 'Unavailable';return value<=50?'Good':value<=100?'Moderate':value<=150?'Unhealthy for sensitive groups':value<=200?'Unhealthy':value<=300?'Very unhealthy':'Hazardous';}
-export function direction(degrees){return isNumber(degrees)?['N','NE','E','SE','S','SW','W','NW'][Math.round(degrees/45)%8]:'—';}
+export function direction(degrees){return isNumber(degrees)?['N','NE','E','SE','S','SW','W','NW'][(Math.round(degrees/45)%8+8)%8]:'—';}

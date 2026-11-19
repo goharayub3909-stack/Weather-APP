@@ -1,9 +1,17 @@
 import {addTileHelp} from './tile-help.js';
 import {loadBackendStorms,backendStormDay} from './storm-outlook.js';
-import {chooseCurrentSource,currentValue,currentCondition,mainReading} from './current-weather.js';
+import {chooseCurrentSource,currentValue,currentCondition,mainReading,distanceKm} from './current-weather.js';
+import {ringPoints,terrainProfile,fetchElevations,cachedElevation,seedElevation} from './terrain-source.js';
+import {hailOver,hailLabel} from './hail.js';
+import {fetchStrikes,nearbyStrikes,NEARBY} from './lightning-nearby.js';
+import {weekPeriods} from './forecast-periods.js';
 import {pkt} from './map-utils.js';
 import {initFarmers} from './farmers.js';
 import {initHealthPanel} from './health-panel.js';
+import {initClimatePanel} from './climate-panel.js';
+import {initFloodPanel} from './flood-panel.js';
+import {fetchFeed} from './observation-feed.js';
+import {fetchStationFeed} from './station-feed.js';
 import {supplementalFields,dailyCondition,ecmwfDailyCondition} from './storms.js';
 import {icon} from './icons.js';
 import {initGeolocation} from './geolocation.js';
@@ -25,7 +33,7 @@ let selectionRevision=0;
 let selected=store.get('monsoon-city','islamabad');if(!cities[selected])selected='islamabad';
 let unit=store.get('monsoon-unit','C'),saved=store.get('monsoon-favorites',['islamabad','karachi','lahore']);if(!Array.isArray(saved))saved=[];
 let backendStorms=null;
-let currentLoading=true,supplemental=null,data=null,index=-1,request,chartMetric='temperature_2m',currentReports=[null,null],currentSource={kind:'forecast',report:null,name:'ECMWF IFS'},observationCache=null;
+let strikes=[],strikesLoaded=false,currentLoading=true,supplemental=null,currentTerrain=null,data=null,index=-1,request,chartMetric='temperature_2m',currentReports=[null,null],currentSource={kind:'forecast',report:null,name:'ECMWF IFS'},observationCache=null;
 const text=(id,value)=>$(id).textContent=value;
 const n=(v,suffix='',digits=0)=>isNumber(v)?v.toFixed(digits)+suffix:'—';
 const temp=v=>n(isNumber(v)?unit==='F'?v*9/5+32:v:null,'°');
@@ -44,11 +52,13 @@ const metrics=[
  ['snowfall','Snowfall','Snow during the model hour','❄',' cm'],
  ['shortwave_radiation','Solar radiation','Mean incoming solar energy','☀',' W/m²'],
  ['precipitation_probability','Rain chance','Not supplied by this source unless available','☂','%'],
+ ['hail_chance','Hail chance','Ingredient screen from ECMWF, not a probability','☂','%'],
+ ['lightning_nearby','Lightning','Observed strikes within '+NEARBY.radiusKm+' km, last hour','ϟ',''],
  ['visibility','Visibility','From selected current-weather source','◉',' km'],
  ['uv_index','UV index','From selected current-weather source','☀',''],
 
 ];
-const metricAppearance={apparent_temperature:['warm','temperature'],relative_humidity_2m:['moisture','humidity'],wind_speed_10m:['breeze','wind'],wind_gusts_10m:['mint','gust'],dew_point_2m:['dew','dew'],pressure_msl:['violet','pressure'],surface_pressure:['rose','surface'],cloud_cover:['cloud','cloud'],precipitation:['rain','umbrella'],rain:['shower','rain'],snowfall:['snow','snow'],shortwave_radiation:['solar','sun'],precipitation_probability:['lilac','rain'],visibility:['mist','eye'],uv_index:['sunset','uv'],cape:['solar','storm'],hail_signal:['lilac','hail']};
+const metricAppearance={apparent_temperature:['warm','temperature'],relative_humidity_2m:['moisture','humidity'],wind_speed_10m:['breeze','wind'],wind_gusts_10m:['mint','gust'],dew_point_2m:['dew','dew'],pressure_msl:['violet','pressure'],surface_pressure:['rose','surface'],cloud_cover:['cloud','cloud'],precipitation:['rain','umbrella'],rain:['shower','rain'],snowfall:['snow','snow'],shortwave_radiation:['solar','sun'],precipitation_probability:['lilac','rain'],hail_chance:['lilac','hail'],lightning_nearby:['solar','storm'],visibility:['mist','eye'],uv_index:['sunset','uv'],cape:['solar','storm'],hail_signal:['lilac','hail']};
 for(const [key,label,note] of metrics){const [theme,glyph]=metricAppearance[key],article=document.createElement('article');article.className='card metric metric--'+theme;article.innerHTML=`<span class="metric-art" aria-hidden="true">${icon(glyph)}</span><div class="metric-top"><span id="label-${key}">${label}</span><span class="metric-icon">${icon(glyph)}</span></div><strong id="metric-${key}">—</strong><p id="note-${key}">${note}</p>`;addTileHelp(article,key);$('detail-grid').append(article);}
 for(const [selector,key]of [['.hero','current'],['.week-card','forecast'],['.hourly-card','hourly'],['.sun-card','sun'],['.air-card','air']]){const card=document.querySelector(selector);if(card)addTileHelp(card,key);}
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
@@ -73,7 +83,7 @@ $('unit').addEventListener('click',()=>{unit=unit==='C'?'F':'C';store.set('monso
 function reset(){
  currentLoading=true;currentReports=[null,null];currentSource={kind:'forecast',report:null,name:'ECMWF IFS'};text('current-source','Checking fresh station reports within 50 km, then airport reports within 100 km…');
  farmers.update({place:cities[selected],forecast:null,supplemental:null,status:'loading',retrievedAt:null,observation:null});
- data=null;supplemental=null;index=-1;text('location',cities[selected][0]);text('temperature','—°');text('condition','Loading your forecast…');text('feels','Feels like — · High — / Low —');
+ data=null;currentTerrain=null;supplemental=null;index=-1;text('location',cities[selected][0]);text('temperature','—°');text('condition','Loading your forecast…');text('feels','Feels like — · High — / Low —');
  for(const id of ['hero-wind','hero-humidity','hero-rain','sunrise','sunset','daylight','aqi','pm25','pm10'])text(id,'—');
  for(const [key,,note] of metrics){text('metric-'+key,'—');text('note-'+key,note);}text('chart-caption','Loading hourly forecast…');
  text('note-wind_speed_10m','At 10 metres above ground');text('note-cloud_cover','Total sky covered by cloud');
@@ -100,22 +110,68 @@ async function loadAir(lat,lon,signal){
  catch{if(signal.aborted)return;text('aqi-label','Unavailable');text('aq-note','The separate air-quality provider could not be reached.');}
 }
 function readingSource(reading){return reading.source?(reading.source.kind==='station'?'Station · ':reading.source.kind==='metar'?'METAR · ':'Forecast · ')+reading.source.name+(reading.fallback?' · fallback':''):'Unavailable from station, METAR and ECMWF';}
+// ECMWF has no UV or visibility. The supplemental best-match model is already fetched for the
+// Farmers section, so it fills those tiles, labelled as a different model. It never overrides
+// a station, METAR or ECMWF value.
+function supplementalValue(key){const h=supplemental?.hourly,i=h?.time?hourIndex(h.time):-1;return i<0?null:h[key]?.[i];}
+// Observed strikes come from the live Lightning-map buffer. They show a storm that is active now; they never
+// extend the forecast beyond the current half-day.
+function lightningNow(){const[,lat,lon]=cities[selected];return nearbyStrikes(strikes,lat,lon);}
+async function loadStrikes(){try{strikes=await fetchStrikes({signal:AbortSignal.timeout(15000)});strikesLoaded=true;}catch{strikesLoaded=false;}renderLightning();if(data)renderWeek();}
+function renderLightning(){
+ const l=lightningNow();
+ if(!strikesLoaded){text('metric-lightning_nearby','—');text('note-lightning_nearby','Live lightning feed unavailable');return;}
+ text('metric-lightning_nearby',String(l.count));
+ text('note-lightning_nearby',l.count?'Nearest '+l.nearest.toFixed(0)+' km · latest '+pkt(l.latest)+' · observed now, not a forecast':'None within '+l.radiusKm+' km in the last hour · live feed');
+}
+function renderHail(){
+ renderLightning();
+ const today=data?weekPeriods(data.hourly,data.daily)[0]:null;text('label-precipitation_probability',today?chanceWord(today.day,today.night).replace(/^./,c=>c.toUpperCase()):'Rain chance');
+ const h=data?.hourly;if(!h||index<0){text('metric-hail_chance','—');text('note-hail_chance','Waiting for ECMWF');return;}
+ const now=hailOver(h,[index]),peak=hailOver(h,Array.from({length:24},(_,k)=>index+k).filter(k=>k<h.time.length));
+ text('metric-hail_chance',now.index===null?'—':n(now.index,'%'));
+ text('note-hail_chance',peak.index===null?'ECMWF convection fields unavailable':(now.index===null?'':hailLabel(now.index)+' now · ')+'next 24 h peak '+peak.index+'% ('+hailLabel(peak.index)+')'+(peak.index>0?' at '+clockTime(h.time[peak.at]):'')+' · ingredient screen, not a probability');
+}
 function renderSupplement(){
- for(const key of ['precipitation_probability','visibility','uv_index']){const reading=mainReading(currentSource,key,value(key)),v=reading.value;text('metric-'+key,n(key==='visibility'&&isNumber(v)?v/1000:v,key==='visibility'?' km':key==='precipitation_probability'?'%':'',key==='precipitation_probability'?0:1));text('note-'+key,readingSource(reading));}
+ renderHail();
+ for(const key of ['precipitation_probability','visibility','uv_index']){
+  const reading=mainReading(currentSource,key,value(key));let v=reading.value,note=readingSource(reading);
+  if(!isNumber(v)){const s=supplementalValue(key);if(isNumber(s)){v=s;note='Forecast · Open-Meteo best-match model · supplemental, not ECMWF';}}
+  text('metric-'+key,n(key==='visibility'&&isNumber(v)?v/1000:v,key==='visibility'?' km':key==='precipitation_probability'?'%':'',key==='precipitation_probability'?0:1));text('note-'+key,note);
+ }
 }
 async function loadSupplement(lat,lon,signal){
  try{const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:lat,longitude:lon,hourly:supplementalFields.join(','),daily:'precipitation_probability_max,weather_code',timezone:'Asia/Karachi',forecast_days:7});const r=await fetch(url,{signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});if(!r.ok)throw Error();const result=await r.json();if(!result.hourly?.time?.length)throw Error();if(signal.aborted)return;supplemental=result;farmers.update({supplemental:result});renderSupplement();if(data)renderWeek();}catch{if(!signal.aborted){supplemental=null;farmers.update({supplemental:null});renderSupplement();if(data)renderWeek();}}
 }
 
 function value(key){return data?.hourly?.[key]?.[index];}
+// Heights decide whether a station or airport can stand in for the place (see terrain-source.js). They come from
+// one Open-Meteo elevation request, cached per coordinate; if it fails the older distance-only rule applies.
+async function prepareTerrain(lat,lon,signal){
+ const ring=ringPoints(lat,lon),now=Date.now(),near=(rows,maxKm,age,time)=>(rows||[]).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Number.isFinite(time(p))&&now-time(p)<=age&&distanceKm(lat,lon,p)<=maxKm).sort((x,y)=>distanceKm(lat,lon,x)-distanceKm(lat,lon,y)).slice(0,60);
+ const stations=near(currentReports[0]?.stations,50,3*3600000,p=>Date.parse(p.observed_at)),airports=near(currentReports[1]?.stations,100,2*3600000,p=>p.obsTime*1000);
+ for(const p of stations)seedElevation(p.lat,p.lon,p.elevation);
+ await fetchElevations([[lat,lon],...ring.slice(1),...stations.map(p=>[p.lat,p.lon]),...airports.map(p=>[p.lat,p.lon])],{signal});
+ const profile=terrainProfile(cachedElevation(lat,lon),ring.slice(1).map(([la,lo])=>cachedElevation(la,lo)));
+ currentTerrain=profile?{profile,elevationOf:p=>cachedElevation(p.lat,p.lon)}:null;
+}
+// Fresh station readings are compared with ECMWF at the same places and the difference is applied to the forecast
+// here, fading with lead time. Refreshed at most every 10 minutes per place.
 async function loadCurrent(lat,lon,signal){
- const results=observationCache&&Date.now()-observationCache.time<60000?observationCache.reports:await Promise.allSettled(['stations','metar'].map(async name=>{const r=await fetch(new URL('./observation-data/'+name+'.json',import.meta.url),{cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(18000)])});if(!r.ok)throw Error();const d=await r.json();if(!Array.isArray(d.stations))throw Error();return d;}));
- if(signal.aborted)return;currentLoading=false;observationCache={time:Date.now(),reports:results};currentReports=results.map(r=>r.status==='fulfilled'?r.value:null);currentSource=chooseCurrentSource(lat,lon,...currentReports);farmers.update({observation:currentSource.kind==='forecast'?null:currentSource});render();
+ const results=observationCache&&Date.now()-observationCache.time<60000?observationCache.reports:await Promise.allSettled(['stations','metar'].map(name=>name==='stations'?fetchStationFeed({signal}):fetchFeed(name,{signal})));
+ if(signal.aborted)return;observationCache={time:Date.now(),reports:results};currentReports=results.map(r=>r.status==='fulfilled'?r.value:null);
+ try{await prepareTerrain(lat,lon,signal);}catch{currentTerrain=null;}
+ if(signal.aborted)return;currentLoading=false;currentSource=chooseCurrentSource(lat,lon,...currentReports,Date.now(),currentTerrain);farmers.update({observation:currentSource.kind==='forecast'?null:currentSource});render();
+}
+function terrainNote(){
+ const t=currentTerrain?.profile;if(!t)return '';const[,lat,lon]=cities[selected],legacy=chooseCurrentSource(lat,lon,...currentReports);
+ const skipped=legacy.kind!=='forecast'&&(legacy.kind!==currentSource.kind||legacy.name!==currentSource.name)?` Skipped ${legacy.name} (${legacy.distance.toFixed(0)} km): different height or too far for this terrain.`:'';
+ return ` Terrain: ${t.name} (${Math.round(t.elevation)} m, ${Math.round(t.relief)} m relief within 10 km).`+skipped;
 }
 function renderCurrent(){
  const observed=currentSource.kind!=='forecast',reading=key=>mainReading(currentSource,key,value(key)),get=key=>reading(key).value;
  const heroSource=reading('temperature_2m').source||currentSource,kind=heroSource.kind==='station'?'WEATHER STATION':heroSource.kind==='metar'?'AIRPORT METAR':'ECMWF FALLBACK';text('current-kind',kind);
- text('current-source',observed?`PRIMARY ${currentSource.kind==='station'?'STATION':'METAR'} · ${currentSource.name} · ${currentSource.distance.toFixed(1)} km away · observed ${pkt(currentSource.time)}. Missing fields fall back to fresh METAR, then ECMWF. Each tile names its source.${currentSource.report.observed_time_basis?' '+currentSource.report.observed_time_basis+'.':''}`:currentLoading?'Checking nearby station and airport reports. Showing the ECMWF report provisionally.':'Fresh station (50 km / 3h) and airport (100 km / 2h) reports unavailable. Current conditions use ECMWF. Forecasts below remain separate.');
+ text('current-source',observed?`PRIMARY ${currentSource.kind==='station'?'STATION':'METAR'} · ${currentSource.name} · ${currentSource.distance.toFixed(1)} km away · observed ${pkt(currentSource.time)}. Missing fields fall back to fresh METAR, then ECMWF. Each tile names its source.${terrainNote()}${currentSource.report.observed_time_basis?' '+currentSource.report.observed_time_basis+'.':''}`:currentLoading?'Checking nearby station and airport reports. Showing the ECMWF report provisionally.':'Fresh, representative station (3 h) and airport (2 h) reports unavailable'+(currentTerrain?.profile?' for this '+currentTerrain.profile.name+' terrain':'')+'. Current conditions use ECMWF.'+terrainNote());
  text('temperature',temp(get('temperature_2m')));text('condition',currentCondition(heroSource,data?weather(value('weather_code'))[0]:'Current weather unavailable'));
  text('forecast-time',heroSource.kind!=='forecast'?pkt(heroSource.time):data?clockTime(data.hourly.time[index])+' PKT · MODEL HOUR':'No current data');
  const d=data?.daily,day=d?.time?.indexOf(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Karachi'}))??-1;
@@ -123,9 +179,9 @@ function renderCurrent(){
  text('hero-wind',n(get('wind_speed_10m'),' km/h')+' '+direction(get('wind_direction_10m')));text('hero-humidity',n(get('relative_humidity_2m'),'%'));text('hero-wind-label','↗ Wind · '+(reading('wind_speed_10m').source?.kind||'unavailable'));text('hero-humidity-label','◉ Humidity · '+(reading('relative_humidity_2m').source?.kind||'unavailable'));
  const dailyRain=mainReading(currentSource,'rain_daily',d?.precipitation_sum?.[day]);text('hero-rain-label',dailyRain.source?.kind==='forecast'?'☂ Daily precipitation · ECMWF':'☂ Daily rain · station');text('hero-rain',n(dailyRain.value,' mm',1));
  for(const [key,label,note,,suffix]of metrics){
-  const item=reading(key),v=item.value;text('metric-'+key,suffix==='temp'?temp(v):n(key==='visibility'&&isNumber(v)?v/1000:v,suffix,['precipitation','rain','snowfall'].includes(key)?1:0));
+  if(key==='hail_chance'||key==='lightning_nearby')continue;const item=reading(key),v=item.value;text('metric-'+key,suffix==='temp'?temp(v):n(key==='visibility'&&isNumber(v)?v/1000:v,suffix,['precipitation','rain','snowfall'].includes(key)?1:0));
   text('label-'+key,key==='wind_gusts_10m'&&item.source?.kind==='station'?'10-minute gust':label);
-  text('note-'+key,readingSource(item)+(key==='relative_humidity_2m'&&item.source?.kind==='metar'?' · derived from airport temperature / dew point':''));
+  text('note-'+key,readingSource(item)+(key==='relative_humidity_2m'&&item.source?.kind==='metar'?' · derived from airport temperature / dew point':'')+(key==='pressure_msl'&&item.source?.kind==='metar'?' · altimeter setting (QNH)':'')+(key==='pressure_msl'&&item.source?.kind==='station'?' · provider pressure, sea-level':'')+(['precipitation','rain'].includes(key)&&item.source?.kind==='station'?' · current rain rate (mm/h)':''));
  }
  if(reading('wind_speed_10m').source?.kind!==reading('wind_direction_10m').source?.kind)text('note-wind_speed_10m',readingSource(reading('wind_speed_10m'))+' · direction from '+(reading('wind_direction_10m').source?.name||'unavailable'));
  if(!observed){text('note-wind_speed_10m',readingSource(reading('wind_speed_10m'))+' · '+direction(value('wind_direction_10m')));text('note-cloud_cover',`ECMWF · Low ${n(value('cloud_cover_low'),'%')} · Mid ${n(value('cloud_cover_mid'),'%')} · High ${n(value('cloud_cover_high'),'%')}`);}
@@ -135,19 +191,34 @@ function render(){
  text('sunrise',clockTime(d.sunrise?.[0]));text('sunset',clockTime(d.sunset?.[0]));const seconds=d.daylight_duration?.[0];text('daylight',isNumber(seconds)?`${Math.floor(seconds/3600)}h ${Math.floor(seconds%3600/60)}m`:'—');
  renderWeek();renderChart();renderSupplement();
 }
+// Each forecast day has a day half (sunrise to sunset) and a night half (sunset to next sunrise), each with its own
+// icon and wording; rain, snow and hail sit in the last column. Wording logic lives in forecast-periods.js.
+// The probability is the provider's general precipitation chance, so name the kind of weather that is forecast.
+function chanceWord(...periods){
+ const icons=periods.map(p=>p.icon);
+ if(icons.includes('hail'))return 'thunderstorm / hail chance';if(icons.includes('storm'))return 'thunderstorm chance';
+ const snow=icons.includes('snow'),rain=icons.includes('rain');return snow&&rain?'rain / snow chance':snow?'snow chance':'rain chance';
+}
 function renderWeek(){
- if(!data)return;const d=data.daily;$('week').replaceChildren();
- const lows=d.temperature_2m_min.filter(isNumber),highs=d.temperature_2m_max.filter(isNumber),min=Math.min(...lows),max=Math.max(...highs),range=max-min||1;
- d.time.forEach((time,i)=>{
-  const outlook=ecmwfDailyCondition({amount:d.precipitation_sum?.[i],code:d.weather_code?.[i],hourly:data.hourly,date:time,backend:backendStormDay(backendStorms,...cities[selected].slice(1),time)});
-  const low=d.temperature_2m_min[i],high=d.temperature_2m_max[i],row=document.createElement('div');row.className='day';
-  const day=document.createElement('div');day.className='day-name';const weekday=document.createElement('strong');weekday.textContent=i===0?'Today':new Date(time+'T12:00:00+05:00').toLocaleDateString('en-PK',{weekday:'short',timeZone:'Asia/Karachi'});const condition=document.createElement('small');condition.textContent=outlook.label;day.append(weekday,condition);
-  const symbol=document.createElement('span');symbol.className='day-icon outlook-'+outlook.icon;symbol.innerHTML=icon(outlook.icon);symbol.title=outlook.label+(outlook.reason?' · '+outlook.reason:'');symbol.setAttribute('aria-label',outlook.label);
-  const temps=document.createElement('div');temps.className='day-range';const lo=document.createElement('span');lo.textContent=temp(low);const bar=document.createElement('span');bar.className='range-track';if(isNumber(low)&&isNumber(high)){const fill=document.createElement('i');fill.style.left=(low-min)/range*100+'%';fill.style.width=Math.max(4,(high-low)/range*100)+'%';bar.append(fill);}const hi=document.createElement('strong');hi.textContent=temp(high);temps.append(lo,bar,hi);
-  const rain=document.createElement('div');rain.className='day-rain';const amount=document.createElement('strong');amount.textContent=n(d.precipitation_sum?.[i],' mm',1);const probability=document.createElement('small'),pop=d.precipitation_probability_max?.[i];probability.textContent=isNumber(pop)?n(pop,'%')+(outlook.icon==='snow'?' precip chance':' rain chance'):outlook.thunder?'Thunder signal':outlook.band.rain?'Rain signal':'—';rain.title=outlook.band.label+' · amount-based label; thunder signal is qualitative ECMWF guidance.';rain.append(amount,probability);
-  row.append(day,symbol,temps,rain);$('week').append(row);
+ if(!data)return;const d=data.daily,h=data.hourly;$('week').replaceChildren();
+ const [,plat,plon]=cities[selected],periods=weekPeriods(h,d);
+ periods.forEach((p,i)=>{
+  const time=d.time[i],backend=backendStormDay(backendStorms,plat,plon,time),remote=backend&&(backend.weatherThunder||(backend.lightningThunder&&Number.isFinite(Date.parse(backend.lightning_valid_until))&&Date.parse(backend.lightning_valid_until)>=Date.now()));
+  if(remote&&!['hail','storm','snow'].includes(p.day.icon)){p.day.icon='storm';p.day.label='Thunderstorm chances';p.day.reason='Backend · '+backend.reason;}
+  if(i===0){const l=lightningNow(),rise=Date.parse(d.sunrise?.[0]+'+05:00'),set=Date.parse(d.sunset?.[0]+'+05:00'),half=Date.now()<set?p.day:p.night;if(l.count>0&&Number.isFinite(set)&&half.icon!=='hail'){half.icon='storm';half.label='Thunderstorm · lightning nearby now';half.reason='Observed: '+l.count+' strike'+(l.count>1?'s':'')+' within '+l.radiusKm+' km in the last hour';}}
+  const temps=(part,pick)=>{const v=part.rows.map(r=>h.temperature_2m?.[r]).filter(isNumber);return v.length?Math[pick](...v):null;};
+  const high=temps(p.day,'max')??d.temperature_2m_max?.[i],low=temps(p.night,'min')??d.temperature_2m_min?.[i];
+  const row=document.createElement('div');row.className='day day--split';
+  const name=document.createElement('div');name.className='day-name';const weekday=document.createElement('strong');weekday.textContent=i===0?'Today':new Date(time+'T12:00:00+05:00').toLocaleDateString('en-PK',{weekday:'short',timeZone:'Asia/Karachi'});const when=document.createElement('small');when.textContent=new Date(time+'T12:00:00+05:00').toLocaleDateString('en-PK',{day:'numeric',month:'short',timeZone:'Asia/Karachi'});name.append(weekday,when);
+  const part=(period,label,value)=>{const cell=document.createElement('div');cell.className='day-part day-part--'+label.toLowerCase();const symbol=document.createElement('span');symbol.className='day-icon outlook-'+period.icon;symbol.innerHTML=icon(period.icon);symbol.setAttribute('aria-hidden','true');const text=document.createElement('div');const tag=document.createElement('small');tag.textContent=label+' · '+(label==='Day'?'high':'low');const temperature=document.createElement('strong');temperature.textContent=temp(value);const cond=document.createElement('small');cond.className='day-condition';cond.textContent=period.label;text.append(tag,temperature,cond);cell.title=period.label+(period.reason?' · '+period.reason:'');cell.append(symbol,text);return cell;};
+  const rain=document.createElement('div');rain.className='day-rain';const amount=document.createElement('strong');const rainTotal=isNumber(p.day.rainMm)&&isNumber(p.night.rainMm)?p.day.rainMm+p.night.rainMm:d.precipitation_sum?.[i];amount.textContent=n(rainTotal,' mm',1);rain.append(amount);
+  const pop=d.precipitation_probability_max?.[i],line=(t,c)=>{const e=document.createElement('small');e.textContent=t;if(c)e.className=c;rain.append(e);};
+  const word=chanceWord(p.day,p.night);line(isNumber(pop)?n(pop,'%')+' '+word:p.day.band?.rain||p.night.band?.rain||['storm','hail','snow'].some(k=>p.day.icon===k||p.night.icon===k)?word.replace(' chance',' signal')[0].toUpperCase()+word.replace(' chance',' signal').slice(1):'No precipitation signal');
+  const snow=(p.day.snowCm||0)+(p.night.snowCm||0);if(isNumber(snow)&&snow>=.1)line('❄ '+n(snow,' cm',1)+' snow','day-snow');else line('No snow','day-none');
+  const hail=[p.day.hail,p.night.hail].filter(x=>isNumber(x.index)).sort((x,y)=>y.index-x.index)[0];line(hail?'Hail '+hail.index+'% · '+hail.label:'Hail unavailable',hail&&hail.index>=25?'day-hail':'day-none');
+  rain.title='Rain chance is the provider value for the day. Hail is a screening index from ECMWF convection fields, not a probability. Snow is forecast fresh snowfall in cm.';
+  row.append(name,part(p.day,'Day',high),part(p.night,'Night',low),rain);$('week').append(row);
  });
-
 }
 function renderChart(){
  if(!data)return;
@@ -174,7 +245,7 @@ function renderChart(){
 
 document.querySelectorAll('[data-chart]').forEach(button=>button.addEventListener('click',()=>{chartMetric=button.dataset.chart;document.querySelectorAll('[data-chart]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});renderChart();}));
 $('refresh').addEventListener('click',load);
-function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Karachi'}));text('clock',now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Karachi'})+' PKT · UTC+5');if(data)index=hourIndex(data.hourly.time);if(data||currentReports.some(Boolean)){const[,lat,lon]=cities[selected];currentSource=chooseCurrentSource(lat,lon,...currentReports);renderCurrent();renderSupplement();if(location.hash==='#farmers')farmers.update({observation:currentSource.kind==='forecast'?null:currentSource});}}tick();setInterval(tick,60000);setInterval(()=>{if(!document.hidden&&request&&!request.signal.aborted){const[,lat,lon]=cities[selected];loadCurrent(lat,lon,request.signal);}},600000);favorites();load();showCityImage(selected,cities[selected]);setPhotoPlace(cities[selected]);
+function tick(){const now=new Date();text('date',now.toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Karachi'}));text('clock',now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Karachi'})+' PKT · UTC+5');if(data)index=hourIndex(data.hourly.time);if(data||currentReports.some(Boolean)){const[,lat,lon]=cities[selected];currentSource=chooseCurrentSource(lat,lon,...currentReports,Date.now(),currentTerrain);renderCurrent();renderSupplement();if(location.hash==='#farmers')farmers.update({observation:currentSource.kind==='forecast'?null:currentSource});}}loadStrikes();setInterval(()=>{if(!document.hidden)loadStrikes();},120000);tick();setInterval(tick,60000);setInterval(()=>{if(!document.hidden&&request&&!request.signal.aborted){const[,lat,lon]=cities[selected];loadCurrent(lat,lon,request.signal);}},60000);favorites();load();showCityImage(selected,cities[selected]);setPhotoPlace(cities[selected]);
 
 initRadar();
 initSatellite();
@@ -186,6 +257,8 @@ initMapTabs();
 initPlacePhotos();
 
 initHealthPanel({cities,getSelected:()=>selected});
+initClimatePanel({cities,getSelected:()=>selected});
+initFloodPanel({cities,getSelected:()=>selected});
 
 initGeolocation({getSelectionRevision:()=>selectionRevision,onLocate({lat,lon}){cities['current-location']=['Your location',lat,lon];if(!$('city').querySelector('option[value="current-location"]'))$('city').append(new Option('Your location','current-location'));selectCity('current-location');}});
 

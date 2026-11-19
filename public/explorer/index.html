@@ -3,343 +3,165 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#091522">
-<title>WeatherWalay Kissan & Sehat Hub · Pakistan Weather Studio</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css" integrity="sha384-Jpg1uvTciFJuHq+90Ly0/2SKRT9yS5OhbIN5FuFoFWji9fc44ok8xxO88CJi8Z5W" crossorigin="anonymous">
+<meta name="theme-color" content="#0a1220">
+<title>WeatherWalay Kissan & Sehat Hub · Pakistan Terrain Explorer</title>
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.js","three/addons/":"../vendor/three/addons/"}}</script>
 <style>
-/* This document is self-contained, except for the pinned OpenLayers CDN and basemap tiles. */
-:root{color-scheme:dark;--glass:rgba(9,21,34,.88);--border:rgba(222,238,255,.13);--text:#edf5fb;--muted:#9db0c0;--accent:#c3ef74}
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;min-height:520px;overflow:hidden;background:#091522;color:var(--text);font:13px system-ui,-apple-system,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button:disabled{opacity:.5;cursor:default}#map{position:absolute;inset:0}.glass{background:var(--glass);border:1px solid var(--border);box-shadow:0 12px 36px #0003;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.topbar{position:absolute;z-index:20;left:22px;right:22px;top:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;pointer-events:none}.topbar>*{pointer-events:auto}.identity{display:flex;align-items:center;gap:11px}.brand-mark{font-size:33px;font-weight:800;letter-spacing:-4px;color:var(--accent);text-shadow:0 2px 12px #0008}.brand-text strong{display:block;font-size:16px;letter-spacing:-.6px}.eyebrow{font-size:8px;letter-spacing:1.7px;color:var(--muted);text-transform:uppercase}.forecast-badge{padding:9px 12px;border-radius:30px;font-size:9px;letter-spacing:1.1px;color:#ffe1a3;white-space:nowrap}.forecast-badge:before{content:'';display:inline-block;background:#ffc66a;width:5px;height:5px;border-radius:50%;margin-right:7px}.panel{position:absolute;left:22px;top:100px;z-index:20;border-radius:16px;padding:20px;width:205px}.panel h1{font-size:18px;font-weight:600;letter-spacing:-.6px;margin:5px 0 17px}.parameter-list{display:grid;gap:7px}.parameter-button{display:flex;align-items:center;gap:12px;border:1px solid transparent;border-radius:9px;padding:12px;background:transparent;color:var(--muted);text-align:left;font-size:12px;transition:background .18s,color .18s}.parameter-button span:first-child{font-size:20px;width:21px}.parameter-button[aria-pressed=true]{color:var(--text);background:#d6edff12;border-color:#ffffff10}.parameter-button:hover{background:#ffffff0c}.panel-note{font-size:10px;color:var(--muted);line-height:1.7;padding-top:15px;border-top:1px solid var(--border);margin:16px 0 0}.flow-button{width:100%;border:1px solid var(--border);background:#ffffff08;border-radius:8px;padding:10px;margin-top:14px;font-size:11px}.elevation-panel{position:absolute;z-index:20;right:22px;top:100px;width:104px;border-radius:14px;padding:13px 9px}.elevation-panel>.eyebrow{text-align:center;display:block;font-size:7px;letter-spacing:1.2px;margin-bottom:12px}.levels{display:flex;flex-direction:column;gap:5px}.level{border:1px solid transparent;background:transparent;border-radius:8px;padding:10px 3px;font-size:12px;text-align:center;color:var(--muted);position:relative}.level small{display:block;font-size:8px;margin-top:4px;opacity:.75}.level[aria-pressed=true]{background:#c3ef7414;color:var(--accent);border-color:#c3ef7440}.level[aria-pressed=true]:before{content:'';position:absolute;left:-10px;top:14px;width:3px;height:22px;border-radius:2px;background:var(--accent)}.recenter{position:absolute;z-index:20;right:22px;bottom:118px;border-radius:10px;width:40px;height:40px;font-size:23px}.legend{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:31px;width:min(590px,calc(100% - 48px));border-radius:13px;padding:14px 18px 11px}.legend-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:15px}.legend-heading strong{font-size:12px;font-weight:500}.legend-heading span{font-size:9px;color:var(--muted)}#legend-gradient{height:9px;border-radius:8px}.legend-ticks{display:flex;justify-content:space-between;font-size:9px;color:#d8e6f0;padding-top:7px}.source-note{font-size:8px;color:var(--muted);line-height:1.5;margin:9px 0 0}.map-hint{position:absolute;left:22px;bottom:127px;z-index:20;font-size:10px;color:#dbe8f1;text-shadow:0 2px 8px #000;padding:7px 10px;border-radius:20px;background:#09152280}.map-status{position:absolute;left:22px;bottom:6px;z-index:20;font-size:8px;color:#b0c4d3;max-width:calc(100% - 200px);pointer-events:none}.particles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}.ol-overlaycontainer,.ol-overlaycontainer-stopevent{z-index:10}.ol-zoom{left:24px;top:auto;bottom:168px;background:#091522c0;border-radius:8px;padding:3px}.ol-control button{background:#102436cc;color:#e6eef7;border-radius:5px}.ol-control button:hover{background:#28445c}.ol-attribution{font-size:8px;background:#091522cc!important;color:#a3b8c9;padding:3px 6px;border-radius:5px 0 0}.ol-attribution a{color:#bdd6e8}.picker{width:264px;border-radius:15px;position:relative;box-shadow:0 15px 60px #0007;cursor:auto}.picker:after{content:'';position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);border-left:13px solid transparent;border-right:13px solid transparent;border-top:14px solid #0c1b2a}.picker-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 17px 10px}.picker-head strong{display:block;font-size:13px;font-weight:600}.picker-coordinates{color:var(--muted);font-size:9px;margin-top:5px}.close{border:0;background:#ffffff0a;border-radius:50%;height:24px;width:24px;color:var(--muted);font-size:17px}.picker-primary{padding:0 17px 13px;display:flex;align-items:baseline;gap:8px}.picker-primary strong{font-size:34px;font-weight:500;letter-spacing:-1.6px}.picker-primary span{font-size:11px;color:var(--muted)}.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:15px 17px;border-top:1px solid var(--border);background:#ffffff03}.picker-cell span{display:block;font-size:9px;color:var(--muted);margin-bottom:5px}.picker-cell strong{font-size:12px;font-weight:500}.picker-footer{padding:10px 17px;font-size:8px;color:#eac78d;line-height:1.5}.map-error{position:absolute;inset:0;display:grid;place-items:center;background:#091522;z-index:100;padding:30px;text-align:center;line-height:1.8}.map-error[hidden]{display:none}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:650px){.topbar{left:14px;right:14px;top:14px}.brand-text strong{font-size:13px}.brand-text .eyebrow{font-size:6px;letter-spacing:1.2px}.brand-mark{font-size:28px}.forecast-badge{font-size:7px;padding:8px}.panel{left:13px;top:78px;width:155px;padding:15px;border-radius:12px}.panel h1{font-size:16px;margin:5px 0 12px}.parameter-button{font-size:11px;padding:9px;gap:8px}.parameter-button span:first-child{font-size:17px;width:18px}.panel-note{font-size:8px;margin-top:11px;padding-top:11px}.flow-button{font-size:9px;padding:8px;margin-top:10px}.elevation-panel{right:13px;top:78px;width:78px;padding:12px 7px}.level{padding:9px 1px;font-size:11px}.level small{font-size:7px}.level[aria-pressed=true]:before{left:-8px}.elevation-panel>.eyebrow{font-size:6px}.legend{width:calc(100% - 26px);bottom:28px;padding:12px 14px}.legend-heading strong{font-size:11px}.legend-heading span{font-size:8px}.source-note{font-size:7px}.map-hint{left:13px;bottom:140px;font-size:8px}.recenter{right:13px;bottom:142px;width:35px;height:35px;font-size:20px}.ol-zoom{left:14px;bottom:178px}.map-status{left:13px;font-size:7px;bottom:6px;max-width:calc(100% - 150px)}.picker{width:236px}.picker-primary strong{font-size:29px}.picker-head{padding:14px 14px 10px}.picker-primary{padding:0 14px 12px}.picker-grid{padding:13px 14px;gap:12px}.picker-head strong{font-size:12px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
-
-.forecast-badge{color:#b6f0da}.forecast-badge:before{background:#81eac2}.forecast-badge.older{color:#ffcc86}.forecast-badge.older:before{background:#ffcc86}.source-note a{color:#b6e6ff;text-decoration:underline}.legend{bottom:116px}.map-hint{bottom:215px}.recenter{bottom:215px}.ol-zoom{bottom:255px}.forecast-timeline{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:24px;width:min(760px,calc(100% - 44px));padding:12px 16px;border-radius:12px}.forecast-time-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:10px}.forecast-time-heading strong{font-size:11px;font-weight:500}.forecast-time-heading span{font-size:8px;color:var(--muted)}.forecast-time-controls{display:flex;align-items:center;gap:12px;margin-top:9px}.forecast-time-controls button{border:1px solid var(--border);background:#ffffff0b;border-radius:7px;padding:7px 11px;white-space:nowrap;font-size:11px;color:var(--text)}.forecast-time-controls input{width:100%;min-width:40px;accent-color:var(--accent)}.forecast-time-controls span{font-size:9px;color:var(--muted);min-width:32px}.panel-note{font-size:9px}.map-status{max-width:calc(100% - 175px)}
-@media(max-width:650px){.forecast-timeline{width:calc(100% - 26px);bottom:23px;padding:10px 12px}.forecast-time-heading{align-items:flex-start;gap:5px;flex-direction:column}.forecast-time-heading strong{font-size:10px}.forecast-time-heading span{font-size:7px}.forecast-time-controls{gap:8px;margin-top:6px}.forecast-time-controls button{font-size:10px;padding:7px 9px}.legend{bottom:128px}.map-hint{bottom:227px}.recenter{bottom:225px}.ol-zoom{bottom:265px}.map-status{font-size:6px}}
-@media(max-height:760px){.panel-note{display:none}.panel{padding:13px;top:76px}.panel h1{font-size:15px;margin-bottom:10px}.parameter-button{padding:8px}.flow-button{margin-top:8px;padding:7px}.elevation-panel{top:76px}.source-note{font-size:7px}.map-hint{display:none}}
-#map .ol-overlaycontainer,#map .ol-overlaycontainer-stopevent{z-index:40}
-@media(max-height:620px){.panel h1,.panel>.eyebrow{display:none}.elevation-panel{padding:9px 6px}.level{padding:5px 2px}.elevation-panel>.eyebrow{margin-bottom:6px}}
-
-#map .ol-viewport>canvas.particles{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:5}#map .ol-viewport>canvas.rain-particles{z-index:6}#map .ol-overlaycontainer,#map .ol-overlaycontainer-stopevent{z-index:10!important}.particle-option{display:flex;align-items:center;gap:7px;font-size:10px;color:#b5cbd9;margin-top:11px}.particle-option input{accent-color:#92d7ff}.rain-reading{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px}.rain-reading span{margin:0}.level:disabled{opacity:.4}.level:disabled[aria-pressed=true]{opacity:1}
-@media(max-width:650px){.particle-option{font-size:8px;gap:4px}.parameter-button svg{width:18px;height:18px}}
-@media(max-height:600px),(max-width:650px){.panel h1,.panel>.eyebrow{display:none}.panel{top:70px;padding:12px}.parameter-list{grid-template-columns:1fr 1fr;gap:5px}.parameter-button{flex-direction:column;justify-content:center;padding:5px;gap:4px;font-size:9px}.parameter-button svg{width:17px;height:17px}.flow-button{padding:6px;margin-top:7px}.particle-option{font-size:8px;margin-top:7px}.elevation-panel{top:70px}}
-/* Compact scrollable pressure list and always-visible, touch-size zoom tools. */
-.elevation-panel{max-height:min(280px,calc(100% - 400px));display:flex;flex-direction:column;padding:10px 8px}.elevation-panel>.eyebrow{flex-shrink:0;margin-bottom:7px}.levels{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;gap:2px}.level{padding:7px 3px;flex-shrink:0;font-size:11px}.level small{display:none}.map-tools{position:absolute;z-index:25;right:22px;bottom:275px;display:flex;gap:6px}.map-tools button{position:static;width:40px;height:40px;border-radius:10px;font-size:24px;color:var(--text)}#coverage-report{color:#c9dceb}.legend{padding-bottom:10px}.picker-footer #picker-availability{color:#ffe0a3}
-@media(max-width:650px){.map-tools{right:13px}.map-tools button{width:36px;height:36px}.elevation-panel{max-height:min(260px,calc(100% - 400px))}.level{padding:7px 2px}.legend .source-note{font-size:7px}}
+.nav{position:absolute;z-index:10;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:14px}
+.nav button{width:38px;height:38px;border:1px solid var(--border);background:#ffffff0d;border-radius:10px;font-size:18px;line-height:1;display:grid;place-items:center;padding:0}.nav button:hover{background:#ffffff1f}
+.nav hr{border:0;border-top:1px solid var(--border);width:100%;margin:2px 0}
+#compass-needle{display:block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:16px solid #ff7a6b;position:relative}#compass-needle:after{content:'';position:absolute;left:-6px;top:16px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:16px solid #dbe8ff}
+.hint{font-size:10px;color:var(--muted);line-height:1.6;margin:0}
+@media (max-width:760px){.nav{top:auto;bottom:130px;transform:none}}
+/* Self-contained page: three.js is vendored, terrain tiles come from AWS Terrain Tiles, forecasts from Open-Meteo. */
+:root{color-scheme:dark;--glass:rgba(10,18,32,.82);--border:rgba(214,232,255,.14);--text:#ecf3fb;--muted:#9aaec2;--accent:#8fd0ff;--warn:#ffd28a}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;width:100%;height:100%;min-height:480px;overflow:hidden;background:radial-gradient(circle at 50% 30%,#16263d,#070c16 75%);color:var(--text);font:13px system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.glass{background:var(--glass);border:1px solid var(--border);box-shadow:0 10px 32px #0004;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.top{position:absolute;z-index:10;left:14px;right:14px;top:12px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;pointer-events:none}.top>*{pointer-events:auto}
+.title{padding:9px 14px;border-radius:12px}.title strong{display:block;font-size:15px;letter-spacing:-.3px}.title span{font-size:10px;color:var(--muted);letter-spacing:.4px}
+.badge{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:20px;font-size:9px;letter-spacing:.8px;color:var(--warn);border:1px solid #ffd28a55;text-transform:uppercase}
+.badge.ml{color:#8fd0ff;border-color:#8fd0ff55;text-transform:none;letter-spacing:.3px;cursor:help}
+.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.search{position:relative}.search input{width:210px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--glass)}
+.results{position:absolute;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;border-radius:10px;max-height:240px;overflow:auto}
+.results li button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 9px;border-radius:7px}.results li button:hover,.results li button:focus-visible{background:#ffffff14}
+.pill{padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--glass)}.pill:hover{background:#1c2c46}
+select.pill{padding-right:6px}
+#w-level{width:100%;padding:5px 6px;border-radius:8px;border:1px solid var(--border);background:#0e1828}
+.panel{position:absolute;z-index:10;left:14px;top:118px;width:230px;padding:14px;border-radius:14px;max-height:calc(100% - 210px);overflow:auto}
+.panel h2{margin:0 0 8px;font-size:10px;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;font-weight:600}
+.panel section+section{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0}.row label{flex:1}
+.row input[type=range]{width:100%}.row.stack{display:block}.row.stack label{display:flex;justify-content:space-between;margin-bottom:3px;color:var(--muted)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+.legend{display:flex;height:8px;border-radius:4px;margin:6px 0 2px}.wind-ticks{position:relative;height:12px;font-size:9px;color:var(--muted);margin-bottom:2px}.wind-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}.wind-ticks span:first-child{transform:none}.wind-ticks span:last-child{transform:translateX(-100%)}
+.legend-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--muted)}
+.collapse{position:absolute;z-index:11;left:14px;top:118px;display:none}
+.bottom{position:absolute;z-index:10;left:14px;right:14px;bottom:12px;padding:10px 14px;border-radius:14px;display:flex;align-items:center;gap:12px}
+.bottom .time{min-width:150px}.bottom .time strong{display:block;font-size:14px}.bottom .time span{font-size:10px;color:var(--muted)}
+.bottom input[type=range]{flex:1;min-width:80px}
+.bottom button{border:1px solid var(--border);background:#ffffff0d;border-radius:9px;padding:8px 12px}.bottom button:hover{background:#ffffff1c}
+.status{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 18px;border-radius:12px;text-align:center;max-width:80%}
+.credits{position:absolute;z-index:8;right:14px;bottom:78px;max-width:420px;text-align:right;font-size:9.5px;color:var(--muted);line-height:1.5;text-shadow:0 1px 4px #000}
+.credits a{color:var(--muted)}
+#labels{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+#labels .t0{font-size:13px;font-weight:700}#labels .t1{font-size:12px;font-weight:600}#labels .t4,#labels .t5{font-size:10px;opacity:.9}#labels .k-p,#labels .k-s{color:#ffd28a}#labels .k-p:before,#labels .k-s:before{display:none}#labels .k-v:before{width:3px;height:3px}
+#labels span{position:absolute;transform:translate(-50%,-100%);font-size:10.5px;text-shadow:0 0 3px #000,0 0 6px #000;white-space:nowrap;color:#f2f7ff}
+#labels span:before{content:'';display:block;width:5px;height:5px;margin:0 auto 1px;border-radius:50%;background:#fff;box-shadow:0 0 4px #000}
+.fc{position:absolute;z-index:12;left:14px;right:14px;bottom:78px;max-height:min(46%,330px);display:flex;flex-direction:column;padding:10px 14px 8px;border-radius:14px}
+.fc header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fc h3{margin:0;font-size:15px;letter-spacing:-.2px}.fc header small{display:block;color:var(--muted);font-size:10.5px;margin-top:1px}
+.fc-badge{margin-left:auto;padding:3px 9px;border-radius:20px;font-size:10px;color:#8fd0ff;border:1px solid #8fd0ff55;white-space:nowrap}
+.fc-tools{display:flex;gap:6px}.fc-tools button{border:1px solid var(--border);background:#ffffff0d;border-radius:8px;padding:3px 9px;font-size:11px}.fc-tools button:hover{background:#ffffff1c}
+.fc-tools #fc-close{font-size:16px;line-height:1;padding:2px 9px}
+.fc-scroll{overflow:auto;margin-top:6px;border-radius:8px;scrollbar-width:thin}
+.fc-table{border-collapse:separate;border-spacing:0;font-size:11px;text-align:center;white-space:nowrap}
+.fc-table th,.fc-table td{padding:0;min-width:46px;height:30px;border-bottom:1px solid #ffffff12;position:relative}
+.fc-table .rowh{position:sticky;left:0;z-index:2;min-width:74px;max-width:74px;text-align:left;padding:0 8px 0 2px;font-weight:500;color:var(--muted);font-size:10px;background:#0e1a2ce6}
+.fc-table .day{text-align:left;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.2px;border-left:1px solid #ffffff22}
+.fc-table .hours th{font-weight:500;color:var(--muted);font-size:10px;height:22px}
+.fc-table .midnight{border-left:1px solid #ffffff2a}
+.fc-table td.icons-cell,.fc-table .icons td{height:38px}.fc-table .ic{width:28px;height:28px;display:block;margin:auto}
+.fc-table .temp td{font-weight:600;font-size:12px;height:26px}
+.fc-table .rain td{height:34px;vertical-align:bottom}.fc-table .rain .bar{position:absolute;left:8px;right:8px;bottom:0;background:#4aa0ff;border-radius:3px 3px 0 0;opacity:.85}
+.fc-table .rain span{position:relative;font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px #000}
+.fc-table .wind td{height:40px}.fc-table .wind b{display:block;font-size:11.5px;line-height:1.1}.fc-table .wind small{display:block;font-size:9px;color:#ffd0a0;line-height:1}
+.fc-table .arrow{width:15px;height:15px;display:block;margin:2px auto 0}
+.fc-table .km9{opacity:.72}
+.fc-table .now{background:#8fd0ff26;box-shadow:inset 0 0 0 1px #8fd0ff88}.fc-table .temp td.now{box-shadow:inset 0 0 0 2px #8fd0ff}
+.fc-table td,.fc-table th[data-t]{cursor:pointer}
+.fc-note{margin:6px 2px 0;font-size:9.5px;color:var(--muted);line-height:1.45}.fc-empty{padding:14px;color:var(--muted)}
+.alt{position:absolute;z-index:9;right:68px;top:112px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;max-height:calc(100% - 215px);overflow-y:auto;scrollbar-width:none}
+body.has-fc .alt{max-height:calc(100% - 112px - 78px - min(46%,330px) - 14px)}
+.alt button{display:grid;grid-template-columns:34px 1fr;align-items:center;column-gap:6px;border:1px solid transparent;background:transparent;border-radius:9px;padding:3px 7px 3px 5px;text-align:left;min-width:92px}
+.alt button b{font-size:13px;font-weight:700;grid-row:1/3;text-align:right}.alt button i{display:none}
+.alt button small{font-size:9.5px;color:var(--muted);line-height:1.15}
+.alt button:hover{background:#ffffff14}.alt button[aria-pressed=true]{background:#8fd0ff26;border-color:#8fd0ff88}.alt button[aria-pressed=true] small{color:#cfe8ff}
+.alt button.loading{opacity:.6}.alt button.loading b:after{content:'…'}.alt button:disabled{opacity:.35}
+.alt .alt-sep{height:1px;background:var(--border);margin:3px 4px}
+.key span{margin-right:12px;font-size:10px;color:var(--muted)}
+@media (max-width:760px){.alt{right:8px;top:auto;bottom:150px;max-height:200px}.alt button small{display:none}.alt button{min-width:62px}.fc{bottom:70px;max-height:48%}.panel{display:none}.panel.open{display:block}.collapse{display:block}.search input{width:140px}.credits{display:none}.bottom{flex-wrap:wrap}.bottom .time{min-width:100px}.title span{display:none}}
 </style>
 </head>
 <body>
-<div id="map" tabindex="0" aria-label="Interactive Pakistan ECMWF forecast map. Click a location, or press Enter to inspect the map center."></div>
-<header class="topbar"><div class="identity"><span class="brand-mark">b°</span><div class="brand-text"><span class="eyebrow">WEATHERWALAY KISSAN & SEHAT HUB · PAKISTAN</span><strong>Weather studio</strong></div></div><span id="forecast-badge" class="forecast-badge glass">LOADING ECMWF</span></header>
-<aside class="panel glass" aria-label="Weather parameter controls"><span class="eyebrow">EXPLORE THE ATMOSPHERE</span><h1>Choose your view.</h1><div class="parameter-list" role="group" aria-label="Weather parameter"><button class="parameter-button" data-parameter="wind" aria-pressed="true"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/></svg></span><span>Wind</span></button><button class="parameter-button" data-parameter="temperature" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z"/><path d="M12 7v10"/></svg></span><span>Temperature</span></button><button class="parameter-button" data-parameter="humidity" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/></svg></span><span>Humidity</span></button><button class="parameter-button" data-parameter="rain" aria-pressed="false"><span aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 14a3.5 3.5 0 1 1 .8-6.9 5 5 0 0 1 9.5.9A3 3 0 1 1 17 14H5Z"/><path d="m7 17-1 3m6-3-1 3m6-3-1 3"/></svg></span><span>Rain</span></button></div><button id="flow-toggle" class="flow-button" aria-pressed="true">❚❚ Pause wind flow</button><label id="rain-particle-option" class="particle-option"><input id="rain-particles-toggle" type="checkbox" checked> Surface rain particles</label><p class="panel-note">Actual ECMWF fields. White trails follow forecast wind. Blue rain streaks appear only where surface rain is forecast. Particle motion is accelerated for display.</p><button id="forecast-refresh" class="flow-button" type="button">↻ Refresh forecast</button></aside>
-<aside class="elevation-panel glass" aria-label="Pressure level controls"><span class="eyebrow" title="Scroll for more pressure levels">LEVEL ↕</span><div class="levels" role="group" aria-label="Pressure level"><button class="level" data-level="200" aria-pressed="false">200 hPa<small>UPPER AIR</small></button><button class="level" data-level="250" aria-pressed="false">250 hPa<small>UPPER AIR</small></button><button class="level" data-level="300" aria-pressed="false">300 hPa<small>UPPER AIR</small></button><button class="level" data-level="500" aria-pressed="false">500 hPa<small>MID AIR</small></button><button class="level" data-level="700" aria-pressed="false">700 hPa<small>MID AIR</small></button><button class="level" data-level="850" aria-pressed="false">850 hPa<small>LOWER AIR</small></button><button class="level" data-level="925" aria-pressed="false">925 hPa<small>LOWER AIR</small></button><button class="level" data-level="surface" aria-pressed="true">Surface<small>WIND AT 10 m</small></button></div></aside>
-<div class="map-tools" role="group" aria-label="Map zoom and position"><button id="zoom-in" class="glass" aria-label="Zoom in" title="Zoom in">+</button><button id="zoom-out" class="glass" aria-label="Zoom out" title="Zoom out">−</button><button id="recenter" class="recenter glass" aria-label="Recenter map on Pakistan" title="Recenter Pakistan">⌖</button></div><div class="map-hint">⌖ Click the map to inspect a location</div>
-<section class="legend glass" aria-label="Active weather color scale"><div class="legend-heading"><strong id="legend-title">Wind speed · knots</strong><span id="level-caption">Surface / 10 m</span></div><div id="legend-gradient" aria-hidden="true"></div><div id="legend-ticks" class="legend-ticks"></div><p class="source-note">ECMWF IFS 0.25° via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · 1° display mesh · Surface temperature/RH: 2 m, wind: 10 m. Pressure levels have variable height above sea level.<br><span id="coverage-report" role="status"></span><br><span id="rain-detail-note"></span></p></section>
-<section class="forecast-timeline glass" aria-label="Forecast time controls"><div class="forecast-time-heading"><strong id="forecast-valid">Loading forecast times…</strong><span id="forecast-updated"></span></div><div class="forecast-time-controls"><button id="forecast-play" aria-pressed="false" disabled>▶︎ Play</button><input id="forecast-timeline" type="range" min="0" max="0" value="0" aria-label="Forecast valid hour" disabled><button id="forecast-now" disabled>Now</button><span id="forecast-step">—</span></div></section>
-<div id="map-status" class="map-status" role="status" aria-live="polite">Initializing the Pakistan weather studio…</div>
-<div id="picker" class="picker glass" role="dialog" aria-label="Weather at selected map location" aria-modal="false"><div class="picker-head"><div><strong>Weather at this point</strong><div id="picker-coordinates" class="picker-coordinates"></div></div><button id="picker-close" class="close" aria-label="Close weather picker">×</button></div><div class="picker-primary"><strong id="picker-primary-value">—</strong><span id="picker-primary-unit"></span></div><div class="picker-grid" aria-live="polite"><div class="picker-cell"><span>Temperature</span><strong id="picker-temperature">—</strong></div><div class="picker-cell"><span>Wind · from direction</span><strong id="picker-wind">—</strong></div><div class="picker-cell"><span>Relative humidity</span><strong id="picker-humidity">—</strong></div><div class="picker-cell"><span>Total-column cloud cover</span><strong id="picker-cloud">—</strong></div><div class="picker-cell rain-reading"><span>Surface rain · forecast hour</span><strong id="picker-rain">—</strong></div></div><div class="picker-footer"><span id="picker-level"></span><br><span id="picker-height"></span><br><span id="picker-availability"></span><br><span id="picker-time"></span> · Interpolated model forecast</div></div>
-<div id="map-error" class="map-error" hidden></div>
-<script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js" integrity="sha384-R02sHnzL8yl/uvLZvMsfgBOMBIOOHLpuLNo4dLuWQWFun1sxEWJej+SPwiGxaeGd" crossorigin="anonymous"></script>
-<script>
-'use strict';
-/* ======================================================================
- * 1. REAL FORECAST DATA AND GEOGRAPHIC SAMPLING
- * Shared snapshots contain only actual ECMWF IFS 0.25° values retrieved by
- * scripts/sync-studio.py. There is deliberately no synthetic fallback.
- * Wind components are interpolated before speed/direction are calculated.
- * Cloud cover is total column, never mislabeled as a pressure-level product.
- * ====================================================================== */
-const KNOTS_PER_MS=1.9438444924406;
-const LEVELS=Object.freeze(Object.fromEntries(['surface','925','850','700','500','300','250','200'].map(level=>[level,{label:level==='surface'?'Surface / 10 m':level+' hPa'}])));
-const clamp=(value,low,high)=>Math.max(low,Math.min(high,value));
-const lerp=(a,b,t)=>a+(b-a)*t;
-const finite=value=>typeof value==='number'&&Number.isFinite(value);
-function forecastLabel(stamp){return new Date(stamp).toLocaleString('en-GB',{timeZone:'Asia/Karachi',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})+' PKT';}
-function validateForecast(data){
- if(data?.schema_version!==3||data.model!=='ecmwf_ifs025'||!Number.isFinite(Date.parse(data.retrieved_at)))throw Error('Invalid forecast source');
- const g=data.grid;if(!g||g.columns<2||g.rows<2||g.columns>100||g.rows>100||![g.west,g.east,g.south,g.north].every(finite)||g.west>=g.east||g.south>=g.north)throw Error('Invalid geographic mesh');
- if(!Array.isArray(data.times)||data.times.length<2||data.times.length>168||data.times.some((t,i)=>typeof t!=='string'||!t.endsWith('Z')||!Number.isFinite(Date.parse(t))||(i>0&&Date.parse(t)-Date.parse(data.times[i-1])!==3600000)))throw Error('Invalid forecast times');
- const count=g.columns*g.rows,check=frames=>Array.isArray(frames)&&frames.length===data.times.length&&frames.every(row=>Array.isArray(row)&&row.length===count&&row.every(v=>v===null||finite(v)));
- if(!check(data.cloud_cover)||!check(data.rain)||!check(data.surface_pressure))throw Error('Invalid surface forecast');
- for(const level of Object.keys(LEVELS))for(const field of ['temperature','humidity','u','v','height'])if(!check(data.levels?.[level]?.[field]))throw Error('Incomplete forecast fields');
- if(data.units?.u!=='m/s'||data.units?.v!=='m/s'||data.units?.temperature!=='°C'||data.units?.humidity!=='%'||data.units?.rain!=='mm'||data.units?.height!=='m'||data.units?.surface_pressure!=='hPa')throw Error('Unexpected forecast units');
- return data;
-}
-function validateRain(data){
- const g=data?.grid;if(data?.schema_version!==1||data.model!=='ecmwf_ifs025'||data.units!=='mm'||!g||g.columns!==37||g.rows!==31||g.west!==60||g.east!==78||g.south!==23||g.north!==38||data.times?.length!==72||data.rain?.length!==72)throw Error('Invalid detailed rain forecast');
- if(!Number.isFinite(Date.parse(data.retrieved_at))||data.times.some((t,i)=>!t.endsWith('Z')||!Number.isFinite(Date.parse(t))||(i&&Date.parse(t)-Date.parse(data.times[i-1])!==3600000))||data.rain.some(row=>row.length!==g.columns*g.rows||row.some(v=>v!==null&&(!finite(v)||v<0||v>500))))throw Error('Invalid rain cells / hour axis');return data;
-}
-class GridSampler{
- constructor(dataset=null,state={time:0}){this.dataset=dataset;this.state=state;}
- setRain(data){this.rainDetail=data;this.rainTimes=new Map((data?.times||[]).map((t,i)=>[t,i]));}
- rainAt(lon,lat){
-  const base=this.dataset;if(!base)return null;const stamp=base.times[this.state.time],index=this.rainTimes?.get(stamp),detail=this.rainDetail&&index!==undefined;
-  const d=detail?this.rainDetail:base,g=d.grid,t=detail?index:this.state.time;
-  if(lon<g.west||lon>g.east||lat<g.south||lat>g.north||!finite(lon)||!finite(lat))return null;
-  const gx=(lon-g.west)/(g.east-g.west)*(g.columns-1),gy=(lat-g.south)/(g.north-g.south)*(g.rows-1),x=Math.min(g.columns-2,Math.floor(gx)),y=Math.min(g.rows-2,Math.floor(gy)),fx=gx-x,fy=gy-y,indices=[y*g.columns+x,y*g.columns+x+1,(y+1)*g.columns+x,(y+1)*g.columns+x+1],weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];let amount=0;
-  for(let i=0;i<4;i++){if(weights[i]<1e-12)continue;const v=d.rain[t]?.[indices[i]];if(!finite(v))return null;amount+=weights[i]*v;}return amount;
- }
- sample(lon,lat,level){
-  const data=this.dataset;if(!data)return null;const g=data.grid,fields=data.levels[level],time=this.state.time;
-  if(!finite(lon)||!finite(lat)||lon<g.west||lon>g.east||lat<g.south||lat>g.north||!fields||!data.times[time])return null;
-  const gx=(lon-g.west)/(g.east-g.west)*(g.columns-1),gy=(lat-g.south)/(g.north-g.south)*(g.rows-1);
-  const x=Math.min(g.columns-2,Math.floor(gx)),y=Math.min(g.rows-2,Math.floor(gy)),fx=gx-x,fy=gy-y;
-  const indices=[y*g.columns+x,y*g.columns+x+1,(y+1)*g.columns+x,(y+1)*g.columns+x+1];
-  const weights=[(1-fx)*(1-fy),fx*(1-fy),(1-fx)*fy,fx*fy];
-  // A missing provider value never becomes zero. Known below-terrain corners
-  // may be omitted only if interpolated surface pressure puts this point above
-  // terrain. This avoids expanding one mountain node into a whole blank square.
-  const interpolate=(frames,terrainAware=false)=>{const row=frames[time];let result=0,total=0;for(let i=0;i<4;i++){if(weights[i]<1e-12)continue;const v=row[indices[i]];if(!finite(v)){const p=data.surface_pressure[time][indices[i]];if(terrainAware&&level!=='surface'&&finite(p)&&Number(level)>p)continue;return null;}result+=weights[i]*v;total+=weights[i];}return total>1e-12?result/total:null;};
-  const value={surfacePressure:interpolate(data.surface_pressure)};
-  value.belowTerrain=level!=='surface'&&finite(value.surfacePressure)&&Number(level)>value.surfacePressure;
-  for(const key of ['temperature','humidity','u','v','height'])value[key]=value.belowTerrain?null:interpolate(fields[key],true);
-  value.cloudCover=interpolate(data.cloud_cover);value.rain=this.rainAt(lon,lat);
-  value.windKnots=finite(value.u)&&finite(value.v)?Math.hypot(value.u,value.v)*KNOTS_PER_MS:null;
-  value.direction=value.windKnots>0.05?(Math.atan2(-value.u,-value.v)*180/Math.PI+360)%360:null;
-  return value;
- }
-}
-const PARAMETERS={
- rain:{label:'Hourly rain',unit:'mm',field:'rain',ticks:[0,.2,1,3,10,20,40],stops:[[0,[75,119,166]],[.2,[72,151,211]],[.5,[56,188,199]],[1,[65,202,163]],[3,[126,213,106]],[6,[218,220,83]],[10,[250,192,75]],[20,[245,113,79]],[30,[224,73,117]],[40,[172,68,179]]]},
- wind:{label:'Wind speed',unit:'knots',field:'windKnots',ticks:[0,20,40,60,80,100,140],stops:[[0,[123,190,242]],[18,[48,164,169]],[38,[67,183,99]],[65,[238,224,75]],[95,[242,90,64]],[140,[201,45,145]]]},
- temperature:{label:'Temperature',unit:'°C',field:'temperature',ticks:[-70,-50,-30,-10,10,30,50],stops:[[-70,[33,35,112]],[-35,[40,87,181]],[-10,[35,164,177]],[12,[78,174,105]],[30,[235,211,72]],[50,[178,37,44]]]},
- humidity:{label:'Relative humidity',unit:'%',field:'humidity',ticks:[0,20,40,60,80,100],stops:[[0,[167,145,124]],[20,[189,191,173]],[42,[156,203,143]],[64,[67,157,166]],[82,[36,89,147]],[100,[16,39,91]]]}
-};
-class ColorRamp{
- constructor(stops){this.stops=stops;}
- color(value){
-  const s=this.stops;if(value<=s[0][0])return s[0][1];if(value>=s.at(-1)[0])return s.at(-1)[1];
-  for(let i=1;i<s.length;i++)if(value<=s[i][0]){const t=(value-s[i-1][0])/(s[i][0]-s[i-1][0]);return s[i][1].map((c,k)=>Math.round(lerp(s[i-1][1][k],c,t)));}
- }
- css(){const min=this.stops[0][0],span=this.stops.at(-1)[0]-min;return 'linear-gradient(90deg,'+this.stops.map(([v,c])=>`rgb(${c.join(',')}) ${(v-min)/span*100}%`).join(',')+')';}
-}
-/* END_PURE_GRID_CORE — marker used by the automated numeric checks. */
-
-/* ======================================================================
- * 3. CANVAS RASTER LAYER
- * OpenLayers requests a canvas in projected coordinates. We sample a small
- * intermediate image, then smoothly upscale it with canvas interpolation.
- * This avoids creating a blocky grid while retaining geographic alignment.
- * ====================================================================== */
-class RasterFieldLayer{
- constructor(map,sampler,state){
-  this.sampler=sampler;this.state=state;
-  this.source=new ol.source.ImageCanvas({projection:'EPSG:3857',ratio:1,canvasFunction:(...args)=>this.render(...args)});
-  this.layer=new ol.layer.Image({source:this.source,opacity:.68,zIndex:2});map.addLayer(this.layer);
- }
- render(extent,resolution,pixelRatio,size){
-  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(size[0]));canvas.height=Math.max(1,Math.round(size[1]));
-  const small=document.createElement('canvas');small.width=Math.max(1,Math.ceil(canvas.width/(this.state.parameter==='rain'?2.5:5)));small.height=Math.max(1,Math.ceil(canvas.height/(this.state.parameter==='rain'?2.5:5)));
-  const ctx=small.getContext('2d'),image=ctx.createImageData(small.width,small.height);
-  const parameter=PARAMETERS[this.state.parameter],ramp=new ColorRamp(parameter.stops);
-  for(let y=0;y<small.height;y++)for(let x=0;x<small.width;x++){
-   const coordinate=[lerp(extent[0],extent[2],(x+.5)/small.width),lerp(extent[3],extent[1],(y+.5)/small.height)];
-   const [lon,lat]=ol.proj.toLonLat(coordinate),amount=this.state.parameter==='rain'?this.sampler.rainAt(lon,lat):this.sampler.sample(lon,lat,this.state.level)?.[parameter.field];if(!finite(amount)||(this.state.parameter==='rain'&&amount<.01))continue;
-   const color=ramp.color(amount),offset=(y*small.width+x)*4;
-   // Fade trace rain continuously; do not draw a hard rectangular wet/dry edge.
-   image.data.set([...color,this.state.parameter==='rain'?Math.round(235*clamp(amount/.2,0,1)):245],offset);
-  }
-  ctx.putImageData(image,0,0);const output=canvas.getContext('2d');output.imageSmoothingEnabled=true;output.imageSmoothingQuality='high';output.drawImage(small,0,0,canvas.width,canvas.height);return canvas;
- }
- refresh(){this.source.changed();}
-}
-
-/* ======================================================================
- * 4. WIND PARTICLES
- * Particles advect using U/V, not random screen directions. Their world
- * positions are converted to pixels each frame. A transparent fade preserves
- * trails; pan/zoom clears old trails to prevent geographic misalignment.
- * Animation automatically pauses in hidden tabs and for reduced motion.
- * ====================================================================== */
-class WindParticleLayer{
- constructor(map,sampler,state){
-  Object.assign(this,{map,sampler,state,particles:[],raf:0,last:0,moving:false});
-  this.canvas=document.createElement('canvas');this.canvas.className='particles';this.canvas.setAttribute('aria-hidden','true');map.getViewport().append(this.canvas);this.ctx=this.canvas.getContext('2d');
-  // OpenLayers resets canvas styles. The scoped CSS below explicitly restores
-  // positioning and stacking so ink is composited ABOVE the raster, not under it.
-  map.on('change:size',()=>{this.resize();this.refresh();});
-  map.on('movestart',()=>{this.moving=true;this.clear();});map.on('moveend',()=>{this.moving=false;this.refresh();});
-  document.addEventListener('visibilitychange',()=>this.refresh());this.resize();
- }
- displayed(){return ['wind','rain'].includes(this.state.parameter);}
- active(){const size=this.map.getSize();return this.displayed()&&this.state.animate&&Boolean(this.sampler.dataset)&&!document.hidden&&!this.state.suspended&&size?.[0]>0&&size?.[1]>0;}
- resize(){const [w,h]=this.map.getSize()||[1,1];this.dpr=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.max(1,Math.round(w*this.dpr));this.canvas.height=Math.max(1,Math.round(h*this.dpr));this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);}
- clear(){this.ctx.save();this.ctx.setTransform(1,0,0,1,0,0);this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);this.ctx.restore();}
- spawn(){
-  const [w,h]=this.map.getSize()||[1,1];for(let i=0;i<25;i++){
-   const coordinate=this.map.getCoordinateFromPixel([Math.random()*w,Math.random()*h]);if(!coordinate)continue;
-   const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,this.state.level);
-   if(value&&finite(value.u)&&finite(value.v)&&Math.hypot(value.u,value.v)>.12)return {coordinate,age:Math.random()*2.7};
-  }return null;
- }
- targetCount(){const [w,h]=this.map.getSize()||[1,1];return clamp(Math.round(w*h/850),240,1500);}
- reset(){this.clear();this.particles=Array.from({length:this.targetCount()},()=>this.spawn()).filter(Boolean);}
- refresh(){
-  if(this.refreshing)return;
-  cancelAnimationFrame(this.raf);this.raf=0;this.last=0;this.canvas.hidden=!this.displayed();
-  if(!this.active()){this.clear();return;}
-  // Hidden panes can leave an empty/old OL frame state. Rendering before
-  // seeding prevents an empty particle array after tab switches or resizing.
-  this.refreshing=true;try{this.map.renderSync();this.resize();this.reset();this.raf=requestAnimationFrame(t=>this.frame(t));}finally{this.refreshing=false;}
- }
- frame(timestamp){
-  this.raf=0;if(!this.active()){this.clear();return;}
-  const dt=this.last?Math.min((timestamp-this.last)/1000,.05):1/60;this.last=timestamp;
-  if(!this.moving){
-   // Replace particles that expired outside valid cells, including sparse rain.
-   for(let n=0,missing=Math.min(8,this.targetCount()-this.particles.length);n<missing;n++){const fresh=this.spawn();if(fresh)this.particles.push(fresh);}
-   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='destination-in';ctx.fillStyle=`rgba(0,0,0,${Math.pow(.92,dt*60)})`;ctx.fillRect(0,0,w,h);ctx.globalCompositeOperation='source-over';ctx.lineWidth=1.25;ctx.strokeStyle='rgba(245,253,255,.92)';ctx.beginPath();
-   const resolution=this.map.getView().getResolution();
-   this.particles=this.particles.map(p=>{
-    p.age+=dt;if(p.age>3.3)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value||!finite(value.u)||!finite(value.v))return this.spawn();
-    const speed=Math.hypot(value.u,value.v);if(speed<=.12)return this.spawn();
-    // Accelerated visual motion uses actual direction and relative speed. It
-    // stays visible across zoom levels; displayed numeric wind remains physical.
-    const step=clamp(speed*7,10,160)*resolution*dt,next=[p.coordinate[0]+value.u/speed*step,p.coordinate[1]+value.v/speed*step];
-    const start=this.map.getPixelFromCoordinate(p.coordinate),end=this.map.getPixelFromCoordinate(next);if(!start||!end||end[0]<0||end[0]>w||end[1]<0||end[1]>h)return this.spawn();
-    ctx.moveTo(...start);ctx.lineTo(...end);p.coordinate=next;return p;
-   }).filter(Boolean);ctx.stroke();
-  }
-  this.raf=requestAnimationFrame(t=>this.frame(t));
- }
-}
-class RainParticleLayer extends WindParticleLayer{
- constructor(map,sampler,state){super(map,sampler,state);this.canvas.classList.add('rain-particles');}
- displayed(){return super.displayed()&&this.state.showRain;}
- targetCount(){const [w,h]=this.map.getSize()||[1,1];return clamp(Math.round(w*h/1250),140,1100);}
- spawn(){
-  const [w,h]=this.map.getSize()||[1,1];for(let i=0;i<30;i++){
-   const coordinate=this.map.getCoordinateFromPixel([Math.random()*w,Math.random()*h]);if(!coordinate)continue;const [lon,lat]=ol.proj.toLonLat(coordinate),value=this.sampler.sample(lon,lat,'surface');
-   // No decorative rain in dry or missing cells: amount controls density.
-   if(value&&finite(value.rain)&&value.rain>=.05&&Math.random()<clamp(value.rain/3,.12,1))return {coordinate,age:Math.random()*2,lifetime:2.2+Math.random()*1.8};
-  }return null;
- }
- frame(timestamp){
-  this.raf=0;if(!this.active()){this.clear();return;}
-  const dt=this.last?Math.min((timestamp-this.last)/1000,.05):1/60;this.last=timestamp;const fade=this.ctx;fade.globalCompositeOperation='destination-in';fade.fillStyle=`rgba(0,0,0,${Math.pow(.45,dt*60)})`;fade.fillRect(0,0,...this.map.getSize());fade.globalCompositeOperation='source-over';
-  if(!this.moving){
-   // Replace particles that expired outside valid cells, including sparse rain.
-   for(let n=0,missing=Math.min(8,this.targetCount()-this.particles.length);n<missing;n++){const fresh=this.spawn();if(fresh)this.particles.push(fresh);}
-   const ctx=this.ctx,[w,h]=this.map.getSize();ctx.globalCompositeOperation='source-over';ctx.lineCap='round';
-   this.particles=this.particles.map(p=>{
-    p.age+=dt;if(p.age>p.lifetime)return this.spawn();const [lon,lat]=ol.proj.toLonLat(p.coordinate),value=this.sampler.sample(lon,lat,'surface');if(!value||!finite(value.rain)||value.rain<.05)return this.spawn();
-    const start=this.map.getPixelFromCoordinate(p.coordinate);if(!start)return this.spawn();
-    // Falling streaks are a qualitative rain effect, not predicted drop paths.
-    const drift=clamp((finite(value.u)?value.u:0)*3,-55,55),fall=65+Math.min(value.rain,20)*6,next=[start[0]+drift*dt,start[1]+fall*dt],length=3+Math.min(value.rain,15)*.55;
-    if(next[0]<0||next[0]>w||next[1]<0||next[1]>h)return this.spawn();const coordinate=this.map.getCoordinateFromPixel(next);if(!coordinate)return this.spawn();
-    const [nextLon,nextLat]=ol.proj.toLonLat(coordinate),nextValue=this.sampler.sample(nextLon,nextLat,'surface');if(!nextValue||!finite(nextValue.rain)||nextValue.rain<.05)return this.spawn();
-    const intensity=clamp(value.rain/10,0,1),life=Math.sin(Math.PI*clamp(p.age/p.lifetime,0,1));ctx.strokeStyle=`rgba(${Math.round(155+80*intensity)},${Math.round(220+25*intensity)},255,${(.35+.6*intensity)*Math.max(.2,life)})`;ctx.lineWidth=.85+.9*intensity;ctx.beginPath();ctx.moveTo(next[0]-drift/fall*length,next[1]-length);ctx.lineTo(...next);ctx.stroke();p.coordinate=coordinate;return p;
-   }).filter(Boolean);
-  }
-  this.raf=requestAnimationFrame(t=>this.frame(t));
- }
-}
-
-/* ======================================================================
- * 5. ANCHORED WEATHER PICKER
- * One coordinate is retained. Changing parameter or elevation re-samples it
- * and updates all four values, without moving the geographic anchor.
- * ====================================================================== */
-class WeatherPicker{
- constructor(map,sampler,state){
-  Object.assign(this,{map,sampler,state,coordinate:null});
-  this.overlay=new ol.Overlay({element:document.getElementById('picker'),positioning:'bottom-center',offset:[0,-14],stopEvent:true,autoPan:{animation:{duration:180},margin:125}});map.addOverlay(this.overlay);
-  this.marker=new ol.Feature();this.markerLayer=new ol.layer.Vector({source:new ol.source.Vector({features:[this.marker]}),style:new ol.style.Style({image:new ol.style.Circle({radius:5,fill:new ol.style.Fill({color:'#edf9ff'}),stroke:new ol.style.Stroke({color:'#183c51',width:2})})}),zIndex:8});map.addLayer(this.markerLayer);
-  document.getElementById('picker-close').addEventListener('click',()=>this.close());map.on('singleclick',event=>this.open(event.coordinate));
-  map.getTargetElement().addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();this.open(map.getView().getCenter());}if(event.key==='Escape')this.close();});
- }
- open(coordinate){const [lon,lat]=ol.proj.toLonLat(coordinate);if(!this.sampler.sample(lon,lat,this.state.level)){document.getElementById('map-status').textContent=this.sampler.dataset?'Select a point inside the forecast region (60–78°E, 23–38°N).':'Forecast data is unavailable. Press Refresh forecast to retry.';return;}this.coordinate=coordinate.slice();this.marker.setGeometry(new ol.geom.Point(coordinate));this.update();this.overlay.setPosition(coordinate);}
- close(){this.coordinate=null;this.overlay.setPosition(undefined);this.marker.setGeometry(undefined);}
- update(){
-  if(!this.coordinate)return;const [lon,lat]=ol.proj.toLonLat(this.coordinate),value=this.sampler.sample(lon,lat,this.state.level);if(!value)return;
-  const set=(id,text)=>document.getElementById(id).textContent=text,parameter=PARAMETERS[this.state.parameter];
-  const cardinal=finite(value.direction)?['N','NE','E','SE','S','SW','W','NW'][Math.round(value.direction/45)%8]:'';
-  const display=(v,suffix,digits=1)=>finite(v)?v.toFixed(digits)+suffix:'Unavailable';
-  set('picker-coordinates',`${lat.toFixed(3)}° N, ${lon.toFixed(3)}° E`);set('picker-primary-value',display(value[parameter.field],''));set('picker-primary-unit',parameter.unit);
-  set('picker-temperature',display(value.temperature,' °C'));set('picker-wind',display(value.windKnots,' kn')+(finite(value.direction)?` · ${cardinal} ${Math.round(value.direction)}°`:value.windKnots===0?' · calm':''));set('picker-humidity',display(value.humidity,'%',0));set('picker-cloud',display(value.cloudCover,'%',0));set('picker-level',LEVELS[this.state.level].label);set('picker-height',this.state.level==='surface'?'Wind at 10 m; temperature / RH at 2 m':finite(value.height)?'Model height: '+Math.round(value.height).toLocaleString('en-GB')+' m above sea level':'Model height unavailable');set('picker-availability',value.belowTerrain?'This pressure level is below terrain here.':!finite(value[parameter.field])?'Provider data unavailable for this point / hour.':'Surface pressure: '+display(value.surfacePressure,' hPa',0));set('picker-rain',display(value.rain,' mm')); set('picker-time',this.sampler.dataset?forecastLabel(this.sampler.dataset.times[this.state.time]):'No forecast');
-
- }
-}
-
-/* ======================================================================
- * 6. APPLICATION CONTROLLER
- * The view is constrained around Pakistan; the grid covers a study rectangle,
- * not an authoritative political boundary. Key-free OpenStreetMap tiles retain attribution.
- * ====================================================================== */
-class WeatherExplorer{
- constructor(){
-  this.state={parameter:'wind',level:'surface',time:0,suspended:false,showRain:true,animate:!matchMedia('(prefers-reduced-motion: reduce)').matches};
-  this.sampler=new GridSampler(null,this.state);this.player=null;this.request=null;
-  const pakistanCenter=ol.proj.fromLonLat([69.3451,30.3753]);
-  const tiles=new ol.source.XYZ({url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',attributions:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',crossOrigin:'anonymous',maxZoom:18});
-  let tileWarning=false;tiles.on('tileloaderror',()=>{if(!tileWarning){tileWarning=true;document.getElementById('map-status').textContent='Basemap tiles unavailable. Forecast layers remain available independently of basemap tiles.';}});
-  const basemap=new ol.layer.Tile({source:tiles});
-  // Dark styling applies only to key-free OSM tiles, never to weather rasters.
-  basemap.on('prerender',event=>{event.context.save();event.context.filter='grayscale(1) invert(1) brightness(.7) contrast(1.15)';});
-  basemap.on('postrender',event=>event.context.restore());
-  this.map=new ol.Map({target:'map',layers:[basemap],view:new ol.View({center:pakistanCenter,zoom:5,minZoom:4,maxZoom:10,extent:ol.proj.transformExtent([57,20,82,41],'EPSG:4326','EPSG:3857'),constrainOnlyCenter:true}),controls:ol.control.defaults.defaults({rotate:false,zoom:false,attributionOptions:{collapsible:false}})});
-  this.raster=new RasterFieldLayer(this.map,this.sampler,this.state);this.particles=new WindParticleLayer(this.map,this.sampler,this.state);this.rainParticles=new RainParticleLayer(this.map,this.sampler,this.state);this.picker=new WeatherPicker(this.map,this.sampler,this.state);
-  document.querySelectorAll('[data-parameter]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.parameter;if(next===this.state.parameter)return;if(next==='rain'){this.previousLevel=this.state.level;this.state.level='surface';}else if(this.state.parameter==='rain'){this.state.level=this.previousLevel||'surface';}this.state.parameter=next;this.update();}));
-  document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{this.state.level=button.dataset.level;this.update();}));
-  document.getElementById('rain-particles-toggle').addEventListener('change',event=>{this.state.showRain=event.target.checked;this.update();});
-  document.getElementById('flow-toggle').addEventListener('click',()=>{this.state.animate=!this.state.animate;this.update();});
-  document.getElementById('recenter').addEventListener('click',()=>this.map.getView().animate({center:pakistanCenter,zoom:5,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:450}));
-  for(const [id,delta]of [['zoom-in',1],['zoom-out',-1]])document.getElementById(id).addEventListener('click',()=>{const view=this.map.getView();view.animate({zoom:clamp(Math.round(view.getZoom())+delta,view.getMinZoom(),view.getMaxZoom()),duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:220});});
-  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{this.state.animate=!event.matches;this.update();});
-  const byId=id=>document.getElementById(id);
-  byId('forecast-refresh').addEventListener('click',()=>this.load());
-  byId('forecast-timeline').addEventListener('input',()=>{this.stopPlayback();this.state.time=Number(byId('forecast-timeline').value);this.update();});
-  byId('forecast-now').addEventListener('click',()=>{this.stopPlayback();this.state.time=this.currentHour();this.update();});
-  byId('forecast-play').addEventListener('click',()=>{if(this.player){this.stopPlayback();return;}if(!this.sampler.dataset)return;byId('forecast-play').textContent='❚❚ Pause';byId('forecast-play').setAttribute('aria-pressed','true');this.player=setInterval(()=>{this.state.time=(this.state.time+1)%this.sampler.dataset.times.length;this.update();},1600);});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stopPlayback();});
-  // The parent dashboard suspends hidden map panes as well as hidden tabs.
-  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='badal-studio-visibility')return;this.state.suspended=!event.data.visible;if(this.state.suspended)this.stopPlayback();if(event.data.visible){this.map.updateSize();this.map.renderSync();}this.particles.refresh();this.rainParticles.refresh();});
-  this.map.getView().on('change:resolution',()=>{const v=this.map.getView();document.getElementById('zoom-in').disabled=v.getZoom()>=v.getMaxZoom();document.getElementById('zoom-out').disabled=v.getZoom()<=v.getMinZoom();});document.querySelector('.levels').scrollTop=document.querySelector('.levels').scrollHeight;this.update();this.load();
-
- }
- stopPlayback(){clearInterval(this.player);this.player=null;document.getElementById('forecast-play').textContent='▶︎ Play';document.getElementById('forecast-play').setAttribute('aria-pressed','false');}
- currentHour(){const times=this.sampler.dataset?.times||[];const i=times.findIndex(t=>Date.parse(t)>Date.now());return i<0?Math.max(0,times.length-1):Math.max(0,i-1);}
- async load(){
-  this.stopPlayback();this.request?.abort();const request=new AbortController();this.request=request;
-  const button=document.getElementById('forecast-refresh'),badge=document.getElementById('forecast-badge'),status=document.getElementById('map-status');button.disabled=true;badge.textContent='LOADING ECMWF';status.textContent='Loading actual ECMWF IFS forecast fields…';
-  try{
-   const url=new URL('../studio-data/forecast.json',location.href);url.searchParams.set('refresh',Date.now());
-   const rainURL=new URL('../studio-data/rain.json',location.href);rainURL.searchParams.set('refresh',Date.now());const detailPromise=fetch(rainURL,{cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(25000)])}).then(async r=>{if(!r.ok)throw Error();return validateRain(await r.json());}).catch(()=>null);
-   const response=await fetch(url,{cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(25000)])});if(!response.ok)throw Error('Forecast snapshot unavailable');
-   const data=validateForecast(await response.json());if(Date.parse(data.times.at(-1))<Date.now()-3600000)throw Error('Forecast has expired');
-   this.sampler.dataset=data;this.sampler.setRain(await detailPromise);if(request.signal.aborted)return;this.state.time=this.currentHour();const age=(Date.now()-Date.parse(data.retrieved_at))/3600000;
-   badge.textContent=age>12?'OLDER ECMWF FORECAST':'ECMWF · FORECAST';badge.classList.toggle('older',age>12);
-   status.textContent=`ECMWF IFS 0.25° · 304 sampled cells · ${data.times.length} hourly forecasts. ${data.status==='cached'?'Latest refresh failed; previous actual forecast retained. ':''}${age>12?'Snapshot is over 12 hours old. ':''}Updated approximately every 6 hours; refresh reloads the latest published snapshot.`;
-   document.getElementById('forecast-updated').textContent='Fetched '+forecastLabel(data.retrieved_at);
-   this.update();
-  }catch(error){
-   if(request.signal.aborted)return;badge.textContent='FORECAST UNAVAILABLE';badge.classList.add('older');
-   // Previously retrieved real data may remain only while its valid times continue.
-   if(this.sampler.dataset&&Date.parse(this.sampler.dataset.times.at(-1))<Date.now()-3600000)this.sampler.dataset=null;
-   status.textContent=this.sampler.dataset?'Forecast refresh failed. Previously loaded actual forecasts remain visible; check the fetched and valid times.':'Forecast data could not be loaded or has expired. No weather values are shown. Press Refresh forecast to retry.';
-   if(!this.sampler.dataset)this.picker.close();this.update();
-  }finally{if(this.request===request)button.disabled=false;}
- }
- update(){
-  const dataset=this.sampler.dataset;
-  for(const id of ['forecast-timeline','forecast-play','forecast-now'])document.getElementById(id).disabled=!dataset;
-  document.getElementById('forecast-timeline').max=String(Math.max(0,(dataset?.times.length||1)-1));document.getElementById('forecast-timeline').value=String(this.state.time);
-  document.getElementById('forecast-valid').textContent=dataset?forecastLabel(dataset.times[this.state.time]):'Forecast time unavailable';
-  document.getElementById('forecast-step').textContent=dataset?`${this.state.time+1}/${dataset.times.length}`:'—';
-  const parameter=PARAMETERS[this.state.parameter];document.querySelectorAll('[data-parameter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.parameter===this.state.parameter)));document.querySelectorAll('[data-level]').forEach(button=>{button.setAttribute('aria-pressed',String(button.dataset.level===this.state.level));button.disabled=this.state.parameter==='rain';});
-  document.getElementById('legend-title').textContent=parameter.label+' · '+parameter.unit;document.getElementById('level-caption').textContent=this.state.parameter==='rain'?'Surface · hourly rain amount':LEVELS[this.state.level].label;document.getElementById('legend-gradient').style.background=new ColorRamp(parameter.stops).css();
-  document.getElementById('legend-ticks').replaceChildren(...parameter.ticks.map(value=>{const span=document.createElement('span');span.textContent=value;return span;}));
-  const flow=document.getElementById('flow-toggle');flow.hidden=!['wind','rain'].includes(this.state.parameter);flow.disabled=!dataset;flow.setAttribute('aria-pressed',String(this.state.animate));flow.textContent=this.state.animate?'❚❚ Pause particles':'▶︎ Resume particles';
-  document.getElementById('rain-detail-note').textContent=this.sampler.rainDetail&&this.sampler.rainTimes.has(dataset?.times[this.state.time])?'Rain: 0.5° display mesh (1,147 real samples) · native model 0.25° · fetched '+forecastLabel(this.sampler.rainDetail.retrieved_at):'Rain: 1° display mesh · finer snapshot unavailable for this hour.';
-  document.getElementById('rain-particle-option').hidden=!['wind','rain'].includes(this.state.parameter);document.getElementById('rain-particles-toggle').checked=this.state.showRain;
-  if(dataset){
-   const row=dataset.levels[this.state.level],pressures=dataset.surface_pressure[this.state.time];let valid=0,below=0,missing=0;
-   for(let i=0;i<pressures.length;i++){if(this.state.parameter!=='rain'&&this.state.level!=='surface'&&finite(pressures[i])&&Number(this.state.level)>pressures[i]){below++;continue;}const v=this.state.parameter==='rain'?dataset.rain[this.state.time][i]:this.state.parameter==='wind'?(finite(row.u[this.state.time][i])&&finite(row.v[this.state.time][i])?1:null):row[this.state.parameter==='humidity'?'humidity':'temperature'][this.state.time][i];if(finite(v))valid++;else missing++;}
-   document.getElementById('coverage-report').textContent=`${valid}/${pressures.length} grid points available · ${below} below terrain · ${missing} missing from provider. Blank mountain areas are intentionally masked.`;
-  }else document.getElementById('coverage-report').textContent='Forecast unavailable; no substitute values.';
-  const view=this.map.getView(),zoom=view.getZoom();document.getElementById('zoom-in').disabled=zoom>=view.getMaxZoom();document.getElementById('zoom-out').disabled=zoom<=view.getMinZoom();
-  this.raster.refresh();this.particles.refresh();this.rainParticles.refresh();this.picker.update();
- }
-}
-if(window.ol){window.weatherExplorer=new WeatherExplorer();}else{const error=document.getElementById('map-error');error.hidden=false;error.textContent='The OpenLayers map library could not load. Check your internet connection and reload this page.';}
-</script>
+<canvas id="scene" aria-label="3D terrain weather map of Pakistan. Drag to orbit, scroll to zoom, right-drag to pan, click for a point forecast."></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div class="top">
+  <div class="title glass"><strong>Pakistan · Terrain explorer</strong><span id="subtitle">ECMWF IFS 9 km forecast over real terrain</span><br><span class="badge">Experimental · not official guidance · see PMD</span><br><span id="ml-badge" class="badge ml" tabindex="0" hidden></span></div>
+  <div class="tools">
+    <div class="search"><input id="search" type="search" placeholder="Search a place in Pakistan" autocomplete="off" aria-label="Search a place"><ul id="results" class="results glass" hidden></ul></div>
+    <select id="presets" class="pill" aria-label="Regional views"></select>
+    <button id="share" class="pill" type="button">Copy view link</button>
+  </div>
+</div>
+<button id="toggle-panel" class="collapse pill" type="button" aria-expanded="false">Layers</button>
+<aside id="panel" class="panel glass" aria-label="Map controls">
+  <section><h2>Layers</h2>
+    <div class="row"><label for="l-wind"><span class="swatch" style="background:linear-gradient(90deg,#82beff,#6eebc8,#faeb6e,#ff6a5a)"></span>Wind trails</label><input id="l-wind" type="checkbox" checked></div>
+    <div class="row"><label for="l-cloud"><span class="swatch" style="background:linear-gradient(90deg,#fff,#a8b8d0)"></span>Clouds, animated</label><input id="l-cloud" type="checkbox" checked></div>
+    <div class="row"><label for="l-temp"><span class="swatch" style="background:linear-gradient(90deg,#4646eb,#78e178,#f5eb5a,#f05a32)"></span><span id="l-temp-name">Temperature, 2 m</span></label><input id="l-temp" type="checkbox"></div>
+    <div id="temp-legend-box" hidden><div class="legend" id="temp-legend" aria-hidden="true"></div><div class="legend-scale" id="temp-legend-scale" aria-hidden="true"><span>-30</span><span>-5</span><span>20</span><span>42</span><span>50 °C</span></div></div>
+    <div class="row"><label for="l-rain"><span class="swatch" style="background:#4aa0ff"></span>Rain, hourly</label><input id="l-rain" type="checkbox" checked></div>
+    <div class="row"><label for="l-snow"><span class="swatch" style="background:#9b64f0"></span>Snow (water equivalent)</label><input id="l-snow" type="checkbox" checked></div>
+    <div class="row"><label for="l-towns">Places, peaks and passes</label><input id="l-towns" type="checkbox" checked></div>
+    <div class="legend" id="legend" aria-hidden="true"></div><div class="legend-scale"><span>0.1</span><span>2</span><span>10</span><span>50 mm/h</span></div>
+  </section>
+  <section><h2>Wind</h2>
+    <div class="legend" id="wind-legend" aria-hidden="true" title="Trail colour by 10 m wind speed"></div><div class="wind-ticks" aria-hidden="true"><span style="left:0">0</span><span style="left:25%">10</span><span style="left:50%">20</span><span style="left:75%">30</span><span style="left:100%">40 m/s</span></div><p class="hint" style="margin:2px 0 8px">Trail colour = wind speed (m/s × 3.6 = km/h): white-cyan calm, green, yellow, amber, red, magenta gale. Trails hug the ground; with “Follow the terrain” the 10 m wind is the 1 km mass-consistent field over the GLO-90 terrain when it is loaded (flow goes round peaks and speeds up where the layer thins over ridges, capped at 2×), otherwise a simpler slope rule. A terrain adjustment of the ECMWF wind, not a weather model.</p>
+    <div class="row stack"><label for="w-level"><span>Wind altitude</span></label><select id="w-level"><option value="sfc">Surface (10 m)</option><option value="850">850 hPa (about 1.5 km)</option><option value="700">700 hPa (about 3 km)</option></select></div>
+    <p class="hint" id="level-note"></p>
+    <div class="row stack"><label for="w-density"><span>Density</span><output id="o-density">16000</output></label><input id="w-density" type="range" min="2000" max="24000" step="1000" value="16000"></div>
+    <div class="row"><label for="w-follow">Follow the terrain</label><input id="w-follow" type="checkbox" checked></div>
+    <div class="row stack"><label for="w-speed"><span>Animation speed</span><output id="o-speed">1×</output></label><input id="w-speed" type="range" min="0" max="4" step="1" value="1" list="speed-steps" aria-valuetext="1x"><datalist id="speed-steps"><option value="0" label="0.5×"></option><option value="1" label="1×"></option><option value="2" label="2×"></option><option value="3" label="4×"></option><option value="4" label="6×"></option></datalist><div class="wind-ticks" aria-hidden="true"><span style="left:0">0.5×</span><span style="left:25%">1×</span><span style="left:50%">2×</span><span style="left:75%">4×</span><span style="left:100%">6×</span></div></div>
+    <div class="row stack"><label for="w-trail"><span>Trail length</span><output id="o-trail">13 segments · long</output></label><input id="w-trail" type="range" min="4" max="13" step="1" value="13"></div>
+  </section>
+  <section><h2>Controls</h2>
+    <p class="hint"><b>Drag</b> to move · <b>right-drag</b>, <b>Shift-drag</b> or the ✥ button (rotate mode) to rotate and tilt · or use the Tilt and Rotation sliders · <b>scroll</b> to zoom to the cursor · <b>double-click</b> to zoom in · <b>click</b> for a forecast.<br>Keys: arrows move · + − zoom · Q E rotate · PgUp PgDn tilt · R mode · N north · H home · Space play. Touch: one finger moves, two fingers pinch and twist.</p>
+  </section>
+  <section><h2>Terrain</h2>
+    <div class="row stack"><label for="t-exag"><span>Height exaggeration</span><output id="o-exag">3.0×</output></label><input id="t-exag" type="range" min="1" max="10" step="0.5" value="3"></div>
+    <div class="row stack"><label for="t-tilt"><span>Tilt (0 from above, 85 flat)</span><output id="o-tilt">52°</output></label><input id="t-tilt" type="range" min="0" max="85" step="1" value="52"></div>
+    <div class="row stack"><label for="t-head"><span>Rotation</span><output id="o-head">0°</output></label><input id="t-head" type="range" min="-180" max="180" step="1" value="0"></div>
+    <div class="row"><label for="t-sat">Satellite imagery</label><input id="t-sat" type="checkbox"></div>
+    <div class="row"><label for="t-detail">Detailed terrain</label><input id="t-detail" type="checkbox"></div>
+    <div class="row"><label for="t-top">Top-down view</label><input id="t-top" type="checkbox"></div>
+    <p class="hint" id="detail-state">Zoom in for 130 m and 65 m detail</p>
+  </section>
+</aside>
+<div class="nav glass" role="group" aria-label="Map navigation">
+  <button id="z-in" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
+  <button id="z-out" type="button" aria-label="Zoom out" title="Zoom out (−)">−</button>
+  <hr>
+  <button id="tilt-up" type="button" aria-label="Tilt toward the horizon" title="Tilt more">⌃</button>
+  <button id="tilt-down" type="button" aria-label="Tilt toward top-down" title="Tilt less">⌄</button>
+  <button id="mode" type="button" aria-label="Left mouse button: move the map" aria-pressed="false" title="Left-drag mode: move or rotate/tilt (R)">✥</button>
+  <button id="compass" type="button" aria-label="Face north" title="Face north (N)"><span id="compass-needle"></span></button>
+  <button id="home" type="button" aria-label="Whole of Pakistan" title="Whole of Pakistan (H)">⌂</button>
+</div>
+<div id="status" class="status glass" role="status">Loading terrain…</div>
+<section id="fc" class="fc glass" hidden aria-label="Location forecast">
+  <header id="fc-head">
+    <div><h3 id="fc-title">Forecast</h3><small id="fc-sub"></small></div>
+    <span id="fc-badge" class="fc-badge"></span>
+    <div class="fc-tools"><button id="fc-unit" type="button" title="Wind speed unit">km/h</button><button id="fc-close" type="button" aria-label="Close forecast">×</button></div>
+  </header>
+  <div id="fc-body" class="fc-scroll"></div>
+  <p id="fc-note" class="fc-note"></p>
+</section>
+<nav id="alt-bar" class="alt glass" aria-label="Altitude: surface to 250 hPa"></nav>
+<div class="credits"><span id="credit-forecast">Forecast: ECMWF Open Data (CC BY 4.0)</span> · Terrain: Mapzen / AWS Terrain Tiles (SRTM, ASTER and others) · Imagery: Esri, Maxar, Earthstar Geographics and the GIS User Community · Place names: GeoNames (CC BY 4.0) · 3D: three.js (MIT)<br>Rain and snow are model values, not radar. A screening view, not an official forecast or warning: for those use the <a href="https://www.pmd.gov.pk/" target="_blank" rel="noopener noreferrer">Pakistan Meteorological Department</a>.</div>
+<div class="bottom glass">
+  <div class="time"><strong id="t-label">—</strong><span id="t-sub">Pakistan Standard Time</span></div>
+  <button id="t-back" type="button" aria-label="Back one hour">−1 h</button>
+  <button id="t-play" type="button" aria-pressed="false">Play</button>
+  <button id="t-fwd" type="button" aria-label="Forward one hour">+1 h</button>
+  <input id="t-slider" type="range" min="0" max="71" step="0.05" value="0" aria-label="Forecast hour">
+  <button id="t-now" type="button">Now</button>
+</div>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

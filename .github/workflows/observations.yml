@@ -1,0 +1,66 @@
+name: Refresh live observations
+# Publishes only stations.json and metar.json to the `data` branch; the site reads them from there
+# (see public/observation-feed.js), so live stations no longer wait for a full site deploy.
+# GitHub delays and drops scheduled runs on shared runners, so each run queues the next one itself
+# after a pause. The schedule below only restarts the chain if it ever breaks.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: observations
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Fetch the previous quality-control state and realtime record (last good values for the spike and stuck tests; stations the airports are judged against)
+        continue-on-error: true
+        run: |
+          mkdir -p public/observation-data
+          for f in qc-state-realtime.json qc-state-metar.json realtime.json; do
+            curl -fsSL --max-time 60 "https://raw.githubusercontent.com/${{ github.repository }}/data/observation-data/$f" -o "public/observation-data/$f" || rm -f "public/observation-data/$f"
+          done
+      - name: Refresh free airport observations
+        run: python3 scripts/sync-metar.py
+      - name: Refresh the full WeatherWalay realtime record (all columns, time stamps, elevations; also writes stations.json)
+        id: realtime
+        continue-on-error: true
+        env:
+          WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
+          WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
+        run: node scripts/sync-realtime.mjs
+      - name: Fallback only if the realtime sync failed - older WeatherWalay script
+        if: steps.realtime.outcome == 'failure'
+        env:
+          WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
+          WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
+          PREVIOUS_STATIONS_URL: https://raw.githubusercontent.com/${{ github.repository }}/data/observation-data/stations.json
+        run: python3 scripts/sync-stations.py
+      - name: Publish to the data branch
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/feed/observation-data"
+          cp public/observation-data/stations.json public/observation-data/metar.json "$RUNNER_TEMP/feed/observation-data/"
+          for f in realtime.json station-meta.csv station-elevations.json qc-report-realtime.json qc-state-realtime.json qc-report-metar.json qc-state-metar.json; do [ -f "public/observation-data/$f" ] && cp "public/observation-data/$f" "$RUNNER_TEMP/feed/observation-data/" || true; done
+          cd "$RUNNER_TEMP/feed"
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Live observations $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" data
+      - name: Queue the next refresh
+        if: always()
+        run: |
+          sleep 540
+          gh workflow run observations.yml --repo "${{ github.repository }}" --ref "${{ github.event.repository.default_branch }}"

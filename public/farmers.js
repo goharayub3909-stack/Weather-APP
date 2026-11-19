@@ -1,3 +1,4 @@
+import {VIEW_IDS,HEADINGS,viewFor,anchorFor} from './views.js';
 import {addTileHelp} from './tile-help.js';
 import {initAgriDSS} from './agri-dss.js';
 import {CROPS,ZONES,activity,approximateZone,pakistanMonth,seasonName} from './farm-data.js';
@@ -22,16 +23,21 @@ export function initFarmers(){
  }
  $('farm-stage-confirmed').addEventListener('change',render);
  $('farm-show-all').addEventListener('click',()=>{showAll=!showAll;render();});
+ let shownView=null;
  function navigate(){
-  const active=location.hash==='#farmers';$('farmers-view').hidden=!active;$('weather-view').hidden=active;
+  const view=viewFor(location.hash),active=view==='farmers-view',changed=view!==shownView;shownView=view;
+  for(const id of VIEW_IDS)$(id).hidden=id!==view;
   document.body.classList.toggle('farm-view',active);
-  $('main-heading').textContent=active?'Weather for your farm.':'Pakistan, at a glance.';
-  $('main-eyebrow').textContent=active?'GROW WITH THE FORECAST':'YOUR DAILY WEATHER COMPANION';
-  document.querySelectorAll('.rail-link,.view-switch a').forEach(link=>{const selected=active?link.hash==='#farmers':link.hash===location.hash||(!location.hash&&link.hash==='#overview');link.classList.toggle('rail-active',selected);if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+  $('main-heading').textContent=HEADINGS[view][0];
+  $('main-eyebrow').textContent=HEADINGS[view][1];
+  const here=active?'#farmers':location.hash||'#overview';
+  document.querySelectorAll('.rail-link,.view-switch a').forEach(link=>{const selected=link.hash===here||(view==='weather-view'&&!anchorFor(here)&&link.hash==='#overview');link.classList.toggle('rail-active',selected);if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   document.dispatchEvent(new CustomEvent('farmviewchange',{detail:active}));
-  const frame=$('weather-explorer-frame');frame?.contentWindow?.postMessage({type:'badal-studio-visibility',visible:!active&&!$('weather-explorer').hidden},location.origin);
+  document.dispatchEvent(new CustomEvent('viewchange',{detail:view}));
+  const frame=$('weather-explorer-frame');frame?.contentWindow?.postMessage({type:'badal-studio-visibility',visible:view==='maps-view'&&!$('weather-explorer').hidden},location.origin);
   window.dispatchEvent(new Event('resize'));
   if(active){render();window.scrollTo({top:0,behavior:'instant'});}
+  else{const anchor=anchorFor(location.hash);if(anchor)$(anchor)?.scrollIntoView({behavior:'instant'});else if(changed)window.scrollTo({top:0,behavior:'instant'});}
  }
  window.addEventListener('hashchange',navigate);
  $('farm-nav').addEventListener('click',()=>{if(location.hash==='#farmers')navigate();});

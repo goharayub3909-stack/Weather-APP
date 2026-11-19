@@ -168,9 +168,12 @@ export function grade(criteria) {
   if (!known.length) return { score: null, level: 'UNKNOWN', status: 'unavailable' };
   const score = Math.round(100 * known.reduce((a, c) => a + c.closeness, 0) / known.length);
   const missing = criteria.length - known.length, allMet = known.every(c => c.met);
-  if (!missing) return { score, level: allMet ? 'HIGH' : score >= 50 ? 'MODERATE' : 'LOW', status: 'ok' };
+  // MODERATE says "some trigger conditions are present", so at least one must actually be met;
+  // near misses alone raise the score but not the level.
+  const watch = score >= 50 && known.some(c => c.met);
+  if (!missing) return { score, level: allMet ? 'HIGH' : watch ? 'MODERATE' : 'LOW', status: 'ok' };
   // Some inputs are unavailable: never claim HIGH, and never report LOW on the strength of unknowns alone.
-  return { score, level: allMet ? 'MODERATE' : score >= 50 ? 'MODERATE' : 'LOW', status: 'partial' };
+  return { score, level: allMet || watch ? 'MODERATE' : 'LOW', status: 'partial' };
 }
 const raise = (level, n = 1) => level === 'UNKNOWN' ? level : LEVELS[Math.min(LEVELS.length - 1, LEVELS.indexOf(level) + n)];
 const cap = (level, max) => level === 'UNKNOWN' || LEVELS.indexOf(level) <= LEVELS.indexOf(max) ? level : max;
@@ -288,7 +291,8 @@ function dengue(ctx) {
   const bins = bin(samples, now, c.eipHours, HOUR, 'temp_c'), cov = coverage(bins);
   const eip = cov >= c.eipMinCoverage ? bins.filter(Boolean).every(b => b.min > c.eipTemp) : null;
   let level = g.level, label;
-  if (eip && level !== 'UNKNOWN') { level = raise(level); label = TEXT.dengue.eip; }
+  // The "High Viral Transmission Potential" headline is kept for HIGH and above; a raise from LOW keeps the flag only.
+  if (eip && level !== 'UNKNOWN') { level = raise(level); if (LEVELS.indexOf(level) >= 2) label = TEXT.dengue.eip; }
   const h = pkt.hour, inWindow = c.biteWindows.some(([a, b]) => h >= a && h < b);
   return finish('dengue', ctx, { ...g, level }, {
     criteria, label, confidence: g.status === 'ok' ? 'high' : 'medium',
@@ -302,10 +306,18 @@ function malaria(ctx) {
   const { samples, now, pkt, cfg } = ctx, c = cfg.malaria;
   // The latest 21:00–05:00 PKT night, in progress or just finished.
   const h = pkt.hour;
+  let ongoing = h >= c.nightStart || h < c.nightEnd;
   const nightStart = h >= c.nightStart ? pkt.dayStart + c.nightStart * HOUR : pkt.dayStart - (24 - c.nightStart) * HOUR;
-  const nightEnd = h >= c.nightStart || h < c.nightEnd ? now : pkt.dayStart + c.nightEnd * HOUR;
-  const inNight = samples.filter(s => s.t >= nightStart && s.t <= nightEnd);
-  const tBins = bin(inNight, nightEnd, (nightEnd - nightStart) / HOUR, HOUR, 'temp_c'), rBins = bin(inNight, nightEnd, (nightEnd - nightStart) / HOUR, HOUR, 'rh');
+  const nightBins = (start, end) => {
+    const inNight = samples.filter(s => s.t >= start && s.t <= end), hours = (end - start) / HOUR;
+    return { t: bin(inNight, end, hours, HOUR, 'temp_c'), r: bin(inNight, end, hours, HOUR, 'rh') };
+  };
+  let { t: tBins, r: rBins } = nightBins(nightStart, ongoing ? now : pkt.dayStart + c.nightEnd * HOUR), usedLastNight = false;
+  // Early in the night there are too few hours yet: show the last complete night instead of UNKNOWN.
+  if (ongoing && tBins.filter(Boolean).length < c.minBins) {
+    const prev = nightBins(nightStart - DAY, nightStart - DAY + (24 - c.nightStart + c.nightEnd) * HOUR);
+    if (prev.t.filter(Boolean).length >= c.minBins) { ({ t: tBins, r: rBins } = prev); usedLastNight = true; ongoing = false; }
+  }
   const enough = tBins.filter(Boolean).length >= c.minBins;
   const tMin = enough ? Math.min(...tBins.filter(Boolean).map(b => b.min)) : null;
   const rVals = rBins.filter(Boolean), rMean = enough && rVals.length ? rVals.reduce((a, b) => a + b.mean, 0) / rVals.length : null;
@@ -314,11 +326,10 @@ function malaria(ctx) {
     crit('night_rh', 'Night-time mean humidity', rMean, '%', '≥ 70 %', atLeast(rMean, c.rh, c.rhTol)),
   ];
   const g = grade(criteria), cov = coverage(tBins);
-  const ongoing = h >= c.nightStart || h < c.nightEnd;
   return finish('malaria', ctx, g, {
     criteria, confidence: enough ? confidenceFrom(cov) : 'low',
-    flags: { night_in_progress: ongoing }, metrics: { night_coverage: Number(cov.toFixed(2)) },
-    notes: [...(enough ? [] : [`Fewer than ${c.minBins} hourly night readings are available.`]), ...(ongoing ? ['The night is still in progress, so the lowest temperature so far can still fall.'] : [])],
+    flags: { night_in_progress: ongoing, last_complete_night: usedLastNight }, metrics: { night_coverage: Number(cov.toFixed(2)) },
+    notes: [...(enough ? [] : [`Fewer than ${c.minBins} hourly night readings are available.`]), ...(ongoing ? ['The night is still in progress, so the lowest temperature so far can still fall.'] : []), ...(usedLastNight ? ['Tonight has too few hours so far, so last night (21:00–05:00 PKT) is shown.'] : [])],
   });
 }
 
@@ -399,10 +410,14 @@ function cotton(ctx) {
   });
 }
 
+// Coverage is counted in whole hours: hourly model data fills only half of the 30-minute bins,
+// which would otherwise mark every hourly feed as low confidence.
+const hourlyCoverage = (samples, now, hours, key) => coverage(bin(samples, now, hours, HOUR, key));
+
 function pressureDrop(ctx, hours) {
   const { samples, now } = ctx;
   const bins = bin(samples, now, hours, HOUR / 2, 'pressure_hpa');
-  return { drop: largestDrop(bins, 6), coverage: coverage(bins) };
+  return { drop: largestDrop(bins, 6), coverage: hourlyCoverage(samples, now, hours, 'pressure_hpa') };
 }
 
 // An observed fall is positive evidence even from sparse data; only a "no fall" verdict needs good coverage.
@@ -462,14 +477,15 @@ function smog(ctx) {
 
 function asthma(ctx) {
   const { cur, samples, now, cfg } = ctx, c = cfg.asthma;
-  const bins = bin(samples, now, c.lookbackHours, HOUR / 2, 'temp_c'), cov = coverage(bins), drop = largestDrop(bins, c.windowHours * 2);
+  const bins = bin(samples, now, c.lookbackHours, HOUR / 2, 'temp_c'), cov = hourlyCoverage(samples, now, c.lookbackHours, 'temp_c'), drop = largestDrop(bins, c.windowHours * 2);
   const pm = atLeast(cur.pm25, c.pm25, c.pm25Tol, true), rh = atLeast(cur.rh, c.rh, c.rhTol, true);
   let aggravator = unknown();
   if (pm.met || rh.met) aggravator = { met: true, closeness: Math.max(pm.closeness ?? 0, rh.closeness ?? 0) };
   else if (pm.met === false && rh.met === false) aggravator = { met: false, closeness: Math.max(pm.closeness, rh.closeness) };
   const criteria = [
     crit('temp_drop_4h', 'Largest temperature fall within 4 h', drop, '°C', '> 5 °C', dropResult(drop, cov, c.minCoverage, c.dropC, c.dropTol)),
-    crit('aggravator', 'PM2.5 or humidity', cur.pm25 ?? cur.rh, '', 'PM2.5 > 75 µg/m³ or humidity > 80 %', aggravator, { pm25_met: pm.met, rh_met: rh.met }),
+    // Both readings are shown with units; a bare number could be either one.
+    crit('aggravator', 'PM2.5 or humidity', [finite(cur.pm25) ? `PM2.5 ${Math.round(cur.pm25)} µg/m³` : null, finite(cur.rh) ? `humidity ${Math.round(cur.rh)} %` : null].filter(Boolean).join(' · ') || null, '', 'PM2.5 > 75 µg/m³ or humidity > 80 %', aggravator, { pm25_met: pm.met, rh_met: rh.met }),
   ];
   return finish('asthma', ctx, grade(criteria), { criteria, confidence: confidenceFrom(cov) });
 }
@@ -524,7 +540,7 @@ export function assessHealth(current, history = [], options = {}) {
       : fn(ctx);
   }
   const alerts = Object.values(modules).filter(m => LEVELS.indexOf(m.level) >= 1)
-    .sort((a, b) => LEVELS.indexOf(b.level) - LEVELS.indexOf(a.level) || b.index_score - a.index_score)
+    .sort((a, b) => LEVELS.indexOf(b.level) - LEVELS.indexOf(a.level) || (b.index_score ?? 0) - (a.index_score ?? 0))
     .map(m => ({ module: m.id, level: m.level, title: m.title, headline: m.headline, actions: m.actions }));
   const known = Object.values(modules).map(m => m.level).filter(l => l !== 'UNKNOWN');
   const missing = first.missing, invalid = first.invalid;

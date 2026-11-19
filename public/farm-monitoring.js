@@ -187,6 +187,14 @@ export function renderFieldChart(
       add("text", { x: x(t), y: h - 10, "text-anchor": "middle", fill: "currentColor", "font-size": 11 }, d.toLocaleDateString("en-GB", { timeZone: "UTC", month: "short" }) + (d.getUTCMonth() === 0 ? " " + d.getUTCFullYear() : ""));
       t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
     }
+  } else if ((end - start) / 86400000 <= 45) {
+    // Day labels for a single month (start is a Pakistan midnight).
+    for (let t = start; t <= end; t += 86400000) {
+      const d = new Date(t + 5 * 3600000), day = d.getUTCDate();
+      add("line", { x1: x(t), x2: x(t), y1: p.t, y2: h - p.b, stroke: "currentColor", opacity: day === 1 || day % 5 === 0 ? 0.1 : 0.04 });
+      if ((day === 1 || day % 5 === 0) && day !== 30 && t < end)
+        add("text", { x: x(t), y: h - 10, "text-anchor": "middle", fill: "currentColor", "font-size": 11 }, day === 1 ? d.toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }) : String(day));
+    }
   } else
     for (let i = 0; i < 4; i++) {
       const t = start + ((end - start) * i) / 3;
@@ -258,7 +266,49 @@ export function monthlyMeans(rows, start = -Infinity, end = Infinity) {
   }
   return [...groups.values()].sort((a, b) => a.key.localeCompare(b.key)).map((g) => ({ key: g.key, mean: g.sum / g.n, n: g.n }));
 }
-export function renderMonthlyChart(root, rows, { title = "Monthly average", unit = "", color = "#92d494", start = Date.now() - 365 * 86400000, end = Date.now() } = {}) {
+const PKT = 5 * 3600000;
+const pktDate = (t) => new Date(t + PKT).toISOString().slice(0, 10);
+/** "YYYY-MM" (Pakistan time, no daylight saving) → [start, end) in epoch ms, or null. */
+export function pktMonthRange(key) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(key));
+  if (!m || +m[2] < 1 || +m[2] > 12) return null;
+  return [Date.UTC(+m[1], +m[2] - 1, 1) - PKT, Date.UTC(+m[1], +m[2], 1) - PKT];
+}
+/** Pakistan months touched by [start, end], newest first. */
+export function monthKeys(start, end) {
+  const keys = [];
+  if (!finite(start) || !finite(end) || end < start) return keys;
+  const a = new Date(start + PKT), b = new Date(end + PKT);
+  for (let y = a.getUTCFullYear(), m = a.getUTCMonth(); y < b.getUTCFullYear() || (y === b.getUTCFullYear() && m <= b.getUTCMonth()); m === 11 ? (y++, (m = 0)) : m++)
+    keys.push(y + "-" + String(m + 1).padStart(2, "0"));
+  return keys.reverse();
+}
+/**
+ * One row per calendar day of a Pakistan month: the clearest satellite pass that day
+ * (if any) beside archived daily weather. Days without data stay null, never zero.
+ */
+export function monthDays(key, passes = [], weather = []) {
+  const range = pktMonthRange(key);
+  if (!range) return [];
+  const days = new Map();
+  for (let t = range[0]; t < range[1]; t += 86400000) days.set(pktDate(t), { date: pktDate(t), time: t, pass: null, passes: 0, rain: null, tmax: null, tmin: null });
+  for (const p of passes) {
+    const d = finite(p.time) && days.get(pktDate(p.time));
+    if (!d) continue;
+    d.passes++;
+    const better = !d.pass || (finite(p.value) && (!finite(d.pass.value) || (p.clear ?? 0) > (d.pass.clear ?? 0)));
+    if (better) d.pass = p;
+  }
+  for (const w of weather) {
+    const d = finite(w.time) && days.get(pktDate(w.time));
+    if (!d) continue;
+    d.rain = finite(w.rain) ? w.rain : null;
+    d.tmax = finite(w.tmax) ? w.tmax : null;
+    d.tmin = finite(w.tmin) ? w.tmin : null;
+  }
+  return [...days.values()];
+}
+export function renderMonthlyChart(root, rows, { title = "Monthly average", unit = "", color = "#92d494", start = Date.now() - 365 * 86400000, end = Date.now(), selected = "", onPick = null } = {}) {
   root.replaceChildren();
   const months = monthlyMeans(rows, start, end), heading = document.createElement("h4");
   heading.textContent = title;
@@ -281,13 +331,22 @@ export function renderMonthlyChart(root, rows, { title = "Monthly average", unit
   seq.forEach((m, i) => {
     const x0 = pad.l + i * bw, g = byKey.get(m.key);
     add("text", { x: x0 + bw / 2, y: h - 9, "text-anchor": "middle", fill: "currentColor", "font-size": 11, opacity: 0.8 }, m.label);
-    if (!g) { add("text", { x: x0 + bw / 2, y: y(0) - 6, "text-anchor": "middle", fill: "currentColor", "font-size": 10, opacity: 0.5 }, "–"); return; }
-    const top = Math.min(y(g.mean), y(0)), bar = add("rect", { x: x0 + bw * 0.16, y: top, width: bw * 0.68, height: Math.max(1, Math.abs(y(g.mean) - y(0))), fill: color, opacity: 0.8, rx: 2 });
+    if (m.key === selected) add("rect", { x: x0 + 2, y: pad.t - 6, width: bw - 4, height: h - pad.t - pad.b + 6, fill: "currentColor", opacity: 0.08, rx: 4 });
+    let hit = null;
+    if (onPick) {
+      // Whole column is the target so months without a clear pass can still be opened.
+      hit = add("rect", { x: x0, y: 0, width: bw, height: h, fill: "transparent", tabindex: 0, role: "button", style: "cursor:pointer", "aria-pressed": String(m.key === selected), "aria-label": "Show every day of " + m.label + " " + m.key.slice(0, 4) });
+      hit.addEventListener("click", () => onPick(m.key));
+      hit.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(m.key); } });
+    }
+    if (!g) { add("text", { x: x0 + bw / 2, y: y(0) - 6, "text-anchor": "middle", fill: "currentColor", "font-size": 10, opacity: 0.5, "pointer-events": "none" }, "–"); return; }
+    const top = Math.min(y(g.mean), y(0)), bar = add("rect", { x: x0 + bw * 0.16, y: top, width: bw * 0.68, height: Math.max(1, Math.abs(y(g.mean) - y(0))), fill: color, opacity: !selected || m.key === selected ? 0.8 : 0.45, rx: 2, "pointer-events": onPick ? "none" : "auto" });
     const tip = document.createElementNS(ns, "title"); tip.textContent = m.label + ": mean " + g.mean.toFixed(2) + " " + unit + " from " + g.n + " clear pass" + (g.n === 1 ? "" : "es"); bar.append(tip);
-    add("text", { x: x0 + bw / 2, y: top - 4, "text-anchor": "middle", fill: "currentColor", "font-size": 10 }, g.mean.toFixed(2));
+    if (hit) hit.append(tip.cloneNode(true));
+    add("text", { x: x0 + bw / 2, y: top - 4, "text-anchor": "middle", fill: "currentColor", "font-size": 10, "pointer-events": "none" }, g.mean.toFixed(2));
   });
   root.append(svg);
-  const note = document.createElement("small"); note.textContent = "Average of the clear passes in each month; “–” means no clear pass."; root.append(note);
+  const note = document.createElement("small"); note.textContent = "Average of the clear passes in each month; “–” means no clear pass." + (onPick ? " Click a month to see it day by day." : ""); root.append(note);
 }
 export function thermalMoistureIndex(temperature, wet, dry) {
   if (![temperature, wet, dry].every(finite) || temperature < -80 || temperature > 100 || wet < -30 || dry > 80 || dry - wet < 5) return null;

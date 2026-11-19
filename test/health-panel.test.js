@@ -84,3 +84,20 @@ test('page wires the panel', () => {
   assert.match(html, /href="#health"/);
   assert.match(app, /initHealthPanel\(/);
 });
+
+test('ticker numbers come straight from the readings and stay null when missing', async () => {
+  const {tickerData} = await import('../public/health-panel.js');
+  const {forecast, air} = fixture();
+  forecast.hourly.surface_pressure[72 + 15] = 990;   // now (15:00) is 5 hPa below 12:00
+  const d = tickerData(buildReadings(forecast, air, NOW));
+  assert.equal(d.pressureChange3h, -5);
+  assert.equal(d.pm25, 180);
+  assert.equal(d.pm25Mean24, 180);
+  assert.equal(d.pm25Hours, 24);
+  assert.equal(d.windKmh, 4);                         // 1.2 m/s
+  assert.equal(d.tempSeries.length, 25);              // now + next 24 h
+  assert.ok(d.tempHi >= d.temp && d.tempLo <= d.temp);
+  assert.equal(d.rhLo, 60); assert.equal(d.rhHi, 60);
+  const noAir = tickerData(buildReadings(fixture().forecast, null, NOW));
+  assert.equal(noAir.pm25, null); assert.equal(noAir.pm25Mean24, null); assert.equal(noAir.pm25Hours, 0);
+});

@@ -5,3 +5,15 @@ node_modules/
 *.log
 __pycache__/
 *.pyc
+
+# Generated files: CI builds them (pages.yml, observations.yml) or a local script writes them. Never commit.
+.venv-terrain/
+public/terrain-data/grid.json
+public/terrain-data/grid-hires.json
+public/terrain-data/grid-1km/
+public/terrain-data/levels/
+public/observation-data/realtime.json
+public/observation-data/station-meta.csv
+public/observation-data/station-elevations.json
+public/observation-data/qc-report-*.json
+public/observation-data/qc-state-*.json

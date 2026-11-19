@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "note": "Quality-control rules for live station readings, read by scripts/obs-qc.mjs (realtime.json) and scripts/obs_qc.py (metar.json); the two implementations are tested against the same vectors (test/fixtures/qc-vectors.json). 'range' limits are world records (WMO Archive of Weather and Climate Extremes, wmo.asu.cornell.edu), so they only catch impossible values. Every other number is a screening convention of this portal, not a published threshold, and is calibrated so that only gross errors are flagged. Flagged readings stay in the data files, marked in each station's `qc`, and are left out of the live bias curve and the Barnes analysis.",
+  "params": {
+    "temperature": {"unit": "degC", "range": [-89.2, 56.7], "range_source": "world record low (Vostok, 1983) and high (Death Valley, 1913)",
+      "step": {"min_change": 5, "per_hour": 10, "hard_factor": 2},
+      "stuck": {"hours": 6, "min_readings": 3},
+      "spatial": {"lapse_c_per_km": 6.5, "lapse_source": "ICAO standard atmosphere", "radius_km": 40, "max_dz_m": 700, "min_neighbours": 3, "window_min": 90, "min_residual": 8, "mad_factor": 4, "confirm_residual": 4}},
+    "dew_point": {"unit": "degC", "range": [-100, 40], "range_source": "physical bound: dew point cannot exceed the air temperature; 40 degC is above any surface value on record",
+      "above_temperature": 1},
+    "humidity": {"unit": "%", "range": [0, 100], "range_source": "definition"},
+    "pressure": {"unit": "hPa", "range": [300, 1085], "range_source": "world record sea-level pressure 870 and 1084.8 hPa (Tropical Cyclone Tip 1979, Agata 1968); 300 hPa is a station above 9 km",
+      "step": {"min_change": 6, "per_hour": 6, "hard_factor": 2}},
+    "wind_speed": {"unit": "km/h", "range": [0, 408], "range_source": "world record gust 113.3 m/s (Barrow Island, 1996)"},
+    "wind_direction": {"unit": "degrees", "range": [0, 360], "range_source": "definition"},
+    "rain_rate": {"unit": "mm/h", "range": [0, 1872], "range_source": "world record 31.2 mm in one minute (Unionville, 1956)"},
+    "rain_24h": {"unit": "mm", "range": [0, 1825], "range_source": "world record 24 h rain (Foc-Foc, 1966)"}
+  },
+  "limits": "Not covered: wind and rain neighbourhood tests, humidity and pressure stuck tests (calm and steady air are legitimate), the stuck test for METAR (hourly integers repeat legitimately)."
+}

@@ -175,3 +175,44 @@ test('outlook re-runs the engine across forecast hours and applies duration rule
  const o=assessOutlook(reading({},now),past,forecast,{stepHours:3,horizonHours:12});
  assert.equal(o.steps.length,4);assert.equal(o.steps[0].levels.heat.level,'CRITICAL');assert.equal(o.steps[0].levels.smog.level,'UNKNOWN');assert.equal(o.source,'forecast');
 });
+
+test('hourly model data is not marked low confidence just because 30-minute bins are half empty',()=>{
+ const hourly=series(now,12,60,()=>({pressure_hpa:1010,temp_c:20}));
+ const r=assessHealth(hourly.at(-1),hourly.slice(0,-1));
+ assert.equal(r.modules.migraine.metrics.coverage,1);assert.equal(r.modules.migraine.confidence,'high');
+ assert.equal(r.modules.asthma.confidence,'high');
+ // One missing hour still leaves a "no fall" verdict instead of UNKNOWN.
+ const gap=hourly.filter((_,i)=>i!==5);
+ assert.equal(assessHealth(gap.at(-1),gap.slice(0,-1)).modules.migraine.level,'LOW');
+});
+
+test('a watch (MODERATE) needs at least one condition actually met',()=>{
+ // Near misses on both flu criteria: 17 °C (needs < 16) and 42 % (needs < 40).
+ const near=assessHealth(reading({temp_c:17,rh:42})).modules.flu;
+ assert.ok(near.index_score>=50,String(near.index_score));assert.ok(near.criteria.every(c=>c.met===false));assert.equal(near.level,'LOW');
+ const one=assessHealth(reading({temp_c:10,rh:45})).modules.flu;
+ assert.equal(one.level,'MODERATE');assert.equal(one.headline.en,'Watch: some trigger conditions are present');
+});
+
+test('the dengue incubation flag alone never shows the "High" headline on a MODERATE grade',()=>{
+ // 48 h above 28 °C but humidity far too low: base grade LOW, raised one step to MODERATE.
+ const hist=series(now,48,60,()=>({temp_c:29.5,rh:40,rain_acc_48h:0}));
+ const m=assessHealth(hist.at(-1),hist.slice(0,-1)).modules.dengue;
+ assert.equal(m.flags.high_viral_transmission_potential,true);assert.equal(m.level,'MODERATE');
+ assert.notEqual(m.headline.en,'High Viral Transmission Potential');
+});
+
+test('early in the night malaria shows the last complete night instead of UNKNOWN',()=>{
+ const end=at('2026-10-20T22:00:00+05:00');
+ const hist=series(end,30,60,(h,t)=>{const hr=pktParts(t).hour;return hr>=21||hr<5?{temp_c:24,rh:80}:{temp_c:33,rh:45};});
+ const m=assessHealth(hist.at(-1),hist.slice(0,-1)).modules.malaria;
+ assert.equal(m.flags.last_complete_night,true);assert.equal(m.flags.night_in_progress,false);
+ assert.equal(m.criteria[0].value,24);assert.equal(m.level,'HIGH');
+ assert.ok(m.notes.some(n=>/last night/.test(n)));
+});
+
+test('the asthma aggravator shows both readings with units',()=>{
+ const m=assessHealth(reading({pm25:40,rh:85})).modules.asthma;
+ assert.equal(m.criteria[1].value,'PM2.5 40 µg/m³ · humidity 85 %');
+ assert.equal(assessHealth(reading({pm25:null,rh:null})).modules.asthma.criteria[1].value,null);
+});

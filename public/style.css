@@ -97,67 +97,8 @@ html[data-theme=light] body.farm-view{--bg:#eef6ee;--surface:#fff;--surface2:#ed
 #agri-field-history-panel,#field-calendar{scroll-margin-top:110px}@media(max-width:600px){.operation-calendar-table{min-width:0;width:100%}.operation-calendar-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.operation-calendar-table tbody{display:grid;gap:12px}.operation-calendar-table tbody tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface2)}.operation-calendar-table tbody th{grid-column:1/-1;border-bottom:1px solid var(--line);padding:9px 12px;font-size:13px}.operation-calendar-table td{border:0;min-width:0;padding:12px;overflow-wrap:anywhere}.operation-calendar-table td:before{content:attr(data-label);display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px}.operation-calendar-table td strong{font-size:12px}.operation-calendar-table caption{font-size:13px;white-space:normal}}
 .crop-manual{padding:22px;margin:20px 0}.crop-manual-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.crop-manual-heading h3{margin:5px 0!important}.crop-manual-heading button{font:inherit;font-size:12px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--text);cursor:pointer;white-space:nowrap}.crop-manual-stage{border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden;background:var(--surface2)}.crop-manual-stage[data-current=true]{border-color:#82b961}.crop-manual-stage>summary{display:flex;align-items:center;gap:12px;justify-content:space-between;cursor:pointer;padding:15px 17px;list-style:none}.crop-manual-stage>summary:after{content:'+';font-size:20px;color:var(--accent)}.crop-manual-stage[open]>summary:after{content:'−'}.crop-manual-stage h4{margin:0;font-size:15px;line-height:1.6;flex:1}.crop-stage-badge{font-size:10px;line-height:1.5;border-radius:16px;padding:4px 8px;color:#24511c;background:#d9f4bd;max-width:140px}.crop-stage-content{padding:0 20px 18px;font-size:14px;line-height:1.85}.crop-stage-content p{margin:12px 0}.crop-stage-content strong{font-weight:700}.crop-stage-actions ul{padding-left:22px;margin:8px 0}.crop-stage-actions li{margin:7px 0}.crop-stage-warning{padding:12px 15px;border-left:3px solid #d7a543;border-radius:6px;background:#d7a54312}.crop-manual-sources{margin-top:15px;font-size:12px;color:var(--muted)}.crop-manual-sources>summary{cursor:pointer;color:var(--accent);font-weight:600}.crop-manual-sources a{display:inline-block;margin-top:12px;text-decoration:underline}@media(max-width:600px){.crop-manual{padding:16px}.crop-manual-heading{align-items:flex-start;flex-direction:column;gap:8px}.crop-manual-stage>summary{padding:13px;flex-wrap:wrap;gap:6px}.crop-manual-stage h4{font-size:14px;flex-basis:85%}.crop-stage-badge{max-width:none}.crop-stage-content{padding:0 14px 14px;font-size:14px}.crop-manual-heading .eyebrow{font-size:9px}}
 /* ---- Health & environment panel ---- */
-.health-card{margin-top:20px;padding:24px}
-.health-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.health-head h2{font:600 18px Manrope,sans-serif;margin:4px 0 6px;letter-spacing:-.4px}
-.health-intro{margin:0;color:var(--muted);max-width:640px;line-height:1.5}
-.health-tools{display:flex;gap:10px;align-items:center}
-.health-urdu{font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif}
-.health-urdu .health-intro,.health-urdu .health-headline,.health-urdu .health-actions li,.health-urdu .health-alert p{line-height:2}
-.health-level--low{--risk:#8ec8aa;--risk-bg:#8ec8aa1b}
-.health-level--moderate{--risk:#e4bc60;--risk-bg:#e4bc601f}
-.health-level--high{--risk:#ef9a6a;--risk-bg:#ef9a6a22}
-.health-level--critical{--risk:#ff6f6f;--risk-bg:#ff6f6f26}
-.health-level--unknown{--risk:#a5a7ba;--risk-bg:#a5a7ba16}
-html[data-theme=light] .health-level--low{--risk:#246743}
-html[data-theme=light] .health-level--moderate{--risk:#82600a}
-html[data-theme=light] .health-level--high{--risk:#a8501b}
-html[data-theme=light] .health-level--critical{--risk:#b02525}
-html[data-theme=light] .health-level--unknown{--risk:#676778}
-.health-summary{display:flex;gap:16px;align-items:center;margin:20px 0 6px;flex-wrap:wrap}
-.health-overall{display:flex;flex-direction:column;padding:12px 18px;border-radius:12px;background:var(--risk-bg);color:var(--risk);min-width:120px}
-.health-overall span{font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:.85}
-.health-overall strong{font:700 22px Manrope,sans-serif}
-.health-meta{display:flex;flex-direction:column;gap:3px;color:var(--muted)}
-.health-meta strong{color:var(--text);font-size:15px}
-.health-subhead,.health-group h3{font:600 14px Manrope,sans-serif;margin:22px 0 10px}
-.health-alerts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.health-alert{padding:14px 16px;border-radius:10px;background:var(--risk-bg);border-inline-start:3px solid var(--risk)}
-.health-alert-top,.health-module-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.health-alert p{margin:6px 0 0}
-.health-alert-action{color:var(--muted);font-size:12px}
-.health-chip{flex:none;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;color:var(--risk);background:var(--risk-bg);white-space:nowrap}
-.health-modules{display:grid;align-items:start;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-.health-module{padding:14px 16px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);border-top:3px solid var(--risk);min-width:0}
-.health-module h4{margin:0;font-size:13px;font-weight:600}
-.health-bar{height:5px;border-radius:5px;background:var(--line);margin:10px 0 8px;overflow:hidden}
-.health-bar i{display:block;height:100%;background:var(--risk);border-radius:5px}
-.health-headline{margin:0 0 6px;color:var(--text)}
-.health-details summary{cursor:pointer;color:var(--muted);font-size:12px;margin-top:6px}
-.health-details h5{margin:12px 0 6px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
-.health-urdu .health-details h5{text-transform:none;letter-spacing:0}
-.health-criteria,.health-actions,.health-notes{margin:0;padding-inline-start:18px}
-.health-criteria{list-style:none;padding:0;display:grid;gap:6px}
-.health-criteria li{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--bg)}
-.health-criteria li span:nth-child(2){grid-column:1;color:var(--muted)}
-.health-criteria li em{grid-row:1/3;grid-column:2;align-self:center;font-style:normal;font-size:11px}
-.health-criteria li.met em{color:#ef9a6a}.health-criteria li.unmet em{color:#8ec8aa}.health-criteria li.nodata em{color:var(--muted)}
-.health-actions li,.health-notes li{margin:4px 0;line-height:1.5}
-.health-outlook-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
-.health-outlook{border-collapse:separate;border-spacing:2px;font-size:10px;min-width:100%}
-.health-outlook th{font-weight:500;color:var(--muted);white-space:nowrap;padding:3px 4px;text-align:center}
-.health-outlook thead th{vertical-align:bottom}
-.health-outlook thead th b{display:block;color:var(--text);font-weight:600}
-.health-outlook tbody th{text-align:start;max-width:180px;overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:var(--surface);z-index:1}
-.health-outlook td{min-width:18px;height:18px;border-radius:3px;background:var(--risk-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--risk) 35%,transparent)}
-.health-outlook td.health-level--moderate,.health-outlook td.health-level--high,.health-outlook td.health-level--critical{background:color-mix(in srgb,var(--risk) 70%,transparent)}
-.health-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:var(--muted)}
-.health-legend span{display:flex;align-items:center;gap:6px}
-.health-legend i{width:12px;height:12px;border-radius:3px;background:color-mix(in srgb,var(--risk) 70%,transparent)}
-.health-legend .health-level--low i,.health-legend .health-level--unknown i{background:var(--risk-bg);box-shadow:inset 0 0 0 1px var(--risk)}
-.health-disclaimer{border-top:1px solid var(--line);padding-top:12px}
-@media(max-width:700px){.health-card{padding:18px}.health-head{flex-direction:column}.health-outlook tbody th{max-width:110px}}
-.health-watch{margin:10px 0 0;padding:10px 14px;border-radius:8px;background:#e4bc6014;color:var(--muted);line-height:1.6}.health-watch strong{color:#e4bc60}html[data-theme=light] .health-watch strong{color:#82600a}
+.health-card{margin-top:20px}
+.health-urdu{font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif;line-height:2}
 /* ---- Farmers refresh: current-stage advisory ---- */
 .farm-retired{display:none!important}
 .crop-stage-progress{display:flex;gap:6px;margin:12px 0 4px}
@@ -225,6 +166,7 @@ html[data-theme=light] .health-level--unknown{--risk:#676778}
 .crop-upload input{font-size:11px;max-width:200px}
 .crop-season-note{margin:4px 0 0;font-size:12px;color:var(--accent)!important}
 .crop-weather-chart{margin-top:14px}.crop-weather-chart h4{margin:0 0 6px;font-size:13px}.crop-weather-chart svg{width:100%;height:auto;color:var(--text)}.crop-weather-chart small{color:var(--muted);font-size:11px}
+.crop-month-detail{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}.crop-month-detail svg{display:block;width:100%;height:auto;color:var(--text)}.crop-month-detail small{color:var(--muted);font-size:11px}.crop-month-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.crop-month-head h4{margin:0}.crop-month-head button{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:6px 10px}.crop-month-table{margin-top:12px}.crop-month-table summary{cursor:pointer;font-weight:600}.crop-month-table table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;font-variant-numeric:tabular-nums}.crop-month-table th,.crop-month-table td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line)}.crop-month-table th:first-child,.crop-month-table td:first-child{text-align:left}.crop-month-table th{color:var(--muted);font-weight:600}.crop-month-table tr.is-empty td:nth-child(2){color:var(--muted)}.crop-month-table .text-button{color:var(--accent);font-size:12px;padding:0;min-height:0;height:auto;line-height:inherit;text-decoration:underline}.crop-month-table td{white-space:nowrap}@media(max-width:560px){.crop-month-table{overflow-x:auto}.crop-month-table th,.crop-month-table td{padding:4px 5px}}
 .crop-minor{margin:18px 0 8px;font:600 12px Manrope,sans-serif;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
 .crop-risk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .crop-risk{padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);border-left:3px solid var(--muted)}
@@ -283,3 +225,109 @@ body.farm-view .rail{display:none!important}
 #fw-root .fw-flash{outline:2px solid #6ee7b7;outline-offset:3px;border-radius:12px;transition:outline-color 1.2s}
 /* The sheet only keeps detail: these summaries already appear in the ticker and decisions panel. */
 #fw-sheet-body #farm-summary,#fw-sheet-body #field-decision-context{display:none}
+
+/* ---- Weather page: same look as the Farmers workspace (slate panels, emerald accent, 11px caps labels) ---- */
+:is(#weather-view,#maps-view){--wk-panel:#0f172a;--wk-panel-2:#1e293b;--wk-border:#334155;--wk-border-strong:#475569;--wk-label:#cbd5e1;--wk-text:#f1f5f9;--wk-muted:#94a3b8;--wk-accent:#34d399;--wk-accent-ink:#020617}
+html[data-theme=light] :is(#weather-view,#maps-view){--wk-panel:#fff;--wk-panel-2:#eef3f7;--wk-border:#d4dde6;--wk-border-strong:#b7c4d0;--wk-label:#475b6e;--wk-text:#172c42;--wk-muted:#5b6f81;--wk-accent:#0f8a5f;--wk-accent-ink:#fff}
+.status{font-size:12px;line-height:1.6}
+:is(#weather-view,#maps-view) .card:not(.hero){background:var(--wk-panel);border:1px solid var(--wk-border-strong);border-radius:16px;box-shadow:0 18px 40px -24px #000c;backdrop-filter:none}
+:is(#weather-view,#maps-view) .eyebrow,:is(#weather-view,#maps-view) .tag,:is(#weather-view,#maps-view) .week-legend{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--wk-label)}
+:is(#weather-view,#maps-view) .card-heading h2{font:700 17px Manrope,sans-serif;letter-spacing:-.01em;color:var(--wk-text)}
+:is(#weather-view,#maps-view) .card-heading p{font-size:12px;color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .subtle-note,:is(#weather-view,#maps-view) .week-card .subtle-note{font-size:12px;line-height:1.6;color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .section-title h2{font-size:22px;letter-spacing:-.02em}
+:is(#weather-view,#maps-view) .current-source{background:var(--wk-panel);border:1px solid var(--wk-border-strong);border-left:4px solid var(--wk-accent);border-radius:12px;color:var(--wk-label);font-size:12px;line-height:1.6;padding:10px 14px}
+/* hero */
+:is(#weather-view,#maps-view) .hero{background:linear-gradient(125deg,#0b2a3a,#0f172a 72%);border:1px solid #475569;box-shadow:0 18px 40px -24px #000c}
+:is(#weather-view,#maps-view) .city-image-shade{background:linear-gradient(90deg,#0b2a3aee,#0b2a3aa8 38%,#0b2a3a22)}
+:is(#weather-view,#maps-view) .hero-head,:is(#weather-view,#maps-view) .hero-head>span:last-child{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1;max-width:none}
+:is(#weather-view,#maps-view) .pill{font-size:11px;font-weight:800;letter-spacing:.08em;padding:6px 12px;color:#6ee7b7;background:#34d39922;border-color:#34d39966}
+:is(#weather-view,#maps-view) .temperature{font-weight:600;font-variant-numeric:tabular-nums}
+:is(#weather-view,#maps-view) .hero-body p{font-size:16px;font-weight:600}
+:is(#weather-view,#maps-view) .hero-body .feels{font-size:13px;font-weight:400;color:#cbd5e1}
+:is(#weather-view,#maps-view) .hero-bottom{border-top-color:#47556988}
+:is(#weather-view,#maps-view) .hero-bottom span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1}
+:is(#weather-view,#maps-view) .hero-bottom strong{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+/* 7-day */
+:is(#weather-view,#maps-view) .week-legend{margin-top:16px;border-bottom-color:var(--wk-border)}
+:is(#weather-view,#maps-view) .day{grid-template-columns:minmax(84px,1fr) 28px minmax(110px,1.3fr) 84px;padding:11px 0;border-bottom:1px solid var(--wk-border)}
+:is(#weather-view,#maps-view) .day:last-child{border-bottom:0}
+:is(#weather-view,#maps-view) .day-name strong{font-size:14px;color:var(--wk-text)}
+:is(#weather-view,#maps-view) .day-name>small{font-size:12px;color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .day-range span,:is(#weather-view,#maps-view) .day-range strong{font-size:14px;font-variant-numeric:tabular-nums}
+:is(#weather-view,#maps-view) .day-range>span:first-child{color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .range-track{height:6px;background:var(--wk-panel-2)}
+:is(#weather-view,#maps-view) .day-rain strong{font-size:13px;font-variant-numeric:tabular-nums}
+:is(#weather-view,#maps-view) .day-rain small{font-size:11px;color:var(--wk-muted)}
+/* hourly */
+:is(#weather-view,#maps-view) .segmented{background:var(--wk-panel-2);border:1px solid var(--wk-border);border-radius:12px}
+:is(#weather-view,#maps-view) .segmented button{font-size:13px;font-weight:600;min-height:40px;padding:8px 14px;border-radius:9px;color:var(--wk-label)}
+:is(#weather-view,#maps-view) .segmented .selected{background:var(--wk-accent);color:var(--wk-accent-ink);font-weight:700;box-shadow:none}
+:is(#weather-view,#maps-view) .chart-caption{font-size:12px;color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .hour span{font-size:11px;color:var(--wk-muted)}
+:is(#weather-view,#maps-view) .hour strong{font-size:13px;font-variant-numeric:tabular-nums}
+/* detail tiles: flat panels like the ticker tiles instead of per-tile gradients */
+#detail-grid{gap:12px}
+#detail-grid .metric{background:var(--wk-panel);border:1px solid var(--wk-border-strong);min-height:0;padding:14px 16px;transition:border-color .2s}
+html[data-theme=light] #detail-grid .metric{background:var(--wk-panel);border-color:var(--wk-border-strong)}
+#detail-grid .metric:hover{transform:none;box-shadow:none;border-color:var(--wk-accent)}
+#detail-grid .metric-art{display:none}
+#detail-grid .metric-top,html[data-theme=light] #detail-grid .metric-top{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--wk-label)}
+#detail-grid .metric-icon,html[data-theme=light] #detail-grid .metric-icon{color:var(--wk-accent);width:20px;height:20px}
+#detail-grid .metric:hover .metric-icon{filter:none}
+#detail-grid .metric>strong,html[data-theme=light] #detail-grid .metric>strong{font:700 26px/1.1 Manrope,sans-serif;letter-spacing:-.02em;margin:10px 0 6px;color:var(--wk-text);font-variant-numeric:tabular-nums}
+#detail-grid .metric p,html[data-theme=light] #detail-grid .metric p{font-size:12px;line-height:1.45;color:var(--wk-muted);max-width:none;min-height:0}
+/* sunrise / air quality */
+:is(#weather-view,#maps-view) .sun-times span,:is(#weather-view,#maps-view) .air-main span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--wk-label)}
+:is(#weather-view,#maps-view) .sun-times strong{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+:is(#weather-view,#maps-view) .air-main>strong{font-weight:700}
+:is(#weather-view,#maps-view) .air-main h3{font-size:16px;font-weight:700}
+:is(#weather-view,#maps-view) .air-particles{font-size:13px;color:var(--wk-label)}
+/* map tabs */
+:is(#weather-view,#maps-view) .map-navigation button{font-size:13px;font-weight:600;min-height:44px;padding:10px 16px;border-radius:12px;background:var(--wk-panel);border:1px solid var(--wk-border-strong);color:var(--wk-label)}
+:is(#weather-view,#maps-view) .map-navigation button[aria-selected=true]{background:var(--wk-accent);color:var(--wk-accent-ink);border-color:var(--wk-accent);font-weight:700}
+@media(max-width:700px){:is(#weather-view,#maps-view) .hero-bottom span{font-size:10px}:is(#weather-view,#maps-view) .hero-bottom strong{font-size:15px}:is(#weather-view,#maps-view) .day{grid-template-columns:minmax(70px,1fr) 24px minmax(80px,1fr) 70px;gap:6px}#detail-grid .metric>strong{font-size:22px}}
+
+/* ---- Farmers workspace bottom sheet: same type scale, panels and rhythm as the actions sidebar ---- */
+#fw-root #fw-sheet-body{font-size:14px;line-height:1.55;padding-top:4px}
+#fw-root #fw-sheet-body h2{font-size:18px;line-height:1.3;margin:0 0 4px}
+#fw-root #fw-sheet-body h3{font-size:15px;line-height:1.35;margin:0 0 8px}
+#fw-root #fw-sheet-body h4{font-size:13px}
+#fw-root #fw-sheet-body .farm-section-heading{margin:0 0 10px}
+#fw-root #fw-sheet-body .farm-section-heading h3{font-size:18px;margin:2px 0}
+#fw-root #fw-sheet-body .farm-explainer,#fw-root #fw-sheet-body small{font-size:12px;line-height:1.5}
+#fw-root #fw-sheet-body .agri-chart,#fw-root #fw-sheet-body .agri-stat,#fw-root #fw-sheet-body .field-operation-card{background:#0f172a;border:1px solid #47556999;border-radius:16px;padding:14px;box-shadow:none}
+#fw-root #fw-sheet-body .agri-stat:nth-child(n){background:#0f172a}
+#fw-root #fw-sheet-body .agri-charts{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin:12px 0}
+#fw-root #fw-sheet-body .agri-stats{gap:12px}
+#fw-root #fw-sheet-body .agri-chart-title{font-size:13px}
+#fw-root #fw-sheet-body svg[role=img]{display:block;width:100%;height:auto;max-height:210px;margin-inline:auto}
+#fw-root #fw-sheet-body .agri-chart svg text{font-size:inherit}
+#fw-root #fw-sheet-body label{font-size:11px}
+#fw-root #fw-sheet-body input,#fw-root #fw-sheet-body select{font-size:13px;min-height:40px}
+#fw-root #fw-sheet-body button{font-size:13px}
+@media(max-width:600px){#fw-root #fw-sheet-body .agri-charts{grid-template-columns:1fr}#fw-root #fw-sheet-body svg[role=img]{max-height:190px}}
+#fw-root #fw-sheet-body summary{font-size:14px;line-height:1.4}
+#fw-root #fw-sheet-body summary h2,#fw-root #fw-sheet-body summary h3,#fw-root #fw-sheet-body summary strong{font-size:15px;margin:0}
+#fw-root #fw-sheet-body .agri-chart-title h3,#fw-root #fw-sheet-body .agri-chart-title strong{font-size:14px;line-height:1.3}
+
+/* Maps view: the page heading already says this, so its own title row is hidden. */
+#maps-view .section-title{display:none}
+
+.flood-pixel{image-rendering:pixelated}
+
+/* Weekly forecast: day and night halves, each with its own icon and condition */
+.week-legend--split{display:grid;grid-template-columns:minmax(64px,.7fr) minmax(130px,1.3fr) minmax(130px,1.3fr) minmax(104px,1fr);gap:10px}
+.week-legend--split span:nth-child(2){padding-left:0}
+:is(#weather-view,#maps-view) .day.day--split{grid-template-columns:minmax(64px,.7fr) minmax(130px,1.3fr) minmax(130px,1.3fr) minmax(104px,1fr);gap:10px;align-items:center}
+.day-part{display:flex;align-items:center;gap:9px;min-width:0}
+.day-part>div{display:flex;flex-direction:column;min-width:0}
+.day-part strong{font-size:15px;font-variant-numeric:tabular-nums}
+.day-part small{font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0}
+.day-part>div>small:first-child{text-transform:uppercase;letter-spacing:.06em;font-size:9px}
+.day-part .day-condition{font-size:11px;line-height:1.25;color:var(--text);opacity:.85}
+.day-part--night .day-icon{opacity:.92}
+.day--split .day-rain{display:flex;flex-direction:column;gap:1px;text-align:right;min-width:0}
+.day--split .day-rain small{font-size:10px;line-height:1.3}
+.day--split .day-snow{color:#9bd3ff}.day--split .day-hail{color:#ffc16e;font-weight:700}.day--split .day-none{opacity:.55}
+@media(max-width:700px){.week-legend--split{display:none}:is(#weather-view,#maps-view) .day.day--split{grid-template-columns:1fr 1fr;row-gap:8px}.day--split .day-name{grid-column:1/-1;display:flex;gap:8px;align-items:baseline}.day--split .day-rain{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:4px 12px;text-align:left}}

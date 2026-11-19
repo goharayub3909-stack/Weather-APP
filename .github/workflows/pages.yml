@@ -34,7 +34,15 @@ jobs:
         run: python3 scripts/sync-satellite.py
       - name: Refresh free airport observations
         run: python3 scripts/sync-metar.py
-      - name: Refresh WeatherWalay observations securely
+      - name: Refresh the full WeatherWalay realtime record (all columns, time stamps, elevations; also writes stations.json)
+        id: realtime
+        continue-on-error: true
+        env:
+          WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
+          WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
+        run: node scripts/sync-realtime.mjs
+      - name: Fallback only if the realtime sync failed - older WeatherWalay script
+        if: steps.realtime.outcome == 'failure'
         env:
           WEATHERWALAY_USERNAME: ${{ secrets.WEATHERWALAY_USERNAME }}
           WEATHERWALAY_PASSWORD: ${{ secrets.WEATHERWALAY_PASSWORD }}
@@ -48,14 +56,12 @@ jobs:
         env:
           PREVIOUS_STORMS_URL: ${{ steps.pages.outputs.base_url }}/storm-data/cities.json
         run: node scripts/sync-storms.mjs
-      - name: Refresh shared ECMWF forecast studio snapshot
-        env:
-          PREVIOUS_STUDIO_URL: ${{ steps.pages.outputs.base_url }}/studio-data/forecast.json
-        run: python3 scripts/sync-studio.py
-      - name: Refresh finer shared ECMWF rainfall display
-        env:
-          PREVIOUS_RAIN_URL: ${{ steps.pages.outputs.base_url }}/studio-data/rain.json
-        run: python3 scripts/sync-studio-rain.py
+      - name: Refresh ECMWF 0.1 degree (9 km) open data for the 3D terrain map
+        run: |
+          python3 -m pip install --quiet eccodes numpy
+          python3 scripts/sync-terrain-weather-ecmwf.py || echo "0.1 degree grid unavailable: the map falls back to the 0.5 degree grid"
+      - name: Refresh the 0.5 degree fallback grid for the 3D terrain map
+        run: node scripts/sync-terrain-weather.mjs
       - name: Validate application and forecast data handling
         run: |
           npm test
