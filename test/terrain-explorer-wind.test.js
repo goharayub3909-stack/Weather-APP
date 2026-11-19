@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
-  assert.equal(WIND_SIM.life[0], 50); assert.equal(WIND_SIM.life[1], 150);
-  assert.equal(lifespan(0), 50); assert.equal(lifespan(1), 150); assert.equal(lifespan(0.5), 100);
-  assert.equal(lifespan(-3), 50); assert.equal(lifespan(7), 150);                               // never outside the range
+  assert.equal(WIND_SIM.life[0], 120); assert.equal(WIND_SIM.life[1], 300);
+  assert.equal(lifespan(0), 120); assert.equal(lifespan(1), 300); assert.equal(lifespan(0.5), 210);
+  assert.equal(lifespan(-3), 120); assert.equal(lifespan(7), 300);                               // never outside the range
   const seen = new Set(); for (let i = 0; i < 50; i++) seen.add(Math.round(lifespan(i / 49))); assert.ok(seen.size > 40);
 });
 test('the wind keeps the same speed on screen at every zoom: time runs in proportion to the view distance', () => {
@@ -188,4 +188,16 @@ test('the height of the drawn mesh inside a cell follows its two triangles, not 
   assert.equal(meshCellHeight(0, 100, 100, 0, 0.75, 0.75), 50);                                                              // inside triangle (b, c, d): 0 + 0.25 x 100 + 0.25 x 100
   // a plane z = 3 + 4 tx + 5 ty is reproduced exactly on both sides of the diagonal
   for (const [tx, ty] of [[0.1, 0.2], [0.4, 0.5], [0.6, 0.7], [0.9, 0.8], [0.3, 0.9]]) assert.ok(Math.abs(meshCellHeight(3, 7, 8, 12, tx, ty) - (3 + 4 * tx + 5 * ty)) < 1e-12);
+});
+
+// ---- Batch B: drawing correctness ----
+test('the spawn rays meet the ground at the surface and the drawn height of the level at a pressure level', () => {
+  assert.equal(spawnPlaneHeight('sfc', 1.2, 3, 0.4), 1.2);                                                                    // surface: unchanged, the ground under the view centre
+  assert.ok(Math.abs(spawnPlaneHeight('500', 1.2, 3, 0.4) - (5.574 * 3 + 0.4)) < 1e-9);                                        // 500 hPa: 5.574 km x 3 + 0.4, not the ground
+  assert.ok(Math.abs(spawnPlaneHeight('850', 9.9, 1, 0.1) - (1.457 + 0.1)) < 1e-9);                                           // the ground does not matter at a level
+  assert.equal(spawnPlaneHeight('nonsense', 2, 3, 0.4), 2);
+});
+test('a particle lives 2 to 5 seconds at 60 frames a second', () => {
+  assert.ok(WIND_SIM.life[0] / 60 === 2 && WIND_SIM.life[1] / 60 === 5);
+  assert.ok(WIND_SIM.life[0] > 50 && WIND_SIM.life[1] > 150);
 });

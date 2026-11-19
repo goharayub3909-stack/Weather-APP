@@ -296,6 +296,9 @@ export function levelAltitude(id) {
   return {id, hPa: L.hPa, top: L.hPa === null ? 'Surface' : String(L.hPa), unit: L.hPa === null ? '10 m' : 'hPa', metres: m, feet: ft,
     m: big ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`, ft: `${ft.toLocaleString('en-US')} ft`, role: L.role};
 }
+// Height (scene km) of the plane the spawn rays are cast on: the ground under the view centre at the surface, the drawn height of the level (its standard height times the
+// exaggeration plus the hover) at a pressure level, where the trails are drawn.
+export const spawnPlaneHeight = (level, groundKm, exag, lift) => level === 'sfc' || !WIND_LEVELS[level] ? groundKm : WIND_LEVELS[level].heightKm * exag + lift;
 export const levelFile = level => `levels/p${level}.json`;
 export const levelFields = level => ['u', 'v', 't', 'gh'].map(p => p + level);
 export const levelReady = (sampler, level) => level === 'sfc' || levelFields(level).every(k => sampler.has(k));
@@ -606,7 +609,7 @@ export function meshCellHeight(ha, hb, hc, hd, tx, ty) {
 // The simulation itself runs on the GPU (app.js); these are its rules, written once here so they can be tested with numbers. The shader uses the
 // same constants and the same formulas (advect, withMinimumSpeed, respawnBox, outsideView).
 export const WIND_SIM = {
-  life: [50, 150],          // lifespan of a particle in frames (at 60 per second); a new random lifespan at every respawn
+  life: [120, 300],         // lifespan of a particle in frames (at 60 per second); a new random lifespan at every respawn
   simSeconds: 12000,        // seconds of wind shown per real second at 1x when the view is refDistKm away: about 11 pixels a second for every m/s of wind on a 1000 pixel high window
   refDistKm: 1500,
   minScale: 0.02, maxScale: 3,

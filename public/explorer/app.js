@@ -7,7 +7,7 @@ import {cities} from '../cities.js';
 import {GRID, GridSampler, validDataset, unpackDataset, mercX, mercY, lonOfX, latOfY, terrarium, WORLD_KM, rainColour, snowColour, windColour,
   elevationColour, splitPrecip, terrainWind, flowGrid, flowGridJob, summariseHours, encodeView, decodeView, PRESETS, SNOW_WATER_MM_PER_CM, temperatureColour, WIND_LEVELS, pointRows,
   maxTierFor, labelIndex, labelsNear, LOD_LEVELS, LOD_TILES, FADE_FRACTION, lodAlpha, blendHeight, lodWanted, lodHole, TEMPERATURE_TICKS,
-  FLOW, WIND_SIM, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
+  FLOW, WIND_SIM, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
   validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT} from './core.js';
 import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND} from './core.js';
 
@@ -837,7 +837,7 @@ void main() {
 }`;
 const DRAW_VS = GLSL_COMMON + `
 attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, point along the trail (0 = head .. ${PTS - 1} = tail), side of the ribbon
-uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments;   // uTrailSegments: segments drawn (the Trail length control)   // uSimRate: seconds of wind shown per real second
+uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)   // uSimRate: seconds of wind shown per real second
 uniform sampler2D tState, tHist; uniform vec2 uMC;
 uniform float uExag, uLift, uScale;
 varying vec3 vCol; varying float vA, vSide;
@@ -848,17 +848,6 @@ vec4 clipAt(vec2 ll) {
   float lk = uLevelKm; if (lk > 0.) { vec4 g = windGrid(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }      // the level's real height here, else its standard height
   float y = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
   return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, y, (my - uMC.y) * uScale, 1.);
-}
-// Speed of the particle from its own recent motion (head against the second or first recorded position): the same for all ${PTS * 2} vertices of a trail,
-// two texture reads instead of a full wind and terrain lookup per vertex, and it is the speed the particle really moves at (terrain adjustment included).
-float trailSpeed(vec4 s, vec2 head) {
-  for (int k = 2; k >= 1; k--) {
-    int slot = int(mod(uHead - float(k - 1) + ${HIST * 8}., ${HIST}.));
-    vec4 h = texelFetch(tHist, ivec2(int(aPart.x) * ${HIST} + slot, int(aPart.y)), 0);
-    float dAge = s.z - h.z;                                            // in 60ths of a second of real time
-    if (h.w == s.w && dAge > .5) return length(vec2((head.x - h.x) * 111320. * cos(radians(head.y)), (head.y - h.y) * 111320.)) / (dAge / 60. * uSimRate);
-  }
-  return 0.;
 }
 void main() {
   vec4 s = texelFetch(tState, ivec2(aPart), 0);
@@ -883,7 +872,8 @@ void main() {
     if (k == j + 1) pNext = p;
   }
   if (j >= segs) pNext = pCur;
-  float sp = trailSpeed(s, head), t = float(j) / float(segs);
+  vec3 vh = velocityAt(head);                                          // the wind speed at the head, as the simulation sees it (terrain adjustment and 1 km wind included): colours do not change with zoom or animation speed
+  float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = float(j) / float(segs);
   float fadeIn = min(1., s.z / 12.), fadeOut = min(1., (s.w - s.z) / 20.);
   // trailAlpha and trailWidthPx of core.js: bright head fading smoothly to nothing at the tail, narrower towards the tail, a little wider and stronger in fast wind
   vA = okCur && !beyond ? .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut : 0.;
@@ -945,7 +935,7 @@ function initGpuWind() {
     geo.setAttribute('aIdx', new THREE.BufferAttribute(idx, 1)); geo.setAttribute('aSide', new THREE.BufferAttribute(side, 1)); geo.setIndex(new THREE.BufferAttribute(index, 1));
     drawMat = new THREE.ShaderMaterial({
       uniforms: {...wu, tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE},
-        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
+        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
       vertexShader: DRAW_VS, fragmentShader: DRAW_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide});
     gpuLines = new THREE.Mesh(geo, drawMat); gpuLines.frustumCulled = false; gpuLines.renderOrder = 20; scene.add(gpuLines);
     windLines.visible = false; gpuReady = true; resetNext = true; syncWindLevels();
@@ -960,7 +950,8 @@ function stepWindGpu(dt) {
   respawnBox(lon, lat, R, g, spawnBox);
   const su = simMat.uniforms;
   camera.updateMatrixWorld();                                          // the spawn rays use this frame's camera, not the last render's
-  su.uSpawnPlane.value.set(sceneHeightAt(controls.target.x, controls.target.z), controls.target.x, controls.target.z, 1.5 * R);
+  const lift = Math.min(2.5, Math.max(0.05, dist * 0.0012));
+  su.uSpawnPlane.value.set(spawnPlaneHeight(state.level, sceneHeightAt(controls.target.x, controls.target.z), state.exag, lift), controls.target.x, controls.target.z, 1.5 * R);
   // The origin stays where it is until the view has moved a third of its radius away or zoomed in a lot, then particles are re-based onto the new one.
   const kx0 = 111.19 * Math.cos(origin.lat * Math.PI / 180);
   let rebase = false;
@@ -992,7 +983,7 @@ function stepWindGpu(dt) {
   renderer.setRenderTarget(null);
   const du = drawMat.uniforms;
   du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
-  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = Math.min(2.5, Math.max(0.05, dist * 0.0012)); du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
+  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
   gpuLines.geometry.setDrawRange(0, Math.floor(Math.min(state.density * QUALITY_STEPS[quality.level].trails, GPU_N)) * (PTS - 1) * 6);
 }
