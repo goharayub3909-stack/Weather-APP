@@ -66,7 +66,7 @@ test('why particle positions are kept in local kilometres: a float32 longitude c
 });
 
 test('a trail is the live head plus 13 recorded positions in a ring buffer, newest first', () => {
-  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 6000); assert.equal(WIND_SIM.maxParticles, 24576);
+  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 4000); assert.equal(WIND_SIM.maxParticles, 24576);
   assert.deepEqual([1, 2, 3, 13].map(k => ringSlot(5, k)), [5, 4, 3, 6]);                    // newest at the head slot, then backwards, wrapping round
   assert.deepEqual([1, 2].map(k => ringSlot(0, k)), [0, 12]);
   const seen = new Set(); for (let k = 1; k <= 13; k++) seen.add(ringSlot(7, k)); assert.equal(seen.size, 13);   // the 13 slots, each once
@@ -205,8 +205,8 @@ test('a particle lives 2 to 5 seconds at 60 frames a second', () => {
 });
 
 // ---- Batch C: density and performance ----
-test('the default is 6,000 trails of 8 segments, drawn a little thinner', () => {
-  assert.equal(WIND_SIM.defaultCount, 6000); assert.equal(WIND_SIM.trailSegments.default, 8);
+test('the default is 4,000 trails of 8 segments, drawn a little thinner', () => {
+  assert.equal(WIND_SIM.defaultCount, 4000); assert.equal(WIND_SIM.trailSegments.default, 8);
   assert.ok(WIND_SIM.trailSegments.default >= WIND_SIM.trailSegments.min && WIND_SIM.trailSegments.default <= WIND_SIM.trailSegments.max);
   assert.ok(Math.abs(trailWidthPx(0, 0) - 1.3) < 1e-12); assert.ok(Math.abs(trailWidthPx(0, 12) - 2.5) < 1e-12);               // 1.3 + 1.2 x min(1, speed / 12), full width at the head
   assert.ok(Math.abs(trailWidthPx(1, 12) - 1.25) < 1e-12);                                                                      // half of it at the tail
@@ -286,10 +286,10 @@ test('E1 the palette has the six normalised stops of the design and is smooth be
   assert.deepEqual(windColour(0.22), [250, 232, 173]);
   const mid = windColour(0.11); assert.deepEqual(mid, [Math.round((247 + 250) / 2), Math.round((245 + 232) / 2), Math.round((230 + 173) / 2)]);
 });
-test('E2 every level has a range, the surface and the lowest levels 20 m/s up to 80 m/s at 250 hPa, and the legend ticks follow it', () => {
-  assert.deepEqual(WIND_RANGES, {sfc: 20, 1000: 20, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80});
+test('E2 every level has a range, the surface 10 m/s, 1000 hPa 15 m/s, up to 80 m/s at 250 hPa, and the legend ticks follow it', () => {
+  assert.deepEqual(WIND_RANGES, {sfc: 10, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80});
   for (const l of PRESSURE_LEVELS) assert.ok(WIND_RANGES[l] > 0, `${l} hPa has a range`);
-  assert.equal(windRange('500'), 50); assert.equal(windRange('sfc'), 20); assert.equal(windRange('sfc', 35), 35); assert.equal(windRange('500', 35), 50);
+  assert.equal(windRange('500'), 50); assert.equal(windRange('sfc'), 10); assert.equal(windRange('sfc', 35), 35); assert.equal(windRange('500', 35), 50);
   assert.deepEqual(windTicks(20).map(t => [t.f, t.ms, t.kmh]), [[0, 0, 0], [0.25, 5, 18], [0.5, 10, 36], [0.75, 15, 54], [1, 20, 72]]);
   assert.deepEqual(windTicks(80).map(t => [t.ms, t.kmh]), [[0, 0], [20, 72], [40, 144], [60, 216], [80, 288]]);
   assert.equal(windTicks(25)[1].ms, 6.3);                                                       // one decimal at most
@@ -300,8 +300,8 @@ test('E3 the 99th percentile of a speed list and of a histogram agree, and the s
   const hist = new Float64Array(1000); for (let i = 0; i < 100; i++) hist[i * 2]++;             // speeds 0, 0.2, ... 19.8 m/s
   const h = histogramPercentile(hist, 0.1, 0.99); assert.ok(h > 19.4 && h <= 19.8 + 1e-9, String(h));
   assert.equal(histogramPercentile(new Float64Array(10), 0.1, 0.5), null);
-  assert.equal(surfaceRangeFrom(12.3), 20); assert.equal(surfaceRangeFrom(20), 20); assert.equal(surfaceRangeFrom(20.1), 25); assert.equal(surfaceRangeFrom(25), 25);
-  assert.equal(surfaceRangeFrom(25.01), 30); assert.equal(surfaceRangeFrom(null), 20); assert.equal(surfaceRangeFrom(NaN), 20);
+  assert.equal(surfaceRangeFrom(6.65), 10); assert.equal(surfaceRangeFrom(10), 10); assert.equal(surfaceRangeFrom(10.1), 15); assert.equal(surfaceRangeFrom(12.3), 15); assert.equal(surfaceRangeFrom(20.1), 25); assert.equal(surfaceRangeFrom(25), 25);
+  assert.equal(surfaceRangeFrom(25.01), 30); assert.equal(surfaceRangeFrom(null), 10); assert.equal(surfaceRangeFrom(NaN), 10);
 });
 test('E3 the 1 km wind pixel decodes to a speed, and 4095 is missing', () => {
   const px = (u, v) => { const val = u * 4096 + v; return [val >> 16, (val >> 8) & 255, val & 255]; };
@@ -341,4 +341,11 @@ test('E8 the reference grid: 1 degree lines, 0.25 degree lines only in a close v
   assert.equal(gridOpacity(100), 0.12); assert.equal(gridOpacity(LEVEL_GRID.fadeToKm), 0); assert.equal(gridOpacity(10000), 0);
   const a = gridOpacity(2000), b = gridOpacity(3000); assert.ok(a > b && b > 0);
   assert.ok(Math.abs(gridOpacity(100, 0.5) - 0.06) < 1e-12);                                    // the level change scales it
+});
+
+test('trail opacity and width follow the speed against the level range, so light wind stays visible at the surface', () => {
+  assert.ok(Math.abs(trailAlpha(0, 4, 10) - 0.95) < 1e-9); assert.ok(Math.abs(trailAlpha(0, 0, 10) - 0.475) < 1e-9);     // 4 m/s of a 10 m/s range is full strength; calm air keeps half
+  assert.ok(Math.abs(trailWidthPx(0, 6, 10) - 2.5) < 1e-9); assert.ok(Math.abs(trailWidthPx(0, 0, 10) - 1.3) < 1e-9);
+  assert.ok(trailAlpha(0, 4, 10) > trailAlpha(0, 4, 50) && trailWidthPx(0, 4, 10) > trailWidthPx(0, 4, 50));              // the same wind is stronger at the surface than at 500 hPa
+  assert.equal(trailAlpha(0.3, 8), trailAlpha(0.3, 8, 20));                                                                // default range 20: the earlier curve
 });

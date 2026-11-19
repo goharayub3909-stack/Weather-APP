@@ -903,7 +903,7 @@ const DRAW_VS = GLSL_COMMON + `
 attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, place along the trail in recorded-point units (0 = head .. ${PTS - 1} = oldest, fractional between), side of the ribbon
 uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)
 uniform sampler2D tState, tHist; uniform vec2 uMC;
-uniform float uExag, uLift, uScale, uRange, uFromKm, uLevelMix, uFadeA;   // uRange: the speed with the top colour; uFromKm, uLevelMix: the level change (draw only); uFadeA: its fade
+uniform float uExag, uLift, uScale, uRange, uFromKm, uLevelMix, uFadeA, uMinLenPx;   // uRange: the speed with the top colour; uFromKm, uLevelMix: the level change (draw only); uFadeA: its fade
 varying vec3 vCol; varying float vA, vSide;
 ${windRampGlsl('windRamp')}                                      // windColour of core.js, generated from the same table
 // Clip-space position of a point lying on the terrain: the height of the drawn MESH at exactly this point plus a hover (or the level height for pressure levels).
@@ -942,7 +942,7 @@ void main() {
   // the taper run over the visible length
   float segsF = floor(clamp(uTrailSegments, ${WIND_SIM.trailSegments.min}., ${WIND_SIM.trailSegments.max}.) + .5);
   bool beyond = aIdx > segsF + .001; float u = min(aIdx, segsF);
-  gNeed = min(int(floor(min(u + .06, segsF))) + 2, ${PTS - 1});
+  gNeed = min(int(segsF) + 2, ${PTS - 1});            // the whole visible chain for every vertex: the calm-air stretch below needs the trail's full length
   vec2 last = head; bool chain = true;
   for (int k = 0; k <= ${PTS - 1}; k++) {
     if (k > gNeed) break;
@@ -956,13 +956,18 @@ void main() {
   }
   float okC, okP, okN;
   vec2 pCur = curveAt(u, okC), pPrev = curveAt(max(u - .05, 0.), okP), pNext = curveAt(u + .05, okN);
+  // Calm air: a trail shorter than uMinLenPx on screen is stretched from its head along its own path to that length. Display only: the simulation, the wind and the recorded
+  // positions are untouched; the stretched dashes stay pale and thin in light wind, so they read as calm, not as strong wind.
+  { float okE; vec2 pEnd = curveAt(segsF, okE); vec4 cH0 = clipAt(head), cE0 = clipAt(pEnd);
+    if (cH0.w > .01 && cE0.w > .01) { float Lpx = length((cE0.xy / cE0.w - cH0.xy / cH0.w) * uViewport) * .5; float st = clamp(uMinLenPx * uPixelRatio / max(Lpx, .5), 1., 14.);
+      pCur = head + (pCur - head) * st; pPrev = head + (pPrev - head) * st; pNext = head + (pNext - head) * st; } }
   vec3 vh = velocityAt(head);                                          // the wind speed at the head, as the simulation sees it (terrain adjustment and 1 km wind included): colours do not change with zoom or animation speed
   float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = u / segsF;
   float fadeIn = min(1., s.z / 12.), fadeOut = min(1., (s.w - s.z) / 20.);
   // trailAlpha and trailWidthPx of core.js: bright head fading smoothly to nothing at the tail, narrower towards the tail, a little wider and stronger in fast wind
   float lvlFade = 1.;                                                  // a level close to the ground fades out (levelFade of core.js): 300 m above the ground it is fully visible
   if (uLevelKm > 0.) { vec4 g = windGridH(head); float hm = g.z > .5 && g.w > 0. ? g.w * 1000. : uLevelKm * 1000.; lvlFade = clamp((hm - groundM(mercX(head.x), mercY(head.y))) / ${LEVEL_FADE_M.toFixed(1)}, 0., 1.); }
-  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut * lvlFade * uFadeA;
+  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.5 + .5 * min(1., sp / uRange / .4)) * fadeIn * fadeOut * lvlFade * uFadeA;
   vCol = windRamp(clamp(sp / uRange, 0., 1.));
   vec4 cPrev = clipAt(pPrev), cCur = clipAt(pCur), cNext = clipAt(pNext);
   // An invisible point (faded tail, previous life, missing wind) keeps its place with zero opacity: moving it off screen would stretch the
@@ -975,7 +980,7 @@ void main() {
   if (cNext.w < .01) cNext = cCur;
   vec2 d = (cNext.xy / cNext.w - cPrev.xy / cPrev.w) * uViewport; float len = length(d);
   vec2 n = len > 1e-4 ? vec2(-d.y, d.x) / len : vec2(0., 1.);
-  float widthPx = uPixelRatio * (1.3 + 1.2 * min(1., sp / 12.)) * (1. - .5 * t);          // trailWidthPx of core.js: the coloured core
+  float widthPx = uPixelRatio * (1.3 + 1.2 * min(1., sp / uRange / .6)) * (1. - .5 * t);          // trailWidthPx of core.js: the coloured core
   vSide = aSide;
   cCur.xy += n * aSide * (widthPx * ${RIBBON.outline.toFixed(2)} / uViewport) * cCur.w;     // the quad is wider than the core: the rest is the dark halo
   gl_Position = cCur;
@@ -986,7 +991,7 @@ void main() {
   float core = 1. - smoothstep(${(RIBBON.core - 0.06).toFixed(2)}, ${(RIBBON.core + 0.06).toFixed(2)}, e);
   float edge = 1. - smoothstep(.88, 1., e);
   vec3 c = mix(vec3(.02, .05, .1), vCol, core);                        // a dark halo round the colour keeps the streams crisp on bright satellite tiles and snow
-  gl_FragColor = vec4(c, vA * edge * mix(.55, 1., core));       // windRamp and the halo are already sRGB values and the canvas takes them as they are: no colorspace_fragment
+  gl_FragColor = vec4(c, vA * edge * mix(.3, 1., core));       // windRamp and the halo are already sRGB values and the canvas takes them as they are: no colorspace_fragment
 }`;
 
 let simRT = null, histRT = null, simMat = null, histMat = null, drawMat = null, simScene = null, histScene = null, simCam = null;
@@ -1021,7 +1026,7 @@ function initGpuWind() {
     geo.setAttribute('aIdx', new THREE.BufferAttribute(idx, 1)); geo.setAttribute('aSide', new THREE.BufferAttribute(side, 1)); geo.setIndex(new THREE.BufferAttribute(index, 1));
     drawMat = new THREE.ShaderMaterial({
       uniforms: {...wu, tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE},
-        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uRange: {value: WIND_RANGES.sfc}, uFromKm: {value: 0}, uLevelMix: {value: 1}, uFadeA: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
+        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uRange: {value: WIND_RANGES.sfc}, uFromKm: {value: 0}, uLevelMix: {value: 1}, uFadeA: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uMinLenPx: {value: 14}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
       vertexShader: DRAW_VS, fragmentShader: DRAW_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide});
     gpuLines = new THREE.Mesh(geo, drawMat); gpuLines.frustumCulled = false; gpuLines.renderOrder = 20; scene.add(gpuLines);
     windLines.visible = false; gpuReady = true; resetNext = true; syncWindLevels();

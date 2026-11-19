@@ -155,7 +155,7 @@ export function windRampGlsl(name = 'windRamp') {
   return body + '  return ' + c(WIND.length - 1) + ';\n}';
 }
 // The speed (m/s) that gets the top colour at each level: a screening choice so the palette is used fully at every level (the winds aloft are much stronger), not a threshold.
-export const WIND_RANGES = {sfc: 20, 1000: 20, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80};
+export const WIND_RANGES = {sfc: 10, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80};
 export const windRange = (level, sfcRange = WIND_RANGES.sfc) => level === 'sfc' ? sfcRange : WIND_RANGES[level] ?? WIND_RANGES.sfc;
 // The p-th percentile (0..1) of a list of numbers by linear interpolation between ranks; null for an empty list.
 export function percentile(values, p) {
@@ -710,7 +710,7 @@ export const WIND_SIM = {
   calmBlend: [0.02, 0.2],   // m/s: the direction goes from the particle's own heading (still air) to the wind's own (this fast) smoothly, so it never jumps
   trailPoints: 14,          // a trail is the live head plus 13 recorded positions (a ring buffer on the GPU)
   slotSeconds: 6 / 60,      // at 1x a position is recorded this often (1.3 s for 13 segments); at other speeds as often as the same amount of WIND time passes
-  defaultCount: 6000,       // trails drawn by default (up to maxParticles)
+  defaultCount: 4000,       // trails drawn by default (up to maxParticles)
   trailSegments: {min: 4, max: 13, default: 8},    // segments drawn per trail: the Trail length control (13 is the whole ring buffer)
   outsideFactor: 1.6,       // a particle further than this many view radii from the view centre is recycled
   maxParticles: 24576,      // 256 x 96 state texture
@@ -739,8 +739,8 @@ export const ringSlot = (head, k, n = WIND_SIM.trailPoints - 1) => ((head - (k -
 export const sameLife = (slotLife, slotAge, life, age) => slotLife === life && slotAge <= age + 1e-3;
 // Along a trail, t = 0 at the head and 1 at the tail: bright head fading smoothly to nothing, and a ribbon that narrows towards the tail. Faster wind is
 // a little wider and more opaque. Pixels are CSS pixels (times the device pixel ratio in the shader).
-export const trailAlpha = (t, speed) => 0.95 * Math.pow(1 - Math.min(1, Math.max(0, t)), 1.4) * (0.45 + 0.55 * Math.min(1, speed / 8));
-export const trailWidthPx = (t, speed) => (1.3 + 1.2 * Math.min(1, speed / 12)) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
+export const trailAlpha = (t, speed, range = 20) => 0.95 * Math.pow(1 - Math.min(1, Math.max(0, t)), 1.4) * (0.5 + 0.5 * Math.min(1, speed / (range * 0.4)));      // speed against the level's colour range, as the shader does (sp / uRange / .4): light wind stays visible at every level
+export const trailWidthPx = (t, speed, range = 20) => (1.3 + 1.2 * Math.min(1, speed / (range * 0.6))) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
 export const lifespan = r => WIND_SIM.life[0] + Math.min(1, Math.max(0, r)) * (WIND_SIM.life[1] - WIND_SIM.life[0]);
 // Move a point by a wind (u east, v north, m/s) for some seconds. Writes into out so the caller can avoid allocating.
 export function advect(lon, lat, u, v, seconds, out = [0, 0]) {
