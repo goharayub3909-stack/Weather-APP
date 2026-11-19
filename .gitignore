@@ -17,3 +17,6 @@ public/observation-data/station-meta.csv
 public/observation-data/station-elevations.json
 public/observation-data/qc-report-*.json
 public/observation-data/qc-state-*.json
+
+public/observation-data/pmd-ffd.json
+public/observation-data/*.tmp

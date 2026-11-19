@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { resolve, extname } from 'node:path';
 
 const root = fileURLToPath(new URL('./public/', import.meta.url));
+const projectRoot = fileURLToPath(new URL('./', import.meta.url));
 const cache = new Map();
 export { forecastURL } from './public/weather.js';
 import { forecastURL } from './public/weather.js';
 import { liveObservation, warmObservations } from './scripts/observation-sync.mjs';
+import { startRefresher, refreshStatus } from './scripts/dev-refresh.mjs';
 // Local secrets (git-ignored .env) are optional: without them the dev server serves published copies.
 try { process.loadEnvFile(fileURLToPath(new URL('./.env', import.meta.url))); } catch { /* no .env file */ }
 export function createServer(fetcher = fetch) {
@@ -21,6 +23,8 @@ export function createServer(fetcher = fetch) {
       if(!process.env.SOIL_SENSOR_FEED_URL)return res.end(JSON.stringify({schema_version:1,status:'not_configured',devices:[]}));
       try{const target=new URL(process.env.SOIL_SENSOR_FEED_URL);if(target.protocol!=='https:')throw Error();const headers=process.env.SOIL_SENSOR_API_KEY?{Authorization:'Bearer '+process.env.SOIL_SENSOR_API_KEY}:{};const upstream=await fetcher(target,{headers,signal:AbortSignal.timeout(10000)});if(!upstream.ok)throw Error();return res.end(JSON.stringify(validateSoilFeed(await upstream.json())));}catch{res.writeHead(502);return res.end(JSON.stringify({error:'Soil sensor bridge unavailable; no readings inferred.'}));}
     }
+    // What the local auto-refresh (scripts/dev-refresh.mjs) is doing, and cheap stamps of the data on disk: the 3D explorer polls this to notice newer data while it stays open.
+    if (url.pathname === '/api/refresh-status') { res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); return res.end(JSON.stringify(refreshStatus(projectRoot))); }
     if (url.pathname === '/api/forecast') {
       res.setHeader('Content-Type', 'application/json');
       let target;
@@ -64,4 +68,4 @@ export function createServer(fetcher = fetch) {
     catch { res.writeHead(500); res.end('Unable to load application'); }
   });
 }
-if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => { console.log('WeatherWalay Kissan & Sehat Hub listening on port ' + (process.env.PORT || 3000)); if (process.env.LIVE_OBSERVATIONS !== 'off') warmObservations(); });
+if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => { console.log('WeatherWalay Kissan & Sehat Hub listening on port ' + (process.env.PORT || 3000)); if (process.env.LIVE_OBSERVATIONS !== 'off') warmObservations(); if (process.env.AUTO_REFRESH !== 'off') { startRefresher({ root: projectRoot, log: console.log }); console.log('Auto-refresh is on: stations, METAR and PMD every 10 min, products every 30-180 min, ECMWF and the 1 km step as new runs arrive (AUTO_REFRESH=off to stop it; status at /api/refresh-status).'); } });

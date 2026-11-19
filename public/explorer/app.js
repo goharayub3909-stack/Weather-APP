@@ -7,7 +7,7 @@ import {cities} from '../cities.js';
 import {GRID, GridSampler, validDataset, unpackDataset, mercX, mercY, lonOfX, latOfY, terrarium, WORLD_KM, rainColour, snowColour, windColour,
   elevationColour, splitPrecip, terrainWind, flowGrid, flowGridJob, summariseHours, encodeView, decodeView, PRESETS, SNOW_WATER_MM_PER_CM, temperatureColour, WIND_LEVELS, pointRows,
   maxTierFor, labelIndex, labelsNear, LOD_LEVELS, LOD_TILES, FADE_FRACTION, lodAlpha, blendHeight, lodWanted, lodHole, TEMPERATURE_TICKS,
-  FLOW, WIND_SIM, QUALITY_STEPS, newQuality, qualityStep, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
+  FLOW, WIND_SIM, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
   validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT} from './core.js';
 import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND} from './core.js';
 
@@ -38,9 +38,9 @@ controls.mouseButtons = {LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.ROTATE, RIGH
 controls.touches = {ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE};
 controls.listenToKeyEvents(window);                                   // arrow keys move the map
 const BOUNDS = {west: GRID.west - 1, east: GRID.east + 1, south: GRID.south - 1, north: GRID.north + 1};
-const PLAIN_LIGHT = {sun: 2.1, hemi: 0.834};                               // elevation-colour terrain (no imagery): a strong sun and little ambient light, for contrast
-const hemi = new THREE.HemisphereLight(0xdbe8ff, 0x1b2430, PLAIN_LIGHT.hemi); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff1dc, PLAIN_LIGHT.sun); sun.position.set(-1, 0.55, -0.8); scene.add(sun);
+const PLAIN_LIGHT = {sun: 7.0, hemi: 1.0};                               // elevation-colour terrain (no imagery): a strong sun and low ambient light, tuned for colour-managed (sRGB) rendering with Lambert shading to match the reference contrast
+const hemi = new THREE.HemisphereLight(0xdfe8ee, 0x4a4030, PLAIN_LIGHT.hemi); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff3df, PLAIN_LIGHT.sun); sun.position.set(-0.86, 1.0, -0.57); scene.add(sun);
 
 function setView(v) {
   const [x, z] = toScene(v.lon, v.lat), t = v.tilt * Math.PI / 180, h = v.heading * Math.PI / 180;
@@ -140,7 +140,7 @@ const OW = 512, OH = Math.round(OW * H / W), overlay = document.createElement('c
 const octx = overlay.getContext('2d'), oimg = octx.createImageData(OW, OH);
 const tOverlay = document.createElement('canvas'); tOverlay.width = OW; tOverlay.height = OH;
 const tctx = tOverlay.getContext('2d'), timg = tctx.createImageData(OW, OH);
-const texture = new THREE.CanvasTexture(display); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 4;      // 8x anisotropic filtering at a grazing angle is the costliest texture fetch of the terrain shader; 4x is hardly different to look at
+const texture = new THREE.CanvasTexture(display); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8;      // 8x anisotropic filtering keeps the terrain sharp at a grazing angle (it was 4x, which looked soft on tilted views)
 // A level is cut away from every level below it, inside its own fade border, so the lower level never shows through (or pokes through) the detail.
 const emptyHole = () => new THREE.Vector4(1, 1, -1, -1);
 const holes = {base: {value: [emptyHole(), emptyHole(), emptyHole()]}, 9: {value: [emptyHole(), emptyHole(), emptyHole()]}, 10: {value: [emptyHole(), emptyHole(), emptyHole()]}, 11: {value: [emptyHole(), emptyHole(), emptyHole()]}};
@@ -257,18 +257,45 @@ async function runSliced(it) {
   work += performance.now() - t0;
   return {value: r.value, work};
 }
+// ---- normal maps from the full-resolution heights (normalMapJob in core.js explains the maths) ----
+// The mesh has a vertex every 4th (base) or 2nd (detail) height pixel, so its vertex normals light the relief at that resolution only; this gives the light every pixel's slope.
+// Tangent space, so no tangents are needed; the vertex normals themselves are untouched. A map depends on the exaggeration, so it is rebuilt (sliced, after a short pause) when that changes.
+function normalTexture(data, w, h) {
+  const t = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  t.colorSpace = THREE.NoColorSpace; t.flipY = false; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.anisotropy = 8; t.needsUpdate = true;
+  return t;
+}
+const baseNormals = {hts: null, w: W, h: H, z: Z, step: 4, mat: null, tex: null, gen: 0};           // one record per level: heights, size, mesh step, material, texture, run counter
+async function genNormals(t) {
+  const token = ++t.gen, exag = state.exag, out = t.tex ? t.tex.image.data : new Uint8Array(t.w * t.h * 4);
+  const job = normalMapJob(t.hts, t.w, t.h, SCALE / (2 ** t.z * 256), t.step, exag, out);
+  const guarded = (function* () { while (t.gen === token) { if (job.next().done) return true; yield; } return false; })();      // a newer run (or a dropped level) stops this one
+  if (!(await runSliced(guarded)).value) return false;
+  if (!t.tex) { t.tex = normalTexture(out, t.w, t.h); t.mat.normalMap = t.tex; t.mat.needsUpdate = true; } else t.tex.needsUpdate = true;
+  if (exag !== state.exag) scheduleNormals();                                                       // the slider moved while this was being built
+  return true;
+}
+let normalTimer = 0;
+function scheduleNormals(delay = 300) {
+  clearTimeout(normalTimer);
+  normalTimer = setTimeout(async () => {
+    if (baseNormals.mat) { baseNormals.step = state.detail ? 2 : 4; await genNormals(baseNormals); }
+    for (const L of [...lods.values()]) if (L.nrm) await genNormals(L.nrm);
+  }, delay);
+}
 function buildTerrain() {
   const g = gridGeometry(heights, W, H, TX0, TY0, Z, state.detail ? 2 : 4);
-  if (terrain) { terrain.geometry.dispose(); terrain.geometry = g; return; }
-  const mat = new THREE.MeshStandardMaterial({map: texture, roughness: 0.95, metalness: 0});
+  if (terrain) { terrain.geometry.dispose(); terrain.geometry = g; scheduleNormals(0); return; }     // another vertex spacing: the base map is rebuilt for it
+  const mat = new THREE.MeshLambertMaterial({map: texture});
   mat.customProgramCacheKey = () => 'lod-base'; mat.onBeforeCompile = sh => lodShader(sh, holes.base, false);
   terrain = new THREE.Mesh(g, mat);
   terrain.scale.y = state.exag; scene.add(terrain);
+  Object.assign(baseNormals, {hts: heights, mat, step: state.detail ? 2 : 4}); genNormals(baseNormals);
 }
 
 // ---- detail levels ----
 let patchBusy = false, moveStamp = 0;
-function disposeLevel(L) { scene.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.material.dispose(); L.texture.dispose(); L.hTex?.dispose(); L.fTex?.dispose(); }
+function disposeLevel(L) { scene.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.material.dispose(); L.texture.dispose(); L.hTex?.dispose(); L.fTex?.dispose(); if (L.nrm) { L.nrm.gen++; L.nrm.tex?.dispose(); } }
 function removeLevel(z) { const L = lods.get(z); if (!L) return; disposeLevel(L); lods.delete(z); updateHoles(); setDetailNote(); }
 const lodTimes = window.__lodTimes = [];                                // main-thread milliseconds of each detail level's synchronous stages (read by ?fps and by profiling)
 function tick(lap, name, fn) { const t0 = performance.now(), r = fn(); lap[name] = +(performance.now() - t0).toFixed(1); return r; }
@@ -276,32 +303,38 @@ async function startLevel(z, tx0, ty0) {
   patchBusy = true; setDetailNote('Loading detail…');
   const T = LOD_TILES, n = 2 ** z, lap = {z};
   try {
-    const [dem, img] = await Promise.all([loadTiles(TILE_URL, z, tx0, tx0 + T - 1, ty0, ty0 + T - 1), loadTiles(IMG_URL, z, tx0, tx0 + T - 1, ty0, ty0 + T - 1)]);
+    // imagery tiles only while imagery is on (they were fetched for nothing otherwise); switching it on later fetches them for the levels that exist (ensureLevelImagery)
+    const [dem, img] = await Promise.all([loadTiles(TILE_URL, z, tx0, tx0 + T - 1, ty0, ty0 + T - 1), state.imagery ? loadTiles(IMG_URL, z, tx0, tx0 + T - 1, ty0, ty0 + T - 1) : null]);
     if (dem.failed > T * T / 2) throw Error('terrain tiles unavailable');
     const dec = await runSliced(decodeDemJob(dem.canvas)); lap.decode = +dec.work.toFixed(1);
     const {hts, col} = dec.value, w = T * 256, h = T * 256;
     const pdisplay = document.createElement('canvas'); pdisplay.width = w; pdisplay.height = h;
-    const tex = new THREE.CanvasTexture(pdisplay); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const mat = new THREE.MeshStandardMaterial({map: tex, roughness: 0.95, metalness: 0, transparent: true, polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -(z - 8)});     // a few depth units only: a slope-dependent offset (factor) pulls grazing terrain over the trails
+    const tex = new THREE.CanvasTexture(pdisplay); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const mat = new THREE.MeshLambertMaterial({map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -(z - 8)});     // a few depth units only: a slope-dependent offset (factor) pulls grazing terrain over the trails
     mat.customProgramCacheKey = () => 'lod-detail'; mat.onBeforeCompile = sh => lodShader(sh, holes[z], true);
     const built = await runSliced(gridGeometryJob(hts, w, h, tx0, ty0, z, 2, true)); lap.mesh = +built.work.toFixed(1);     // sliced: the longest single block is about SLICE_MS
     const mesh = new THREE.Mesh(built.value, mat);
     mesh.scale.y = state.exag; mesh.renderOrder = z - 8;                     // detail after the opaque base, finer after coarser
     const mx0 = tx0 / n, mx1 = (tx0 + T) / n, my0 = ty0 / n, my1 = (ty0 + T) / n;
-    const L = {z, n, tx0, ty0, w, h, heights: hts, elev: col, sat: img.failed > T * T / 2 ? null : img.canvas, display: pdisplay, texture: tex, mesh, mx0, mx1, my0, my1,
+    const L = {z, n, tx0, ty0, w, h, heights: hts, elev: col, sat: !img || img.failed > T * T / 2 ? null : img.canvas, display: pdisplay, texture: tex, mesh, mx0, mx1, my0, my1,
       x0: (mx0 - MXC) * SCALE, x1: (mx1 - MXC) * SCALE, z0: (my0 - MYC) * SCALE, z1: (my1 - MYC) * SCALE};
     const cellM = 1 / n / 256 * 4 * SCALE * 1000;                            // metres per flow cell (4 pixels)
     const fl = await runSliced(flowGridJob(hts, w, h, 4, z === 11 ? 3 : z === 10 ? 2 : 1, z === 11 ? 16 : z === 10 ? 10 : 6, cellM)); lap.flow = +fl.work.toFixed(1);
     L.flow = {...fl.value, mx0, mx1, my0, my1};
+    L.nrm = {hts, w, h, z, step: 2, mat, tex: null, gen: 0};
+    await genNormals(L.nrm);
     tick(lap, 'textures', () => makeLevelTextures(L));
     // Reaching the GPU is the last big cost: ~25 MB of mesh and several 1280 x 1280 textures. Draw the content first (so the one upload carries it), then send
     // the textures and the mesh to the GPU in separate frames, so no single frame has to take all of it (one frame used to take everything).
     tick(lap, 'paint', () => paintPatch(L));
     await nextFrame(); renderer.initTexture(L.texture);
     if (L.hTex || L.fTex) { await nextFrame(); if (L.hTex) renderer.initTexture(L.hTex); if (L.fTex) renderer.initTexture(L.fTex); }
+    if (L.nrm.tex) { await nextFrame(); renderer.initTexture(L.nrm.tex); }
     await nextFrame();
     const old = lods.get(z); lods.set(z, L); scene.add(mesh); if (old) disposeLevel(old);
     tick(lap, 'holes', updateHoles); setDetailNote();
+    if (resetQuality(quality, performance.now())) renderer.setPixelRatio(DPR_CAP * QUALITY_STEPS[0].dpr);      // the frames of this load must not cost quality afterwards
+    if (state.imagery && !L.sat) ensureLevelImagery(L);
     lap.total = +['decode', 'mesh', 'flow', 'textures', 'holes', 'paint'].reduce((a, k) => a + (lap[k] || 0), 0).toFixed(1); lodTimes.push(lap);
   } catch (e) { setDetailNote('Detail unavailable: ' + e.message); }
   finally { patchBusy = false; }
@@ -314,6 +347,15 @@ function paintPatch(L) {
   if (tempDrawn) ctx.drawImage(tOverlay, sx, sy, sw, sh, 0, 0, L.w, L.h);
   if (overlayDrawn) ctx.drawImage(overlay, sx, sy, sw, sh, 0, 0, L.w, L.h);
   L.texture.needsUpdate = true;
+}
+// Imagery for a level that was built without it (imagery was off) or whose imagery failed: fetched when imagery is switched on.
+async function ensureLevelImagery(L) {
+  if (L.sat || L.satBusy) return;
+  L.satBusy = true;
+  try {
+    const T = LOD_TILES, img = await loadTiles(IMG_URL, L.z, L.tx0, L.tx0 + T - 1, L.ty0, L.ty0 + T - 1);
+    if (img.failed <= T * T / 2 && lods.get(L.z) === L) { L.sat = img.canvas; if (state.imagery) paintPatch(L); }
+  } catch { /* the elevation colours stay */ } finally { L.satBusy = false; }
 }
 function setDetailNote(msg) {
   const el = $('detail-state'); if (!el) return;
@@ -1040,6 +1082,31 @@ function update1km() {
 function apply1kmFlags() {
   ku.u1kTemp.value = km1.on && state.layers.has('t') && state.level === 'sfc' ? 1 : 0; ku.u1kRain.value = km1.on && state.layers.has('r') ? 1 : 0; ku.u1kSnow.value = km1.on && km1.phase && state.layers.has('s') ? 1 : 0; ku.u1kPhase.value = km1.phase ? 1 : 0; ku.u1kWind.value = km1.on ? 1 : 0;
 }
+// ---- newer data while the page stays open ----
+// A local server (node server.js) refreshes the files behind this page in the background (scripts/dev-refresh.mjs) and says when they changed (/api/refresh-status: file stamps).
+// Polled every 5 minutes: a hidden tab reloads itself, a visible one shows a small bar with a Reload button, so the view is never pulled away. The reload keeps the view (the
+// address holds it) and moves to the current hour. Without that endpoint (the published site) nothing is watched.
+const NEW_DATA_POLL_MS = 5 * 60000;
+async function dataStamp() {
+  try { const r = await fetch('../api/refresh-status', {cache: 'no-store'}); if (!r.ok) return null; const j = await r.json(); return j.data ? JSON.stringify([j.data.grid, j.data.km1]) : null; } catch { return null; }
+}
+const stampAtLoad = dataStamp();                                                                  // asked before anything else is loaded
+const reloadedForNewData = (() => { try { const f = sessionStorage.getItem('explorer-reload-now'); sessionStorage.removeItem('explorer-reload-now'); return f === '1'; } catch { return false; } })();
+function reloadForNewData() { try { sessionStorage.setItem('explorer-reload-now', '1'); } catch { /* no storage: the hour stays */ } location.reload(); }
+function showNewDataBar() {
+  if ($('new-data')) return;
+  const bar = document.createElement('div'), btn = document.createElement('button');
+  bar.id = 'new-data'; bar.setAttribute('role', 'status');
+  bar.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:50;display:flex;gap:10px;align-items:center;padding:8px 12px 8px 14px;border-radius:10px;background:#1d3557;color:#fff;font:13px/1.3 system-ui,sans-serif;box-shadow:0 4px 18px #0006';
+  btn.textContent = 'Reload'; btn.style.cssText = 'font:inherit;padding:4px 10px;border-radius:7px;border:0;background:#fff;color:#1d3557;cursor:pointer';
+  btn.addEventListener('click', reloadForNewData);
+  bar.append('New forecast data is ready.', btn); document.body.appendChild(bar);
+}
+async function watchNewData() {
+  const loaded = await stampAtLoad;
+  if (!loaded) return;
+  setInterval(async () => { const now = await dataStamp(); if (!now || now === loaded) return; if (document.hidden) reloadForNewData(); else showNewDataBar(); }, NEW_DATA_POLL_MS);
+}
 async function init1km() {
   try {
     const r = await fetch('../terrain-data/grid-1km/manifest.json', {cache: 'no-cache'});
@@ -1221,9 +1288,9 @@ $('w-follow').addEventListener('change', e => { state.follow = e.target.checked;
 $('w-speed').addEventListener('input', e => { state.speed = speedFromStep(+e.target.value); $('o-speed').textContent = state.speed + '×'; });
 $('w-trail').addEventListener('input', e => { state.trailSegs = +e.target.value; $('o-trail').textContent = trailLabel(state.trailSegs); });
 $('t-exag').addEventListener('input', e => { setExag(+e.target.value); });
-function setExag(v) { state.exag = v; $('t-exag').value = v; $('o-exag').textContent = v.toFixed(1) + '×'; if (terrain) terrain.scale.y = v; for (const L of lods.values()) L.mesh.scale.y = v; if (!gpuReady) for (let i = 0; i < MAXP; i++) for (let k = 0; k < TRAIL; k++) { const b = (i * TRAIL + k) * 3; hist[b + 1] = sceneHeightAt(hist[b], hist[b + 2]) + LIFT; } saveHash(); }
+function setExag(v) { if (v !== state.exag) scheduleNormals(); state.exag = v; $('t-exag').value = v; $('o-exag').textContent = v.toFixed(1) + '×'; if (terrain) terrain.scale.y = v; for (const L of lods.values()) L.mesh.scale.y = v; if (!gpuReady) for (let i = 0; i < MAXP; i++) for (let k = 0; k < TRAIL; k++) { const b = (i * TRAIL + k) * 3; hist[b + 1] = sceneHeightAt(hist[b], hist[b + 2]) + LIFT; } saveHash(); }
 function setLight() { sun.intensity = state.imagery && baseSat ? 1.5 : PLAIN_LIGHT.sun; hemi.intensity = state.imagery && baseSat ? 1.9 : PLAIN_LIGHT.hemi; }
-$('t-sat').addEventListener('change', e => { state.imagery = e.target.checked && !!baseSat; if (e.target.checked && !baseSat) e.target.checked = false; setLight(); paintOverlay(true); });
+$('t-sat').addEventListener('change', e => { state.imagery = e.target.checked && !!baseSat; if (e.target.checked && !baseSat) e.target.checked = false; setLight(); paintOverlay(true); if (state.imagery) for (const L of lods.values()) ensureLevelImagery(L); });
 $('t-detail').addEventListener('change', e => { state.detail = e.target.checked; buildTerrain(); });
 $('t-top').addEventListener('change', e => { const v = readView(); flyTo({...v, tilt: e.target.checked ? 0.5 : 50, heading: 0}); });
 controls.addEventListener('end', saveHash);
@@ -1353,7 +1420,7 @@ function frame(now) {
   buildTerrain(); loadLabels();
   const v = decodeView(location.hash);
   if (v) { state.layers = new Set(v.layers); state.pendingLevel = v.level; setExag(v.exag); state.hour = Math.min(v.hour, sampler?.lastHour ?? v.hour); setView(v); } else setView(PRESETS[0]);
-  const n = nowHour(); if (!v && n !== null) state.hour = Math.round(n);
+  const n = nowHour(); if ((!v || reloadedForNewData) && n !== null) state.hour = Math.round(n);        // a reload for newer data keeps the view but goes to the current hour
   if (data) $('t-slider').max = sampler.lastHour;
   if (data?.model === 'ecmwf_ifs_0p1') $('credit-forecast').textContent = `Forecast: ECMWF Open Data (CC BY 4.0), IFS 0.1° (9 km), run ${data.run.slice(0, 13).replace('T', ' ')} UTC, 3-hourly, interpolated in time`;
   buildAltitudeBar(); await markAvailableLevels();                                              // the level files are loaded when a level is chosen
@@ -1367,4 +1434,5 @@ function frame(now) {
   if (loaded.failed) notes.push(`${loaded.failed} terrain tile(s) failed to load and show as sea level.`);
   if (notes.length) { $('status').textContent = notes.join(' '); setTimeout(() => { $('status').hidden = true; }, 7000); } else $('status').hidden = true;
   requestAnimationFrame(frame);
+  watchNewData();
 })();

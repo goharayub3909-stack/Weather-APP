@@ -209,7 +209,9 @@ export function summariseHours(hours) {
 
 // ---- terrain colour ----
 // Metres above sea level to a land or sea colour. Negative values are the sea floor (darker with depth).
-const LAND = [[0, 124, 156, 64], [300, 144, 162, 73], [650, 148, 165, 75], [900, 180, 176, 96], [1100, 225, 190, 122], [1700, 225, 177, 126], [2600, 205, 164, 138], [3600, 201, 179, 169], [4800, 222, 226, 234], [7000, 255, 255, 255]];
+const LAND = [[0, 84, 107, 61], [550, 102, 117, 69], [900, 115, 102, 69],
+  [1500, 128, 97, 71], [2400, 140, 120, 102], [3400, 175, 165, 155],
+  [4500, 217, 217, 217], [5500, 242, 244, 246], [7000, 255, 255, 255]];
 export const elevationColour = m => m <= 0 ? ramp([[-4000, 6, 18, 36], [0, 20, 52, 82]], m) : ramp(LAND, m);
 
 // ---- terrain-following wind ----
@@ -508,14 +510,17 @@ export const lodAlpha = edge => smooth(edge / FADE_FRACTION);                   
 export const lodHeightWeight = edge => smooth((edge - FADE_FRACTION) / FADE_FRACTION);   // 0 over the outer border, 1 after the next one
 export const lodHole = FADE_FRACTION;                                               // the level below is cut away inside this inset
 export function blendHeight(lower, own, edge) { const w = lodHeightWeight(edge); return lower * (1 - w) + own * w; }
-// Which levels the camera distance asks for, lowest first.
-export const lodWanted = distKm => LOD_LEVELS.filter(l => distKm <= l.maxDist).map(l => l.z);
+// Which levels the camera distance asks for, lowest first. A level is requested once the camera is within LOD_ASK times its distance, so it is on screen by the
+// time the camera arrives; it is dropped again beyond LOD_KEEP times that distance (app.js), so there is no flicker at the boundary.
+export const LOD_ASK = 1.3;
+export const lodWanted = distKm => LOD_LEVELS.filter(l => distKm <= l.maxDist * LOD_ASK).map(l => l.z);
 
 // ---- quality governor ----
-// Slow frames (a smoothed frame time over 24 ms) step the quality down, one notch at most every 2.5 s; fast frames (under 12.5 ms for 6 s) step it back up.
-// A notch lowers the pixel ratio first (the terrain fragment shader is the biggest cost when the view is tilted), then the number of wind trails drawn.
-export const QUALITY_STEPS = [{dpr: 1, trails: 1}, {dpr: 0.85, trails: 1}, {dpr: 0.7, trails: 1}, {dpr: 0.7, trails: 0.7}, {dpr: 0.6, trails: 0.5}, {dpr: 0.5, trails: 0.35}];
-export const QUALITY = {slowMs: 24, fastMs: 12.5, holdMs: 2500, recoverMs: 6000};
+// Slow frames (a smoothed frame time over 28 ms) step the quality down, one notch at most every 2.5 s; fast frames (under 19 ms for 2.5 s) step it back up. The fast limit
+// must sit above one frame of a 60 Hz display (16.7 ms), or a screen that keeps up could never recover what it gave up. A notch lowers the pixel ratio first (the terrain
+// fragment shader is the biggest cost when the view is tilted), never below 0.75, then the number of wind trails drawn.
+export const QUALITY_STEPS = [{dpr: 1, trails: 1}, {dpr: 0.85, trails: 1}, {dpr: 0.75, trails: 1}, {dpr: 0.75, trails: 0.7}, {dpr: 0.75, trails: 0.5}, {dpr: 0.75, trails: 0.35}];
+export const QUALITY = {slowMs: 28, fastMs: 19, holdMs: 2500, recoverMs: 2500};
 export const newQuality = () => ({level: 0, ema: 16, changed: 0, fastSince: 0});
 // Updates q in place with one frame (now and frameMs in milliseconds); returns true when the level changed.
 export function qualityStep(q, now, frameMs) {
@@ -527,6 +532,68 @@ export function qualityStep(q, now, frameMs) {
   else q.fastSince = 0;
   if (next === q.level) return false;
   q.level = next; q.changed = now; q.fastSince = 0; return true;
+}
+
+// Back to the top level (called when a detail level has finished loading: the frames of the load itself must not cost quality afterwards). The smoothed frame time
+// restarts from a neutral 16 ms and the hold time starts now, so the governor judges only what comes next. Returns true when the level changed.
+export function resetQuality(q, now) {
+  const was = q.level;
+  q.level = 0; q.ema = 16; q.changed = now; q.fastSince = 0;
+  return was !== 0;
+}
+
+// ---- terrain normal maps ----
+// The mesh has a vertex every `step` pixels of the height data (4 on the base, 2 on a detail level), so the light, which reads the interpolated vertex normals, shows the relief
+// at that resolution only. A tangent-space normal map from the full-resolution heights puts the rest back. three.js builds its tangent frame around the INTERPOLATED VERTEX
+// NORMAL, so a plain "slope of the heights" map would count the slope the mesh already has twice. Each texel therefore stores the full-resolution normal expressed in the frame
+// of the mesh's own normal at that texel: on a smooth slope the two agree and the texel is flat (128, 128, 255), and only the detail the mesh cannot show is left.
+//
+// Geometry as in gridGeometryJob (app.js): x east and z south in km (pixelKm per height pixel), y = height / 1000 (negative heights are 0), the mesh is scaled in y by the
+// exaggeration `exag`. The vertex normal there is (-dy/dx, 1, -dy/dz) on the un-exaggerated surface; the world normal of the exaggerated mesh is (nx, ny / exag, nz).
+// The frame is the one three.js derives from the texture coordinates: T along +u (east), B along +v (north), both projected onto the plane at right angles to the normal and
+// scaled together by 1 / sqrt(max(|T|^2, |B|^2)); the shader computes normalize(T mx + B my + N mz) from the texel (mx, my, mz). Texel rows are stored bottom row first
+// (v = 0 at row 0), as a DataTexture is uploaded without flipping. out: Uint8Array w * h * 4. Yields every ~20,000 texels so the caller can slice the work.
+export function* normalMapJob(hts, w, h, pixelKm, step, exag, out) {
+  const cols = Math.floor((w - 1) / step) + 1, rows = Math.floor((h - 1) / step) + 1;
+  const hk = (x, y) => Math.max(0, hts[y * w + x]) / 1000;
+  const NX = new Float32Array(cols * rows), NY = new Float32Array(cols * rows), NZ = new Float32Array(cols * rows);
+  for (let j = 0; j < rows; j++) {
+    const py = Math.min(j * step, h - 1), pn = Math.min(Math.max(j - 1, 0) * step, h - 1), ps = Math.min(Math.min(j + 1, rows - 1) * step, h - 1);
+    for (let i = 0; i < cols; i++) {
+      const px = Math.min(i * step, w - 1), pw = Math.min(Math.max(i - 1, 0) * step, w - 1), pe = Math.min(Math.min(i + 1, cols - 1) * step, w - 1), k = j * cols + i;
+      const dx = (pe - pw) * pixelKm, dz = (ps - pn) * pixelKm;
+      const nx = dx > 0 ? -(hk(pe, py) - hk(pw, py)) / dx : 0, nz = dz > 0 ? -(hk(px, ps) - hk(px, pn)) / dz : 0, inv = 1 / Math.sqrt(nx * nx + 1 + nz * nz);
+      NX[k] = nx * inv; NY[k] = inv; NZ[k] = nz * inv;
+    }
+  }
+  const rowsPerYield = Math.max(1, Math.round(20000 / w));
+  for (let py = 0; py < h; py++) {
+    const y0 = Math.max(py - 1, 0), y1 = Math.min(py + 1, h - 1), fy = Math.min(py / step, rows - 1), j0 = Math.min(Math.floor(fy), Math.max(rows - 2, 0)), ty = Math.min(1, fy - j0), j1 = Math.min(j0 + 1, rows - 1);
+    const rowOut = (h - 1 - py) * w;
+    for (let px = 0; px < w; px++) {
+      // the full-resolution normal of the exaggerated surface
+      const x0 = Math.max(px - 1, 0), x1 = Math.min(px + 1, w - 1);
+      const gx = (hk(x1, py) - hk(x0, py)) / ((x1 - x0) * pixelKm), gz = (hk(px, y1) - hk(px, y0)) / ((y1 - y0) * pixelKm);
+      const fl = 1 / Math.sqrt(exag * exag * (gx * gx + gz * gz) + 1), Fx = -exag * gx * fl, Fy = fl, Fz = -exag * gz * fl;
+      // the mesh normal at this texel: the vertex normals of the surrounding lattice, interpolated, then taken to the exaggerated mesh
+      const fx = Math.min(px / step, cols - 1), i0 = Math.min(Math.floor(fx), Math.max(cols - 2, 0)), tx = Math.min(1, fx - i0), i1 = Math.min(i0 + 1, cols - 1);
+      const a = j0 * cols + i0, b = j0 * cols + i1, c = j1 * cols + i0, d = j1 * cols + i1;
+      const w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
+      let Nx = NX[a] * w00 + NX[b] * w10 + NX[c] * w01 + NX[d] * w11, Ny = (NY[a] * w00 + NY[b] * w10 + NY[c] * w01 + NY[d] * w11) / exag, Nz = NZ[a] * w00 + NZ[b] * w10 + NZ[c] * w01 + NZ[d] * w11;
+      const nl = 1 / Math.sqrt(Nx * Nx + Ny * Ny + Nz * Nz); Nx *= nl; Ny *= nl; Nz *= nl;
+      // the tangent frame around that normal (see above) and the texel that makes normalize(T mx + B my + N mz) equal the full-resolution normal
+      const tt = 1 - Nx * Nx, bb = 1 - Nz * Nz, top = Math.max(tt, bb);
+      let mx = 0, my = 0, mz = 1;
+      if (top > 1e-9) {
+        const s2 = 1 / top, G11 = tt * s2, G22 = bb * s2, G12 = Nx * Nz * s2, det = G11 * G22 - G12 * G12;
+        const cN = Fx * Nx + Fy * Ny + Fz * Nz, sc = Math.sqrt(s2), r1 = sc * (Fx - Nx * cN), r2 = sc * (-Fz + Nz * cN);
+        if (det > 1e-9 && cN > 0) { mx = (G22 * r1 - G12 * r2) / det; my = (G11 * r2 - G12 * r1) / det; mz = cN; }
+      }
+      const il = 1 / Math.sqrt(mx * mx + my * my + mz * mz), o = (rowOut + px) * 4;
+      out[o] = Math.round(127.5 + 127.5 * mx * il); out[o + 1] = Math.round(127.5 + 127.5 * my * il); out[o + 2] = Math.round(127.5 + 127.5 * mz * il); out[o + 3] = 255;
+    }
+    if (py % rowsPerYield === rowsPerYield - 1) yield;
+  }
 }
 
 // ---- wind particles ----

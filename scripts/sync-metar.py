@@ -1,5 +1,6 @@
 """Publish Pakistan airport observations from the free official NOAA METAR API."""
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,7 +52,7 @@ if __name__ == '__main__':
         qc = quality_control(data, path.parent)
         out = {'source':'NOAA Aviation Weather Center','retrieved_at':datetime.now(timezone.utc).isoformat(),'stations':data}
         if qc: out['qc'] = qc
-        path.write_text(json.dumps(out,separators=(',',':'))+'\n')
+        tmp=path.with_name(path.name+'.tmp'); tmp.write_text(json.dumps(out,separators=(',',':'))+'\n'); os.replace(tmp,path)      # replaced in one step: a reader (the 1 km step) never sees half a file
         print('Published Pakistan airport reports:',len(data))
     except Exception:
         print('METAR refresh unavailable; no new reports published.')

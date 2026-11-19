@@ -74,6 +74,21 @@ test('colour ramps are transparent when dry, ordered with intensity, and snow is
   assert.deepEqual(elevationColour(7000), [255, 255, 255]);
   assert.ok(elevationColour(-100)[2] < elevationColour(0)[2]);
 });
+test('land colours: the stops are exact, in between is linear, and the sea ramp is unchanged', () => {
+  const stops = [[0, [84, 107, 61]], [550, [102, 117, 69]], [900, [115, 102, 69]], [1500, [128, 97, 71]], [2400, [140, 120, 102]], [3400, [175, 165, 155]],
+    [4500, [217, 217, 217]], [5500, [242, 244, 246]], [7000, [255, 255, 255]]];
+  for (const [m, rgb] of stops) assert.deepEqual(elevationColour(m || 0.001), rgb, `${m} m`);           // exactly 0 m is the shore and takes the sea ramp, so the first land stop is read just above it
+  assert.deepEqual(elevationColour(275), [93, 112, 65]);                         // half way between 0 and 550 m: (84 + 102) / 2, (107 + 117) / 2, (61 + 69) / 2
+  assert.deepEqual(elevationColour(1200), [122, 100, 70]);                       // half way between 900 and 1500 m, (115 + 128) / 2 rounded
+  assert.deepEqual(elevationColour(9000), [255, 255, 255]);                      // above the last stop
+  assert.equal(elevationColour(0.5).length, 3);
+  assert.ok(elevationColour(100)[1] > elevationColour(100)[0]);                  // plains read green: green is the strongest channel
+  assert.ok(elevationColour(1500)[0] > elevationColour(1500)[1]);                // hills read brown: red is stronger than green
+  const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  assert.ok(lum(elevationColour(4500)) > lum(elevationColour(3400)) && lum(elevationColour(3400)) > lum(elevationColour(2400)));      // snow line: brighter with height
+  assert.deepEqual(elevationColour(0), [20, 52, 82]);                            // exactly 0 m is the shore
+  assert.deepEqual(elevationColour(-4000), [6, 18, 36]); assert.deepEqual(elevationColour(-0.0001), [20, 52, 82]);   // sea floor and just below the shore, unchanged
+});
 test('convective split follows the CAPE and rain thresholds', () => {
   assert.deepEqual(splitPrecip(2, 800), {convective: 2, other: 0});
   assert.deepEqual(splitPrecip(2, 300), {convective: 0, other: 2});

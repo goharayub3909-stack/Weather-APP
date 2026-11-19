@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseStationPage, parseCities, pktIso, labelPkt, compassDegrees, applyPmdFfd} from '../scripts/pmd-ffd.mjs';
+import {parseStationPage, parseCities, pktIso, labelPkt, compassDegrees, applyPmdFfd, freshPmdFfd} from '../scripts/pmd-ffd.mjs';
 import {parseLabel} from '../public/realtime/core.js';
 
 // The structure of ffd.pmd.gov.pk/staff/weather-display?city=..., reduced: the station block, the FORECAST block (must be ignored) and the footer.
@@ -87,4 +87,46 @@ test('matching by name, newer rows kept, no-observation pages skipped, unmatched
   assert.equal(data.stations[0].v[5], 25);                                              // Sheikhupura by name
   assert.equal(newer.v[5], 24.1);                                                       // its own sync (05:10 pm) is newer than the page's 05:00 pm
   assert.equal(data.stations[2].v[5], 1);
+});
+
+// ---- the PMD pages with a short memory (a local server refreshes the stations every 10 minutes but reads PMD's site at most every 30) ----
+function memory(initial) {
+  const io = {file: initial, reads: 0, writes: 0, fetches: 0};
+  io.read = async () => { io.reads++; if (io.file === undefined) throw Error('ENOENT'); return io.file; };
+  io.write = async (f, text) => { io.writes++; io.file = text; };
+  io.fetchPages = async () => { io.fetches++; return {source: 'pages', fetched_at: new Date(io.now).toISOString(), stations: [{slug: 'lahore'}], failed: []}; };
+  io.now = Date.parse('2026-11-19T10:00:00Z');
+  return io;
+}
+const opts = (io, maxAgeMin) => ({cacheFile: 'cache.json', maxAgeMin, now: io.now, fetchPages: io.fetchPages, read: io.read, write: io.write});
+const cachedAt = (iso, stations = [{slug: 'lahore'}]) => JSON.stringify({source: 'pages', fetched_at: iso, stations, failed: []});
+
+test('PMD cache: with no age limit (CI) the pages are always read, and no copy is read or written', async () => {
+  const io = memory(cachedAt('2026-11-19T09:59:00Z'));
+  const r = await freshPmdFfd(opts(io, 0));
+  assert.equal(io.fetches, 1); assert.equal(io.reads, 0); assert.equal(io.writes, 0); assert.equal(r.from_cache, undefined);
+});
+test('PMD cache: a copy younger than the limit is reused, an older one is replaced', async () => {
+  const young = memory(cachedAt('2026-11-19T09:40:00Z'));                                              // 20 minutes old, limit 30
+  const a = await freshPmdFfd(opts(young, 30));
+  assert.equal(young.fetches, 0); assert.equal(a.from_cache, true); assert.equal(a.stations.length, 1);
+  const old = memory(cachedAt('2026-11-19T09:29:00Z'));                                                // 31 minutes old
+  const b = await freshPmdFfd(opts(old, 30));
+  assert.equal(old.fetches, 1); assert.equal(old.writes, 1); assert.equal(b.from_cache, undefined);
+  assert.equal(JSON.parse(old.file).fetched_at, '2026-11-19T10:00:00.000Z');                            // the new read is what is kept
+});
+test('PMD cache: no copy, a broken copy, an empty copy or a copy from the future all lead to a fresh read', async () => {
+  for (const initial of [undefined, 'not json', cachedAt('2026-11-19T09:55:00Z', []), cachedAt('2026-11-19T11:00:00Z'), JSON.stringify({stations: [{slug: 'x'}]})]) {
+    const io = memory(initial);
+    await freshPmdFfd(opts(io, 30));
+    assert.equal(io.fetches, 1, String(initial).slice(0, 40)); assert.equal(io.writes, 1);
+  }
+});
+test('PMD cache: a copy that cannot be written does not stop the refresh, and a failed read of the pages is passed on', async () => {
+  const io = memory(undefined); io.write = async () => { throw Error('read-only'); };
+  const r = await freshPmdFfd(opts(io, 30));
+  assert.equal(r.stations.length, 1);
+  const bad = memory(undefined); bad.fetchPages = async () => { throw Error('PMD unavailable'); };
+  await assert.rejects(freshPmdFfd(opts(bad, 30)), /PMD unavailable/);
+  assert.equal(bad.writes, 0);
 });

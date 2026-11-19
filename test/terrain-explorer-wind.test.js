@@ -164,6 +164,7 @@ test('slow frames step quality down one notch at a time, at most every 2.5 s, an
   for (let i = 1; i < changes.length; i++) assert.ok(changes[i] - changes[i - 1] >= QUALITY.holdMs);
   assert.ok(QUALITY_STEPS.every((s, i) => i === 0 || (s.dpr <= QUALITY_STEPS[i - 1].dpr && s.trails <= QUALITY_STEPS[i - 1].trails)));    // each notch is never more demanding
   assert.ok(QUALITY_STEPS.slice(0, 3).every(s => s.trails === 1));                                                             // the pixel ratio goes first, the trails after
+  assert.ok(QUALITY_STEPS.every(s => s.dpr >= 0.75));                                                                          // the picture never gets softer than 0.75 of the screen's pixels
 });
 test('after the frames speed up again quality comes back, slowly, and a single slow frame does not move it', () => {
   const q = newQuality(); let t = 10000;
@@ -171,7 +172,7 @@ test('after the frames speed up again quality comes back, slowly, and a single s
   const low = q.level; assert.ok(low >= 2);
   for (let i = 0; i < 60; i++) { t += 10; qualityStep(q, t, 10); }                                                            // 0.6 s of fast frames: too soon
   assert.equal(q.level, low);
-  for (let i = 0; i < 9000; i++) { t += 10; qualityStep(q, t, 10); }                                                        // 90 s of fast frames: one notch per 6 s
+  for (let i = 0; i < 9000; i++) { t += 10; qualityStep(q, t, 10); }                                                        // 90 s of fast frames: one notch per 2.5 s
   assert.equal(q.level, 0);
   const before = q.level; t += 5000; qualityStep(q, t, 250); assert.equal(q.level, before);                                    // one hitch among good frames: nothing happens
 });

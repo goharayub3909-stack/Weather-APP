@@ -4,7 +4,7 @@
 // Run: node scripts/sync-realtime.mjs
 import {readFile, writeFile, mkdir, rename} from 'node:fs/promises';
 import {fetchFeed, realtimeWithElevations, stationsFromRealtime} from './observation-sync.mjs';
-import {fetchAll as fetchPmdFfd, applyPmdFfd} from './pmd-ffd.mjs';
+import {freshPmdFfd, applyPmdFfd} from './pmd-ffd.mjs';
 import {parseLabel} from '../public/realtime/core.js';
 import {qcRealtime} from './obs-qc.mjs';
 
@@ -29,7 +29,7 @@ try {
   const data = await realtimeWithElevations(raw);
   if (env.PMD_FFD !== '0') {                                                  // PMD FFD page readings give the PMD rows current values; a failure here never stops the refresh
     try {
-      const sum = applyPmdFfd(data, await fetchPmdFfd(), parseLabel);
+      const sum = applyPmdFfd(data, await freshPmdFfd({cacheFile: new URL('pmd-ffd.json', OUT), maxAgeMin: Number(env.PMD_FFD_MAX_AGE_MIN || 0)}), parseLabel);     // a local server sets PMD_FFD_MAX_AGE_MIN=30
       console.log(`PMD FFD page: ${sum.updated} PMD stations updated, ${sum.kept_newer} already newer, ${sum.no_observation} without an observation, ${sum.unmatched.length} unmatched`);
     } catch (e) { console.log('PMD FFD page unavailable:', e.message); }
   }

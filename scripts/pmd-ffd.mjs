@@ -154,6 +154,22 @@ export async function fetchAll({pauseMs = 700, budgetMs = 5 * 60 * 1000, onProgr
 }
 
 // node scripts/pmd-ffd.mjs --apply   patches the PMD rows of the existing public/observation-data/realtime.json (and stations.json) in place, no WeatherWalay login
+// The PMD pages with a short memory: with maxAgeMin > 0 a read younger than that is reused (and re-applied to the fresh WeatherWalay feed), so a local server that
+// refreshes the stations every 10 minutes asks PMD's site at most every 30. maxAgeMin 0 (the default, and what CI uses) always reads the pages.
+export async function freshPmdFfd({cacheFile, maxAgeMin = 0, now = Date.now(), fetchPages = fetchAll, read = f => readFile(f, 'utf8'), write = (f, text) => writeFile(f, text)} = {}) {
+  if (maxAgeMin > 0 && cacheFile) {
+    try {
+      const cached = JSON.parse(await read(cacheFile));
+      const age = now - Date.parse(cached.fetched_at);
+      if (Array.isArray(cached.stations) && cached.stations.length && age >= 0 && age < maxAgeMin * 60000) return {...cached, from_cache: true};
+    } catch { /* no usable copy: read the pages */ }
+  }
+  const pages = await fetchPages();
+  if (maxAgeMin > 0 && cacheFile) { try { await write(cacheFile, JSON.stringify(pages)); } catch { /* read-only checkout: no copy */ } }
+  return pages;
+}
+
+import {readFile, writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href && process.argv.includes('--apply')) {
   const {readFile, writeFile, rename} = await import('node:fs/promises');
