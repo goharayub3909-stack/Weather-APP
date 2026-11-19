@@ -605,6 +605,14 @@ export function meshCellHeight(ha, hb, hc, hd, tx, ty) {
   return tx + ty <= 1 ? ha + tx * (hb - ha) + ty * (hc - ha) : hd + (1 - tx) * (hc - hd) + (1 - ty) * (hb - hd);
 }
 
+// The simulation and history passes only need the particles that are drawn: the first ceil(drawn / columns) rows of the state texture. Rows outside are not touched (a scissor), so
+// they go stale; when more rows are needed later the rows that become active are respawned first (their old state is meaningless). Returns the rows to simulate and the row
+// range [from, to) to respawn, or null. prevRows = 0 means nothing was simulated yet (the first frame respawns everything anyway).
+export function simRowRange(drawn, columns, rowsTotal, prevRows) {
+  const rows = Math.min(rowsTotal, Math.max(1, Math.ceil(Math.max(0, drawn) / columns)));
+  return {rows, activate: prevRows > 0 && rows > prevRows ? [prevRows, rows] : null};
+}
+
 // ---- wind particles ----
 // The simulation itself runs on the GPU (app.js); these are its rules, written once here so they can be tested with numbers. The shader uses the
 // same constants and the same formulas (advect, withMinimumSpeed, respawnBox, outsideView).
@@ -617,8 +625,8 @@ export const WIND_SIM = {
   calmBlend: [0.02, 0.2],   // m/s: the direction goes from the particle's own heading (still air) to the wind's own (this fast) smoothly, so it never jumps
   trailPoints: 14,          // a trail is the live head plus 13 recorded positions (a ring buffer on the GPU)
   slotSeconds: 6 / 60,      // at 1x a position is recorded this often (1.3 s for 13 segments); at other speeds as often as the same amount of WIND time passes
-  defaultCount: 16000,      // trails drawn by default (up to maxParticles)
-  trailSegments: {min: 4, max: 13, default: 13},   // segments drawn per trail: the Trail length control (13 is the whole ring buffer)
+  defaultCount: 6000,       // trails drawn by default (up to maxParticles)
+  trailSegments: {min: 4, max: 13, default: 8},    // segments drawn per trail: the Trail length control (13 is the whole ring buffer)
   outsideFactor: 1.6,       // a particle further than this many view radii from the view centre is recycled
   maxParticles: 24576,      // 256 x 96 state texture
 };
@@ -647,7 +655,7 @@ export const sameLife = (slotLife, slotAge, life, age) => slotLife === life && s
 // Along a trail, t = 0 at the head and 1 at the tail: bright head fading smoothly to nothing, and a ribbon that narrows towards the tail. Faster wind is
 // a little wider and more opaque. Pixels are CSS pixels (times the device pixel ratio in the shader).
 export const trailAlpha = (t, speed) => 0.95 * Math.pow(1 - Math.min(1, Math.max(0, t)), 1.4) * (0.45 + 0.55 * Math.min(1, speed / 8));
-export const trailWidthPx = (t, speed) => (1.9 + 1.7 * Math.min(1, speed / 12)) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
+export const trailWidthPx = (t, speed) => (1.3 + 1.2 * Math.min(1, speed / 12)) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
 export const lifespan = r => WIND_SIM.life[0] + Math.min(1, Math.max(0, r)) * (WIND_SIM.life[1] - WIND_SIM.life[0]);
 // Move a point by a wind (u east, v north, m/s) for some seconds. Writes into out so the caller can avoid allocating.
 export function advect(lon, lat, u, v, seconds, out = [0, 0]) {

@@ -7,7 +7,7 @@ import {cities} from '../cities.js';
 import {GRID, GridSampler, validDataset, unpackDataset, mercX, mercY, lonOfX, latOfY, terrarium, WORLD_KM, rainColour, snowColour, windColour,
   elevationColour, splitPrecip, terrainWind, flowGrid, flowGridJob, summariseHours, encodeView, decodeView, PRESETS, SNOW_WATER_MM_PER_CM, temperatureColour, WIND_LEVELS, pointRows,
   maxTierFor, labelIndex, labelsNear, LOD_LEVELS, LOD_TILES, FADE_FRACTION, lodAlpha, blendHeight, lodWanted, lodHole, TEMPERATURE_TICKS,
-  FLOW, WIND_SIM, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
+  FLOW, WIND_SIM, simRowRange, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
   validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT} from './core.js';
 import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND} from './core.js';
 
@@ -571,7 +571,7 @@ function stepWind(dt) {
 const GPU_W = 256, GPU_H = 96, GPU_N = GPU_W * GPU_H, HIST = WIND_SIM.trailPoints - 1, PTS = WIND_SIM.trailPoints;
 // ?cpuwind in the address forces the CPU simulation (for testing the fallback).
 const gpuWind = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float') && renderer.capabilities.maxVertexTextures >= 15 && renderer.capabilities.maxTextureSize >= GPU_W * HIST && !new URLSearchParams(location.search).has('cpuwind');
-let gpuReady = false, gpuLines = null, resetNext = true, windKey = '', baseHTex = null, baseFTex = null, simCur = 0, simFrame = 0, histCur = 0, histHead = 0, slotClock = 0;
+let gpuReady = false, gpuLines = null, activeRows = 0, resetNext = true, windKey = '', baseHTex = null, baseFTex = null, simCur = 0, simFrame = 0, histCur = 0, histHead = 0, slotClock = 0;
 function floatTexture(data, w, h, format = THREE.RGBAFormat) { const t = new THREE.DataTexture(data, w, h, format, THREE.FloatType); t.needsUpdate = true; return t; }
 const emptyF = floatTexture(new Float32Array(4), 1, 1), emptyR = floatTexture(new Float32Array(1), 1, 1, THREE.RedFormat);
 function flowTexture(F) {
@@ -889,7 +889,7 @@ void main() {
   if (cNext.w < .01) cNext = cCur;
   vec2 d = (cNext.xy / cNext.w - cPrev.xy / cPrev.w) * uViewport; float len = length(d);
   vec2 n = len > 1e-4 ? vec2(-d.y, d.x) / len : vec2(0., 1.);
-  float widthPx = uPixelRatio * (1.9 + 1.7 * min(1., sp / 12.)) * (1. - .5 * t);          // trailWidthPx of core.js: the coloured core
+  float widthPx = uPixelRatio * (1.3 + 1.2 * min(1., sp / 12.)) * (1. - .5 * t);          // trailWidthPx of core.js: the coloured core
   vSide = aSide;
   cCur.xy += n * aSide * (widthPx * ${RIBBON.outline.toFixed(2)} / uViewport) * cCur.w;     // the quad is wider than the core: the rest is the dark halo
   gl_Position = cCur;
@@ -964,10 +964,16 @@ function stepWindGpu(dt) {
   su.uSpawn.value.set(spawnBox.west, spawnBox.east, spawnBox.south, spawnBox.north); su.uView.value.set((lon - origin.lon) * kx, (lat - origin.lat) * 111.19, R);
   su.uSim.value = dt * WIND_SIM.simSeconds * state.speed * scale; su.uAge.value = dt * 60; su.uSeed.value = (++simFrame * 0.7548776662) % 997;
   wu.uSurface.value = state.level === 'sfc' ? 1 : 0; wu.uFollow.value = state.follow ? 1 : 0;
-  su.uReset.value = resetNext ? 1 : 0; resetNext = false;
+  const fullReset = resetNext;
+  su.uReset.value = fullReset ? 1 : 0; resetNext = false;
   su.tState.value = simRT[simCur].texture;
   const next = 1 - simCur;
-  renderer.setRenderTarget(simRT[next]); renderer.render(simScene, simCam);
+  // only the particles that are drawn are simulated: a scissor on the first rows of the state texture (the viewport stays whole, so every texel still reads its own place)
+  const drawn = Math.floor(Math.min(state.density * QUALITY_STEPS[quality.level].trails, GPU_N)), {rows, activate} = simRowRange(drawn, GPU_W, GPU_H, fullReset ? 0 : activeRows);
+  const limit = (rt, y0, y1) => { rt.scissor.set(0, y0, rt.width, y1 - y0); rt.scissorTest = y1 - y0 < rt.height; };
+  limit(simRT[next], 0, rows); renderer.setRenderTarget(simRT[next]); renderer.render(simScene, simCam);
+  if (activate) { limit(simRT[next], activate[0], activate[1]); su.uReset.value = 1; renderer.render(simScene, simCam); su.uReset.value = 0; }      // rows that were idle start afresh
+  activeRows = rows;
   simCur = next;
   // record the current positions into the next ring-buffer slot each time slotSeconds of 1x time has passed (slotInterval: by time, so a trail covers
   // the same motion at any frame rate, and by wind time, so it is the same length on screen at every speed setting)
@@ -977,7 +983,7 @@ function stepWindGpu(dt) {
     slotClock = Math.min(slotClock - slotEvery, slotEvery);
     histHead = (histHead + 1) % HIST;
     const hu = histMat.uniforms; hu.uHead.value = histHead; hu.tState.value = simRT[simCur].texture; hu.tHist.value = histRT[histCur].texture;
-    renderer.setRenderTarget(histRT[1 - histCur]); renderer.render(histScene, simCam);
+    limit(histRT[1 - histCur], 0, rows); renderer.setRenderTarget(histRT[1 - histCur]); renderer.render(histScene, simCam);
     histCur = 1 - histCur;
   }
   renderer.setRenderTarget(null);
@@ -985,7 +991,7 @@ function stepWindGpu(dt) {
   du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
   du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
-  gpuLines.geometry.setDrawRange(0, Math.floor(Math.min(state.density * QUALITY_STEPS[quality.level].trails, GPU_N)) * (PTS - 1) * 6);
+  gpuLines.geometry.setDrawRange(0, drawn * (PTS - 1) * 6);
 }
 
 // ---- ray against the height field (fast, and exact enough for a click) ----
@@ -1314,6 +1320,7 @@ async function setLevel(level) {
 }
 $('w-level').addEventListener('change', e => setLevel(e.target.value));
 $('w-density').value = state.density; $('o-density').textContent = state.density;
+$('w-trail').value = state.trailSegs; $('o-trail').textContent = trailLabel(state.trailSegs);
 $('w-density').addEventListener('input', e => { state.density = +e.target.value; $('o-density').textContent = e.target.value; });
 $('w-follow').addEventListener('change', e => { state.follow = e.target.checked; });
 $('w-speed').addEventListener('input', e => { state.speed = speedFromStep(+e.target.value); $('o-speed').textContent = state.speed + '×'; });

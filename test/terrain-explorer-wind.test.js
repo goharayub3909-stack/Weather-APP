@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
   assert.equal(WIND_SIM.life[0], 120); assert.equal(WIND_SIM.life[1], 300);
@@ -66,7 +66,7 @@ test('why particle positions are kept in local kilometres: a float32 longitude c
 });
 
 test('a trail is the live head plus 13 recorded positions in a ring buffer, newest first', () => {
-  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 16000); assert.equal(WIND_SIM.maxParticles, 24576);
+  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 6000); assert.equal(WIND_SIM.maxParticles, 24576);
   assert.deepEqual([1, 2, 3, 13].map(k => ringSlot(5, k)), [5, 4, 3, 6]);                    // newest at the head slot, then backwards, wrapping round
   assert.deepEqual([1, 2].map(k => ringSlot(0, k)), [0, 12]);
   const seen = new Set(); for (let k = 1; k <= 13; k++) seen.add(ringSlot(7, k)); assert.equal(seen.size, 13);   // the 13 slots, each once
@@ -84,7 +84,7 @@ test('trails are bright at the head and fade smoothly to nothing at the tail, an
   assert.ok(trailAlpha(0.5, 1) < trailAlpha(0.5, 8));                                       // calm air is fainter
   assert.ok(trailWidthPx(0, 12) > trailWidthPx(0, 1));                                      // fast wind is wider
   assert.ok(trailWidthPx(1, 6) < trailWidthPx(0, 6) && trailWidthPx(1, 6) > 0);             // narrows towards the tail but never vanishes geometrically
-  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.9) < 1e-9 && Math.abs(trailWidthPx(0, 99) - 3.6) < 1e-9);
+  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.3) < 1e-9 && Math.abs(trailWidthPx(0, 99) - 2.5) < 1e-9);
 });
 test('at 1x the wind moves at about 11 pixels a second for every m/s of wind, at any zoom', () => {
   for (const dist of [30, 60, 300, 1500, 2300]) {
@@ -114,7 +114,7 @@ test('trail length: points beyond the chosen length collapse onto the last visib
   assert.equal(trailPoint(2, 8).t, 0.25);
   assert.deepEqual(trailPoint(3, 1), trailPoint(3, 4)); assert.deepEqual(trailPoint(13, 50), trailPoint(13, 13));   // clamped to 4..13
   assert.equal(trailLabel(4), '4 segments · short'); assert.equal(trailLabel(8), '8 segments · medium'); assert.equal(trailLabel(13), '13 segments · long');
-  assert.equal(WIND_SIM.trailSegments.default, 13);
+  assert.equal(WIND_SIM.trailSegments.default, 8);
 });
 
 // ---- calm-air squiggles: the heading of a calm particle must be steady, never re-rolled every frame ----
@@ -200,4 +200,21 @@ test('the spawn rays meet the ground at the surface and the drawn height of the 
 test('a particle lives 2 to 5 seconds at 60 frames a second', () => {
   assert.ok(WIND_SIM.life[0] / 60 === 2 && WIND_SIM.life[1] / 60 === 5);
   assert.ok(WIND_SIM.life[0] > 50 && WIND_SIM.life[1] > 150);
+});
+
+// ---- Batch C: density and performance ----
+test('the default is 6,000 trails of 8 segments, drawn a little thinner', () => {
+  assert.equal(WIND_SIM.defaultCount, 6000); assert.equal(WIND_SIM.trailSegments.default, 8);
+  assert.ok(WIND_SIM.trailSegments.default >= WIND_SIM.trailSegments.min && WIND_SIM.trailSegments.default <= WIND_SIM.trailSegments.max);
+  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.3) < 1e-12); assert.ok(Math.abs(trailWidthPx(0, 12) - 2.5) < 1e-12);               // 1.3 + 1.2 x min(1, speed / 12), full width at the head
+  assert.ok(Math.abs(trailWidthPx(1, 12) - 1.25) < 1e-12);                                                                      // half of it at the tail
+});
+test('only the rows of the state texture that are drawn are simulated, and rows that become active are respawned', () => {
+  assert.deepEqual(simRowRange(6000, 256, 96, 0), {rows: 24, activate: null});                                                  // 6000 / 256 = 23.4 -> 24 rows; first frame: everything is respawned anyway
+  assert.deepEqual(simRowRange(256, 256, 96, 24), {rows: 1, activate: null});                                                   // fewer: nothing to do
+  assert.deepEqual(simRowRange(257, 256, 96, 1), {rows: 2, activate: [1, 2]});                                                  // one particle more than a row: the new row starts afresh
+  assert.deepEqual(simRowRange(24000, 256, 96, 24), {rows: 94, activate: [24, 94]});
+  assert.deepEqual(simRowRange(99999, 256, 96, 94), {rows: 96, activate: [94, 96]});                                            // never more rows than the texture has
+  assert.deepEqual(simRowRange(0, 256, 96, 5), {rows: 1, activate: null});                                                      // at least one row
+  assert.deepEqual(simRowRange(5000, 256, 96, 20), {rows: 20, activate: null});                                                 // unchanged
 });
