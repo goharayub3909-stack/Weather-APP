@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {catmullRom, bicubic, bilinear, windFromBlock, centripetalCatmullRom, midpointStep, eulerStep, simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {WIND_RANGES, windRange, percentile, histogramPercentile, windSpeedFromCode, surfaceRangeFrom, windTicks, WIND_MOTION, windMotion, levelFade, wind1kmWeight, easeInOut, transitionAt, LEVEL_TRANSITION, gridSpacings, gridOpacity, LEVEL_GRID, PRESSURE_LEVELS, catmullRom, bicubic, bilinear, windFromBlock, centripetalCatmullRom, midpointStep, eulerStep, simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
   assert.equal(WIND_SIM.life[0], 120); assert.equal(WIND_SIM.life[1], 300);
@@ -141,11 +141,13 @@ test('the calm direction changes smoothly: heading in still air, the wind own di
   assert.deepEqual(withMinimumSpeed(m, 0, 5), [m, 0]);                                         // at the minimum the wind is untouched: continuous with the branch above
 });
 test('the shader wind ramp is generated from the colour table, and the ribbon has a dark halo wider than its core', () => {
-  assert.ok(windColour(0).every(v => v > 200));                                                // calm: near white
-  assert.ok(windColour(WIND_MAX)[0] > 200 && windColour(WIND_MAX)[2] > 200);                   // gale: magenta
+  assert.ok(windColour(0).every(v => v > 200));                                                // calm: pale cream
+  assert.deepEqual(windColour(1), [196, 48, 112]);                                             // the top of the range: magenta
+  assert.deepEqual(windColour(5), [196, 48, 112]);                                             // beyond the range: the top colour
   const g = windRampGlsl('rampX');
-  assert.ok(g.startsWith('vec3 rampX(float s)') && (g.match(/return mix/g) || []).length === WIND.length - 1);
-  for (const [v, r, gg, b] of WIND) assert.ok(g.includes(`vec3(${r.toFixed(1)}, ${gg.toFixed(1)}, ${b.toFixed(1)}) / 255.`), `stop at ${v} m/s`);
+  assert.ok(g.startsWith('vec3 rampX(float t)') && (g.match(/return mix/g) || []).length === WIND.length - 1);
+  for (const [v, r, gg, b] of WIND) assert.ok(g.includes(`vec3(${r.toFixed(1)}, ${gg.toFixed(1)}, ${b.toFixed(1)}) / 255.`), `stop at t = ${v}`);
+  for (const [v] of WIND) assert.ok(g.includes(v.toFixed(3)), `stop position ${v} is written with 3 decimals`);
   assert.ok(RIBBON.outline > 1.2 && Math.abs(RIBBON.core * RIBBON.outline - 1) < 1e-9);
   assert.ok(WIND.every((s, i) => i === 0 || s[0] > WIND[i - 1][0]));                          // stops increase
 });
@@ -276,4 +278,67 @@ test('the midpoint step is second order: in a rotating wind it stays on the circ
   assert.ok(m1 / m2 > 3.5 && m1 / m2 < 4.5, 'halving the step divides the error by about 4: ' + m1 / m2);                       // second order
   assert.deepEqual(midpointStep(5, 7, () => [2, -1], 3), [11, 4]);                                                              // a steady wind: the same as before
   assert.ok(Math.hypot(...run(midpointStep, 50)) > 0.99 && Math.hypot(...run(midpointStep, 50)) < 1.01);                      // the radius is kept
+});
+
+// ---- Batch E: every level looks good ----
+test('E1 the palette has the six normalised stops of the design and is smooth between them', () => {
+  assert.deepEqual(WIND, [[0, 247, 245, 230], [0.22, 250, 232, 173], [0.42, 250, 204, 97], [0.62, 242, 156, 44], [0.8, 228, 92, 46], [1, 196, 48, 112]]);
+  assert.deepEqual(windColour(0.22), [250, 232, 173]);
+  const mid = windColour(0.11); assert.deepEqual(mid, [Math.round((247 + 250) / 2), Math.round((245 + 232) / 2), Math.round((230 + 173) / 2)]);
+});
+test('E2 every level has a range, the surface and the lowest levels 20 m/s up to 80 m/s at 250 hPa, and the legend ticks follow it', () => {
+  assert.deepEqual(WIND_RANGES, {sfc: 20, 1000: 20, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80});
+  for (const l of PRESSURE_LEVELS) assert.ok(WIND_RANGES[l] > 0, `${l} hPa has a range`);
+  assert.equal(windRange('500'), 50); assert.equal(windRange('sfc'), 20); assert.equal(windRange('sfc', 35), 35); assert.equal(windRange('500', 35), 50);
+  assert.deepEqual(windTicks(20).map(t => [t.f, t.ms, t.kmh]), [[0, 0, 0], [0.25, 5, 18], [0.5, 10, 36], [0.75, 15, 54], [1, 20, 72]]);
+  assert.deepEqual(windTicks(80).map(t => [t.ms, t.kmh]), [[0, 0], [20, 72], [40, 144], [60, 216], [80, 288]]);
+  assert.equal(windTicks(25)[1].ms, 6.3);                                                       // one decimal at most
+});
+test('E3 the 99th percentile of a speed list and of a histogram agree, and the surface range follows the rule', () => {
+  assert.equal(percentile([], 0.5), null); assert.equal(percentile([5], 0.99), 5); assert.equal(percentile([1, 2, 3, 4, 5], 0.5), 3);
+  assert.ok(Math.abs(percentile(Array.from({length: 101}, (_, i) => i), 0.99) - 99) < 1e-9);
+  const hist = new Float64Array(1000); for (let i = 0; i < 100; i++) hist[i * 2]++;             // speeds 0, 0.2, ... 19.8 m/s
+  const h = histogramPercentile(hist, 0.1, 0.99); assert.ok(h > 19.4 && h <= 19.8 + 1e-9, String(h));
+  assert.equal(histogramPercentile(new Float64Array(10), 0.1, 0.5), null);
+  assert.equal(surfaceRangeFrom(12.3), 20); assert.equal(surfaceRangeFrom(20), 20); assert.equal(surfaceRangeFrom(20.1), 25); assert.equal(surfaceRangeFrom(25), 25);
+  assert.equal(surfaceRangeFrom(25.01), 30); assert.equal(surfaceRangeFrom(null), 20); assert.equal(surfaceRangeFrom(NaN), 20);
+});
+test('E3 the 1 km wind pixel decodes to a speed, and 4095 is missing', () => {
+  const px = (u, v) => { const val = u * 4096 + v; return [val >> 16, (val >> 8) & 255, val & 255]; };
+  assert.equal(windSpeedFromCode(...px(2048, 2048)), 0);
+  assert.ok(Math.abs(windSpeedFromCode(...px(2048 + 150, 2048 + 200)) - 5) < 1e-9);            // 3 and 4 m/s: 5 m/s
+  assert.equal(windSpeedFromCode(...px(4095, 2048)), null); assert.equal(windSpeedFromCode(...px(2048, 4095)), null);
+});
+test('E4 the motion factors are the design values, never above 1, and decrease with height', () => {
+  assert.deepEqual(WIND_MOTION, {sfc: 1, 1000: 1, 925: 0.95, 850: 0.85, 700: 0.7, 600: 0.6, 500: 0.5, 400: 0.42, 300: 0.36, 250: 0.32});
+  const order = ['sfc', ...PRESSURE_LEVELS.map(String)].map(windMotion);
+  assert.ok(order.every((f, i) => f <= 1 && (i === 0 || f <= order[i - 1])), order.join(' '));
+  assert.equal(windMotion('nonsense'), 1);
+});
+test('E5 a level fades out within 300 m of the ground and is fully visible at 300 m and above', () => {
+  assert.equal(levelFade(1000, 1000), 0); assert.equal(levelFade(900, 1000), 0); assert.equal(levelFade(1300, 1000), 1); assert.equal(levelFade(5000, 1000), 1);
+  assert.ok(Math.abs(levelFade(1150, 1000) - 0.5) < 1e-12);
+});
+test('E6 the level change: fade out 0.3 s, then ease in 0.9 s with the height and the opacity moving together', () => {
+  assert.equal(LEVEL_TRANSITION.outSeconds, 0.3); assert.equal(LEVEL_TRANSITION.inSeconds, 0.9);
+  assert.deepEqual(transitionAt(0), {phase: 'out', alpha: 1, mix: 0, done: false});
+  const half = transitionAt(0.15); assert.equal(half.phase, 'out'); assert.ok(Math.abs(half.alpha - 0.5) < 1e-12 && half.mix === 0);
+  const start = transitionAt(0.3); assert.equal(start.phase, 'in'); assert.equal(start.alpha, 0); assert.equal(start.mix, 0);
+  const mid = transitionAt(0.75); assert.ok(Math.abs(mid.mix - 0.5) < 1e-12 && Math.abs(mid.alpha - 0.5) < 1e-12);
+  const end = transitionAt(1.2); assert.equal(end.mix, 1); assert.equal(end.alpha, 1); assert.equal(end.done, true);
+  let prev = -1; for (let t = 0.3; t <= 1.2; t += 0.05) { const m = transitionAt(t).mix; assert.ok(m >= prev - 1e-12); prev = m; }       // monotone
+  assert.equal(easeInOut(-1), 0); assert.equal(easeInOut(2), 1);
+  const slope = (x) => (easeInOut(x + 1e-6) - easeInOut(x)) / 1e-6; assert.ok(slope(0) < 1e-4 && slope(1 - 1e-6) < 1e-4 && slope(0.5) > 1.4);   // slow at both ends
+});
+test('E7 the 1 km weight falls from 1 to 0 over the last hour and is the same on the way back', () => {
+  assert.equal(wind1kmWeight(10, 72), 1); assert.equal(wind1kmWeight(71, 72), 1); assert.equal(wind1kmWeight(72, 72), 0); assert.equal(wind1kmWeight(80, 72), 0);
+  assert.ok(Math.abs(wind1kmWeight(71.5, 72) - 0.5) < 1e-12);
+  assert.equal(wind1kmWeight(71.25, 72), wind1kmWeight(71.25, 72));
+});
+test('E8 the reference grid: 1 degree lines, 0.25 degree lines only in a close view, faint and fading with distance', () => {
+  assert.deepEqual(gridSpacings(2000), [1]); assert.deepEqual(gridSpacings(149), [1, 0.25]); assert.deepEqual(gridSpacings(150), [1]);
+  assert.equal(LEVEL_GRID.opacity, 0.12);
+  assert.equal(gridOpacity(100), 0.12); assert.equal(gridOpacity(LEVEL_GRID.fadeToKm), 0); assert.equal(gridOpacity(10000), 0);
+  const a = gridOpacity(2000), b = gridOpacity(3000); assert.ok(a > b && b > 0);
+  assert.ok(Math.abs(gridOpacity(100, 0.5) - 0.06) < 1e-12);                                    // the level change scales it
 });

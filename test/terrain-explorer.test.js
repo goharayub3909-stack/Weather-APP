@@ -70,7 +70,7 @@ test('colour ramps are transparent when dry, ordered with intensity, and snow is
   assert.ok(rainColour(2)[3] > rainColour(0.5)[3] - 1);
   assert.deepEqual(rainColour(500), rainColour(50));
   const [r, g, b] = snowColour(5); assert.ok(b > g && r > g);
-  assert.ok(windColour(30)[0] > windColour(2)[0] - 1);
+  assert.ok(windColour(0.62)[1] < windColour(0.22)[1]);                                   // the wind palette (normalised speed) goes from pale to saturated
   assert.deepEqual(elevationColour(7000), [255, 255, 255]);
   assert.ok(elevationColour(-100)[2] < elevationColour(0)[2]);
 });

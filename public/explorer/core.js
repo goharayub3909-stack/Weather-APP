@@ -143,17 +143,68 @@ const RAIN = [[0.1, 74, 160, 255, 0], [0.5, 74, 160, 255, 150], [2, 40, 200, 160
 const SNOW = [[0.1, 190, 150, 255, 0], [0.5, 190, 150, 255, 150], [2, 160, 100, 240, 195], [5, 130, 60, 220, 220], [10, 100, 30, 190, 240]];
 export const rainColour = mm => ramp(RAIN, mm);
 export const snowColour = mm => ramp(SNOW, mm);
-// Wind speed m/s to a trail colour: near-white cyan in calm air, then cyan, green, yellow, amber, red and magenta. High contrast against satellite
-// imagery, dark terrain and snow (the trails also carry a dark halo, see RIBBON). The shader's ramp is generated from this table (windRampGlsl).
-export const WIND = [[0, 235, 250, 255], [3, 120, 235, 255], [6, 110, 240, 160], [10, 255, 235, 90], [15, 255, 170, 40], [22, 255, 90, 50], [30, 255, 60, 150], [40, 230, 80, 255]];
-export const windColour = ms => ramp(WIND, ms);
-export const WIND_MAX = WIND.at(-1)[0];
+// Wind trail colour: a palette over the NORMALISED speed t = speed / the level's range (WIND_RANGES), so every level uses the whole palette: pale cyan-white in calm
+// air, then yellow, amber, orange, red and magenta at the top of the range. High contrast against terrain and snow (the trails also carry a dark halo, see RIBBON).
+// The shader's ramp is generated from this table (windRampGlsl).
+export const WIND = [[0, 247, 245, 230], [0.22, 250, 232, 173], [0.42, 250, 204, 97], [0.62, 242, 156, 44], [0.8, 228, 92, 46], [1, 196, 48, 112]];
+export const windColour = t => ramp(WIND, t);
 export function windRampGlsl(name = 'windRamp') {
   const c = i => 'vec3(' + WIND[i].slice(1).map(v => v.toFixed(1)).join(', ') + ') / 255.';
-  let body = 'vec3 ' + name + '(float s) {\n';
-  for (let i = 1; i < WIND.length; i++) body += '  if (s < ' + WIND[i][0].toFixed(1) + ') return mix(' + c(i - 1) + ', ' + c(i) + ', (s - ' + WIND[i - 1][0].toFixed(1) + ') / ' + (WIND[i][0] - WIND[i - 1][0]).toFixed(1) + ');\n';
+  let body = 'vec3 ' + name + '(float t) {\n';
+  for (let i = 1; i < WIND.length; i++) body += '  if (t < ' + WIND[i][0].toFixed(3) + ') return mix(' + c(i - 1) + ', ' + c(i) + ', (t - ' + WIND[i - 1][0].toFixed(3) + ') / ' + (WIND[i][0] - WIND[i - 1][0]).toFixed(3) + ');\n';
   return body + '  return ' + c(WIND.length - 1) + ';\n}';
 }
+// The speed (m/s) that gets the top colour at each level: a screening choice so the palette is used fully at every level (the winds aloft are much stronger), not a threshold.
+export const WIND_RANGES = {sfc: 20, 1000: 20, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80};
+export const windRange = (level, sfcRange = WIND_RANGES.sfc) => level === 'sfc' ? sfcRange : WIND_RANGES[level] ?? WIND_RANGES.sfc;
+// The p-th percentile (0..1) of a list of numbers by linear interpolation between ranks; null for an empty list.
+export function percentile(values, p) {
+  const v = Array.from(values).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const x = Math.min(1, Math.max(0, p)) * (v.length - 1), i = Math.floor(x);
+  return i + 1 < v.length ? v[i] + (v[i + 1] - v[i]) * (x - i) : v[i];
+}
+// The surface range from the 99th percentile of the 1 km surface wind: the default 20 m/s unless the 99th percentile is above it, then it rounded UP to the next 5 m/s.
+export const surfaceRangeFrom = p99 => Number.isFinite(p99) && p99 > WIND_RANGES.sfc ? Math.ceil(p99 / 5) * 5 : WIND_RANGES.sfc;
+// The p-th percentile of a histogram (bins of binSize starting at 0, counts in `hist`), linear inside the bin; null when it is empty.
+export function histogramPercentile(hist, binSize, p) {
+  let total = 0; for (const n of hist) total += n;
+  if (!total) return null;
+  const goal = Math.min(1, Math.max(0, p)) * total; let acc = 0;
+  for (let i = 0; i < hist.length; i++) { if (acc + hist[i] >= goal && hist[i] > 0) return (i + (goal - acc) / hist[i]) * binSize; acc += hist[i]; }
+  return hist.length * binSize;
+}
+// The speed (m/s) held in a pixel of the 1 km wind PNG: the 24-bit value is the u code times 4096 plus the v code, each (code - 2048) / 50 m/s, 4095 = missing (null).
+export function windSpeedFromCode(r, g, b) {
+  const v = r * 65536 + g * 256 + b, uc = Math.floor(v / 4096), vc = v - uc * 4096;
+  return uc > 4094.5 || vc > 4094.5 ? null : Math.hypot((uc - 2048) / 50, (vc - 2048) / 50);
+}
+// Legend ticks for a range: 0, 1/4, 1/2, 3/4 and the range, in m/s with km/h below.
+export const windTicks = range => [0, 0.25, 0.5, 0.75, 1].map(f => ({f, ms: Math.round(range * f * 10) / 10, kmh: Math.round(range * f * 3.6)}));
+// How fast the trails move at each level relative to the speed they show: the upper-air winds are several times stronger, and trails at that speed would race across the screen.
+// A factor below 1 multiplies the simulation step (uSim) and its rate (uSimRate); the colours and the wind itself are not touched.
+export const WIND_MOTION = {sfc: 1, 1000: 1, 925: 0.95, 850: 0.85, 700: 0.7, 600: 0.6, 500: 0.5, 400: 0.42, 300: 0.36, 250: 0.32};
+export const windMotion = level => WIND_MOTION[level] ?? 1;
+// A trail fades out where the level is close to the ground (the trail would lie flat on the terrain): full opacity 300 m or more above the ground, none at or below it.
+export const LEVEL_FADE_M = 300;
+export const levelFade = (levelHeightM, groundM) => Math.min(1, Math.max(0, (levelHeightM - groundM) / LEVEL_FADE_M));
+// Weight of the 1 km mass-consistent wind over the last hour of the 1 km set: 1 until an hour before the last step, falling linearly to 0 at it, where the ECMWF wind with the slope
+// rule takes over (the 1 km wind stops there). The same value on the way back.
+export const wind1kmWeight = (hour, lastHour) => Math.min(1, Math.max(0, lastHour - hour));
+// Changing the wind level: the old trails fade out (0.3 s), then the new level is switched on and its trails fade in while the drawn height moves from the old level's height to
+// the new one with an ease-in-out (0.9 s). transitionAt(t) is the state t seconds after the click.
+export const LEVEL_TRANSITION = {outSeconds: 0.3, inSeconds: 0.9};
+export const easeInOut = x => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+export function transitionAt(t) {
+  const {outSeconds: o, inSeconds: i} = LEVEL_TRANSITION;
+  if (t < o) return {phase: 'out', alpha: 1 - t / o, mix: 0, done: false};
+  const x = (t - o) / i;
+  return {phase: 'in', alpha: easeInOut(x), mix: easeInOut(x), done: x >= 1 - 1e-9};
+}
+// The faint reference grid at a pressure level: 1 degree lines, plus 0.25 degree lines when the view is closer than 150 km wide; opacity 0.12, fading out with the camera distance.
+export const LEVEL_GRID = {opacity: 0.12, fineBelowKm: 150, coarse: 1, fine: 0.25, fadeFromKm: 1500, fadeToKm: 4000};
+export const gridSpacings = viewWidthKm => viewWidthKm < LEVEL_GRID.fineBelowKm ? [LEVEL_GRID.coarse, LEVEL_GRID.fine] : [LEVEL_GRID.coarse];
+export const gridOpacity = (distKm, mix = 1) => LEVEL_GRID.opacity * mix * Math.min(1, Math.max(0, (LEVEL_GRID.fadeToKm - distKm) / (LEVEL_GRID.fadeToKm - LEVEL_GRID.fadeFromKm)));
 // Wind trails are ribbons of triangles: the coloured core is the width of trailWidthPx, the quad is OUTLINE times wider and its outer part is a dark halo.
 export const RIBBON = {outline: 1.45, core: 1 / 1.45};
 

@@ -7,9 +7,9 @@ import {cities} from '../cities.js';
 import {GRID, GridSampler, validDataset, unpackDataset, mercX, mercY, lonOfX, latOfY, terrarium, WORLD_KM, rainColour, snowColour, windColour,
   elevationColour, splitPrecip, terrainWind, flowGrid, flowGridJob, summariseHours, encodeView, decodeView, PRESETS, SNOW_WATER_MM_PER_CM, temperatureColour, WIND_LEVELS, pointRows,
   maxTierFor, labelIndex, labelsNear, LOD_LEVELS, LOD_TILES, FADE_FRACTION, lodAlpha, blendHeight, lodWanted, lodHole, TEMPERATURE_TICKS,
-  FLOW, WIND_SIM, simRowRange, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, WIND_MAX, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
+  FLOW, WIND_SIM, simRowRange, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
   validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT} from './core.js';
-import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND} from './core.js';
+import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND, WIND_RANGES, windRange, windMotion, wind1kmWeight, transitionAt, gridSpacings, gridOpacity, windTicks, surfaceRangeFrom, histogramPercentile, windSpeedFromCode, LEVEL_FADE_M} from './core.js';
 
 const $ = id => document.getElementById(id);
 const Z = 7, TILES = 2 ** Z, TILE_URL = (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
@@ -20,7 +20,7 @@ const MX0 = TX0 / TILES, MX1 = (TX1 + 1) / TILES, MY0 = TY0 / TILES, MY1 = (TY1 
 const MXC = (MX0 + MX1) / 2, MYC = (MY0 + MY1) / 2, SCALE = WORLD_KM * Math.cos(30.5 * Math.PI / 180);   // km per Mercator unit at 30.5 N
 const toScene = (lon, lat) => [(mercX(lon) - MXC) * SCALE, (mercY(lat) - MYC) * SCALE];                    // x east, z south
 const toLonLat = (x, z) => [lonOfX(x / SCALE + MXC), latOfY(z / SCALE + MYC)];
-const state = {hour: 0, playing: false, exag: 3, layers: new Set(['w', 'r', 's', 'c', 'k']), density: WIND_SIM.defaultCount, speed: 1, trailSegs: WIND_SIM.trailSegments.default, visible: true, detail: false, imagery: false, follow: true, level: 'sfc'};
+const state = {hour: 0, playing: false, exag: 3, layers: new Set(['w', 'r', 's', 'c', 'k']), density: WIND_SIM.defaultCount, speed: 1, trailSegs: WIND_SIM.trailSegments.default, visible: true, detail: false, imagery: false, follow: true, level: 'sfc', sfcRange: WIND_RANGES.sfc};
 let data = null, sampler = null, heights = null;
 { const q = +new URLSearchParams(location.search).get('density'); if (q >= 100) state.density = Math.min(q, WIND_SIM.maxParticles); }      // ?density=N: trails drawn (for testing)
 
@@ -544,7 +544,7 @@ function stepWind(dt) {
   }
   let s = 0, c = 0;
   for (let i = 0; i < n; i++) {
-    const col = windColour(speedNow[i]); linearCol.setRGB(col[0] / 255, col[1] / 255, col[2] / 255, THREE.SRGBColorSpace);          // the line material wants linear vertex colours
+    const col = windColour(speedNow[i] / windRange(state.level, state.sfcRange)); linearCol.setRGB(col[0] / 255, col[1] / 255, col[2] / 255, THREE.SRGBColorSpace);          // the line material wants linear vertex colours
     const life = Math.min(1, page[i] / 12, (plife[i] - page[i]) / 20), base = i * TRAIL * 3, calm = 0.4 + 0.6 * Math.min(1, speedNow[i] / 3);
     for (let k = 0; k < TRAIL - 1; k++) {
       const a = (1 - k / (TRAIL - 1)) ** 1.6 * life * calm * 0.95;
@@ -582,6 +582,7 @@ function flowTexture(F) {
 // Uniforms shared by the simulation and the drawing shaders (the same objects, so one update reaches both).
 const v4 = () => new THREE.Vector4(), v2 = () => new THREE.Vector2();
 const wu = {
+  u1kBlend: {value: 1},                                                  // weight of the 1 km wind over the last hour of the 1 km set (wind1kmWeight of core.js)
   uLevelKm: {value: 0},                                                  // standard height in km of the wind level shown (0 = the surface): shared by the simulation and the drawing
   tWindA: {value: emptyF}, tWindB: {value: emptyF}, uMix: {value: 0}, uGrid: {value: new THREE.Vector4(GRID.west, GRID.south, 1, 1)}, uSpacing: {value: 0.1},
   uSurface: {value: 1}, uFollow: {value: 1}, uOn: {value: new THREE.Vector3()}, uO: {value: new THREE.Vector4(GRID.west, GRID.south, 100, 111.19)},
@@ -657,7 +658,7 @@ function updateWindTextures() {
 
 Object.assign(wu, {tW1A: ku.tW1A, tW1B: ku.tW1B, u1kWind: ku.u1kWind, u1kMix: ku.u1kMix, u1kBox: ku.u1kBox});
 const GLSL_COMMON = `
-uniform sampler2D tW1A, tW1B; uniform float u1kWind, u1kMix; uniform vec4 u1kBox;
+uniform sampler2D tW1A, tW1B; uniform float u1kWind, u1kMix, u1kBlend; uniform vec4 u1kBox;
 uniform sampler2D tWindA, tWindB; uniform float uMix, uSpacing, uSurface, uFollow; uniform vec4 uGrid, uO; uniform vec3 uOn;   // uO: origin lon, lat, km per degree of longitude and of latitude there
 uniform sampler2D tFlow0, tFlow9, tFlow10, tFlow11; uniform vec4 uFB0, uFB9, uFB10, uFB11; uniform vec2 uFS0, uFS9, uFS10, uFS11;
 const float PI = 3.14159265;
@@ -805,9 +806,7 @@ vec3 wind1km(vec2 ll) {
   if (cb.z > .5) b = cb;
   return vec3(mix(a.xy, b.xy, u1kMix), 1.);
 }
-vec3 velocityAt(vec2 ll) {
-  // surface trails with "Follow the terrain": the 1 km mass-consistent wind where it is loaded, else ECMWF with the slope rule below
-  if (uSurface > .5 && uFollow > .5 && u1kWind > .5) { vec3 k = wind1km(ll); if (k.z > .5) return k; }
+vec3 windEcmwf(vec2 ll) {                                              // the ECMWF wind with the terrain rules (the surface wind outside or without the 1 km layer)
   vec4 g = windGrid(ll); vec3 w = g.xyz;
   if (w.z < .5) return w;
   // a pressure level is underground where the 1 km terrain is higher than the level's own height (levelUnderground of core.js): no wind there, the particle is
@@ -815,6 +814,19 @@ vec3 velocityAt(vec2 ll) {
   if (uLevelKm > 0. && g.w > 0. && groundM(mercX(ll.x), mercY(ll.y)) + ${UNDERGROUND_MARGIN_M.toFixed(1)} > g.w * 1000.) return vec3(0.);
   if (uSurface > .5 && uFollow > .5) w.xy = terrainWindGL(w.xy, flowAt(mercX(ll.x), mercY(ll.y)));
   return w;
+}
+vec3 velocityAt(vec2 ll) {
+  // surface trails with "Follow the terrain": the 1 km mass-consistent wind where it is loaded, else ECMWF with the slope rule. Over the last hour of the 1 km set the two are blended
+  // (u1kBlend 1 -> 0, so there is no jump where the 1 km wind ends).
+  if (uSurface > .5 && uFollow > .5 && u1kWind > .5) {
+    vec3 k = wind1km(ll);
+    if (k.z > .5) {
+      if (u1kBlend > .999) return k;
+      vec3 e = windEcmwf(ll);
+      return e.z > .5 ? vec3(mix(e.xy, k.xy, u1kBlend), 1.) : k;
+    }
+  }
+  return windEcmwf(ll);
 }`;
 const SIM_VS = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }';
 const SIM_FS = GLSL_COMMON + `
@@ -891,14 +903,16 @@ const DRAW_VS = GLSL_COMMON + `
 attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, place along the trail in recorded-point units (0 = head .. ${PTS - 1} = oldest, fractional between), side of the ribbon
 uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)
 uniform sampler2D tState, tHist; uniform vec2 uMC;
-uniform float uExag, uLift, uScale;
+uniform float uExag, uLift, uScale, uRange, uFromKm, uLevelMix, uFadeA;   // uRange: the speed with the top colour; uFromKm, uLevelMix: the level change (draw only); uFadeA: its fade
 varying vec3 vCol; varying float vA, vSide;
 ${windRampGlsl('windRamp')}                                      // windColour of core.js, generated from the same table
 // Clip-space position of a point lying on the terrain: the height of the drawn MESH at exactly this point plus a hover (or the level height for pressure levels).
 vec4 clipAt(vec2 ll) {
   float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;      // the mesh's height, not the DEM's: the mesh is what is seen
   float lk = uLevelKm; if (lk > 0.) { vec4 g = windGridH(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }     // the level's real height here, else its standard height
-  float y = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
+  float yTo = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
+  float yFrom = uFromKm > 0. ? max(ground, uFromKm * uExag + uLift) : ground;                          // while the level changes: the height the trails come from (the ground at the surface)
+  float y = mix(yFrom, yTo, uLevelMix);
   return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, y, (my - uMC.y) * uScale, 1.);
 }
 // The recorded positions of this trail, head first (gP[0]), found by walking back through the ring buffer once; a position from the particle's previous life ends the chain and the
@@ -946,8 +960,10 @@ void main() {
   float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = u / segsF;
   float fadeIn = min(1., s.z / 12.), fadeOut = min(1., (s.w - s.z) / 20.);
   // trailAlpha and trailWidthPx of core.js: bright head fading smoothly to nothing at the tail, narrower towards the tail, a little wider and stronger in fast wind
-  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut;
-  vCol = windRamp(sp);
+  float lvlFade = 1.;                                                  // a level close to the ground fades out (levelFade of core.js): 300 m above the ground it is fully visible
+  if (uLevelKm > 0.) { vec4 g = windGridH(head); float hm = g.z > .5 && g.w > 0. ? g.w * 1000. : uLevelKm * 1000.; lvlFade = clamp((hm - groundM(mercX(head.x), mercY(head.y))) / ${LEVEL_FADE_M.toFixed(1)}, 0., 1.); }
+  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut * lvlFade * uFadeA;
+  vCol = windRamp(clamp(sp / uRange, 0., 1.));
   vec4 cPrev = clipAt(pPrev), cCur = clipAt(pCur), cNext = clipAt(pNext);
   // An invisible point (faded tail, previous life, missing wind) keeps its place with zero opacity: moving it off screen would stretch the
   // triangles joining it to its visible neighbour into long faint slivers. Only a particle whose head is behind the camera is removed, all its
@@ -1005,11 +1021,50 @@ function initGpuWind() {
     geo.setAttribute('aIdx', new THREE.BufferAttribute(idx, 1)); geo.setAttribute('aSide', new THREE.BufferAttribute(side, 1)); geo.setIndex(new THREE.BufferAttribute(index, 1));
     drawMat = new THREE.ShaderMaterial({
       uniforms: {...wu, tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE},
-        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
+        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uRange: {value: WIND_RANGES.sfc}, uFromKm: {value: 0}, uLevelMix: {value: 1}, uFadeA: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
       vertexShader: DRAW_VS, fragmentShader: DRAW_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide});
     gpuLines = new THREE.Mesh(geo, drawMat); gpuLines.frustumCulled = false; gpuLines.renderOrder = 20; scene.add(gpuLines);
     windLines.visible = false; gpuReady = true; resetNext = true; syncWindLevels();
   } catch (e) { gpuReady = false; console.warn('GPU wind unavailable, using the CPU simulation:', e.message); }
+}
+// ---- changing the wind level (E6) and the reference grid at a pressure level (E8) ----
+// transitionAt of core.js: the old trails fade out, then the level is switched (commitLevel) and the new trails fade in while the drawn height moves from the old level's height
+// (the ground at the surface) to the new one. Only the drawing is changed (uFromKm, uLevelMix, uFadeA); the simulation never sees any of it.
+const trans = {active: false, committed: true, t: 0, from: 'sfc', to: 'sfc', fromKm: 0};
+function tickLevelChange(dt) {
+  if (!trans.active) return {fromKm: 0, mix: 1, alpha: 1};
+  trans.t += dt;
+  const x = transitionAt(trans.t);
+  if (x.phase === 'in' && !trans.committed) commitLevel(trans.to);
+  if (x.done) { trans.active = false; return {fromKm: 0, mix: 1, alpha: 1}; }
+  return x.phase === 'out' ? {fromKm: 0, mix: 1, alpha: x.alpha} : {fromKm: trans.fromKm, mix: x.mix, alpha: x.alpha};
+}
+function finishLevelChange() { if (trans.active && !trans.committed) commitLevel(trans.to); trans.active = false; }
+// A faint white grid at the level's drawn height (its standard height times the exaggeration plus the hover): 1 degree lines, plus 0.25 degree lines when the view is under 150 km wide.
+// In the Mercator scene a parallel or a meridian is a straight line, so the lines are plain two-vertex segments; the geometry sits at y = 0 and the mesh is raised each frame.
+let levelGrid = null, gridKey = '';
+function updateLevelGrid(lon, lat, R, dist, tr) {
+  const lvl = WIND_LEVELS[state.level], on = state.layers.has('w') && lvl.hPa !== null;
+  if (!on) { if (levelGrid) levelGrid.visible = false; return; }
+  if (!levelGrid) {
+    levelGrid = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: 0xffffff, transparent: true, depthWrite: false}));
+    levelGrid.frustumCulled = false; levelGrid.renderOrder = 15; scene.add(levelGrid);
+  }
+  const spacings = gridSpacings(2 * R), step = spacings.at(-1), cx = Math.round(lon / step) * step, cy = Math.round(lat / step) * step;
+  const hLat = R * 1.4 / 111.19 + step, hLon = R * 1.4 / (111.19 * Math.max(0.2, Math.cos(lat * Math.PI / 180))) + step, key = [spacings.length, cx, cy, Math.ceil(hLat / step)].join('|');
+  if (key !== gridKey) {
+    gridKey = key;
+    const pos = [], x = lo => (mercX(lo) - MXC) * SCALE, z = la => (mercY(la) - MYC) * SCALE, za = z(cy - hLat), zb = z(cy + hLat), xa = x(cx - hLon), xb = x(cx + hLon);
+    spacings.forEach((sp, k) => {
+      const skip = v => k > 0 && Math.abs(v / spacings[0] - Math.round(v / spacings[0])) < 1e-6;           // the 1 degree lines are drawn once
+      for (let lo = Math.ceil((cx - hLon) / sp) * sp; lo <= cx + hLon; lo += sp) if (!skip(lo)) pos.push(x(lo), 0, za, x(lo), 0, zb);
+      for (let la = Math.ceil((cy - hLat) / sp) * sp; la <= cy + hLat; la += sp) if (!skip(la)) pos.push(xa, 0, z(la), xb, 0, z(la));
+    });
+    levelGrid.geometry.dispose(); levelGrid.geometry = new THREE.BufferGeometry(); levelGrid.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  }
+  levelGrid.visible = true;
+  levelGrid.position.y = (tr.fromKm + (lvl.heightKm - tr.fromKm) * tr.mix) * state.exag + Math.min(2.5, Math.max(0.05, dist * 0.0012));
+  levelGrid.material.opacity = gridOpacity(dist, tr.alpha);
 }
 function stepWindGpu(dt) {
   const dist = camera.position.distanceTo(controls.target), scale = zoomScale(dist), Rraw = Math.min(2500, Math.max(25, dist * 1.15)), g = sampler.d.grid;
@@ -1021,6 +1076,7 @@ function stepWindGpu(dt) {
   const su = simMat.uniforms;
   camera.updateMatrixWorld();                                          // the spawn rays use this frame's camera, not the last render's
   const lift = Math.min(2.5, Math.max(0.05, dist * 0.0012));
+  const tr = tickLevelChange(dt);                                      // may switch the level half way through a level change
   su.uSpawnPlane.value.set(spawnPlaneHeight(state.level, sceneHeightAt(controls.target.x, controls.target.z), state.exag, lift), controls.target.x, controls.target.z, 1.5 * R);
   // The origin stays where it is until the view has moved a third of its radius away or zoomed in a lot, then particles are re-based onto the new one.
   const kx0 = 111.19 * Math.cos(origin.lat * Math.PI / 180);
@@ -1032,8 +1088,10 @@ function stepWindGpu(dt) {
   const kx = 111.19 * Math.cos(origin.lat * Math.PI / 180);
   wu.uO.value.set(origin.lon, origin.lat, kx, 111.19); su.uOold.value.set(prevOrigin.lon, prevOrigin.lat, 111.19 * Math.cos(prevOrigin.lat * Math.PI / 180), 111.19); su.uRebase.value = rebase ? 1 : 0;
   su.uSpawn.value.set(spawnBox.west, spawnBox.east, spawnBox.south, spawnBox.north); su.uView.value.set((lon - origin.lon) * kx, (lat - origin.lat) * 111.19, R);
-  su.uSim.value = dt * WIND_SIM.simSeconds * state.speed * scale; su.uAge.value = dt * 60; su.uSeed.value = (++simFrame * 0.7548776662) % 997;
+  const motion = windMotion(state.level);
+  su.uSim.value = dt * WIND_SIM.simSeconds * state.speed * scale * motion; su.uAge.value = dt * 60; su.uSeed.value = (++simFrame * 0.7548776662) % 997;
   wu.uSurface.value = state.level === 'sfc' ? 1 : 0; wu.uFollow.value = state.follow ? 1 : 0;
+  wu.u1kBlend.value = km1.m ? wind1kmWeight(state.hour, km1.m.hours.at(-1)) : 1;
   const fullReset = resetNext;
   su.uReset.value = fullReset ? 1 : 0; resetNext = false;
   su.tState.value = simRT[simCur].texture;
@@ -1059,9 +1117,10 @@ function stepWindGpu(dt) {
   renderer.setRenderTarget(null);
   const du = drawMat.uniforms;
   du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
-  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
+  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale * motion; du.uRange.value = windRange(state.level, state.sfcRange); du.uFromKm.value = tr.fromKm; du.uLevelMix.value = tr.mix; du.uFadeA.value = tr.alpha; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
   gpuLines.geometry.setDrawRange(0, drawn * (PF - 1) * 6);
+  updateLevelGrid(lon, lat, R, dist, tr);
 }
 
 // ---- ray against the height field (fast, and exact enough for a click) ----
@@ -1161,11 +1220,27 @@ function dataTexture(bitmap) {
   Object.assign(t, {flipY: false, generateMipmaps: false, premultiplyAlpha: false, magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter, colorSpace: THREE.NoColorSpace});
   t.needsUpdate = true; return t;
 }
+// The 99th percentile of the 1 km surface wind speed over the steps loaded so far (a histogram in 0.1 m/s bins, each step counted once): when it is above the default 20 m/s the
+// surface colour range becomes it rounded up to the next 5 m/s (surfaceRangeFrom of core.js).
+const speedHist = new Float64Array(1000), speedCounted = new Set();
+function countWindSpeeds(bitmap, i) {
+  if (speedCounted.has(i)) return;
+  speedCounted.add(i);
+  try {
+    const c = new OffscreenCanvas(bitmap.width, bitmap.height), x = c.getContext('2d', {willReadFrequently: true}); x.drawImage(bitmap, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height).data;
+    for (let k = 0; k < d.length; k += 4) { const sp = windSpeedFromCode(d[k], d[k + 1], d[k + 2]); if (sp !== null) speedHist[Math.min(999, Math.floor(sp * 10))]++; }
+    km1.p99 = histogramPercentile(speedHist, 0.1, 0.99);
+    const r = surfaceRangeFrom(km1.p99);
+    if (r !== state.sfcRange) { state.sfcRange = r; console.info(`surface wind range ${r} m/s (99th percentile of the 1 km surface wind: ${km1.p99.toFixed(1)} m/s, ${speedCounted.size} steps)`); updateWindLegend(); }
+  } catch { /* no canvas: the default range stays */ }
+}
 // Step i's textures, or null while they load. The six most recently used steps are kept (about 65 MB of GPU memory at most).
 function km1Step(i) {
   const hit = km1.tex.get(i);
   if (hit) { km1.tex.delete(i); km1.tex.set(i, hit); return hit; }
   if (!km1.loading.has(i)) km1.loading.set(i, Promise.all([load1km(km1.m.steps[i].tr), load1km(km1.m.steps[i].wind), km1.phase ? load1km(km1.m.steps[i].phase) : null]).then(([a, b, c]) => {
+    countWindSpeeds(b, i);
     km1.tex.set(i, {tr: dataTexture(a), w: dataTexture(b), ph: c ? dataTexture(c) : null}); km1.loading.delete(i);
     while (km1.tex.size > 6) { const [k, old] = km1.tex.entries().next().value; km1.tex.delete(k); for (const t of [old.tr, old.w, old.ph]) { if (t) { t.dispose(); t.image.close?.(); } } }
   }).catch(() => { km1.loading.delete(i); km1.failed++; }));
@@ -1356,9 +1431,9 @@ async function markAvailableLevels() {
     for (const o of $('w-level').options) { const b = altBar.querySelector(`[data-level="${o.value}"]`); o.disabled = !!b?.disabled; }
   } catch { /* the buttons stay enabled; a click that finds no file says so */ }
 }
-function updateLevelNote() {
-  const a = levelAltitude(state.level);
-  $('level-note').textContent = state.level === 'sfc' ? '' : `${a.top} hPa, ${a.m} (${a.ft}): ${a.role}. Where the 1 km terrain is higher than this level there is no wind and no temperature, so nothing is drawn through the mountains. The terrain adjustment applies to the surface wind only.`;
+function updateLevelNote(level = state.level) {
+  const a = levelAltitude(level), f = windMotion(level);
+  $('level-note').textContent = level === 'sfc' ? '' : `${a.top} hPa, ${a.m} (${a.ft}): ${a.role}. Where the 1 km terrain is higher than this level there is no wind and no temperature, so nothing is drawn through the mountains. The terrain adjustment applies to the surface wind only.${f < 1 ? ` Shown at ${f}× motion: the winds up here are strong, so the trails move slower than the wind (colours and speeds are not changed).` : ''}`;
 }
 const surfaceTempGradient = () => `linear-gradient(90deg,${TEMPERATURE_TICKS.map((t, i) => { const c = temperatureColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(i / (TEMPERATURE_TICKS.length - 1) * 100).toFixed(0)}%`; }).join(',')})`;
 function updateTempLegend() {
@@ -1382,9 +1457,17 @@ async function setLevel(level) {
       $('level-note').textContent = `The ${level} hPa data is not available for this forecast run.`; if (btn) btn.disabled = true; return;
     }
   }
-  state.level = level; $('w-level').value = level;
+  $('w-level').value = level;
   for (const b of altBar.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.level === level));
-  updateLevelNote(); updateTempLegend();
+  updateLevelNote(level);
+  finishLevelChange();                                                                             // a change still running is completed first
+  if (gpuReady && level !== state.level) Object.assign(trans, {active: true, committed: false, t: 0, from: state.level, to: level, fromKm: WIND_LEVELS[state.level].heightKm});
+  else commitLevel(level);                                                                         // otherwise at once (no GPU trails to fade)
+}
+// The level takes effect: the simulation, the legends and the layers follow it. Half way through a level change, or at once.
+function commitLevel(level) {
+  state.level = level; trans.committed = true; $('w-level').value = level;
+  updateLevelNote(); updateTempLegend(); updateWindLegend();
   if (gpuReady) { resetNext = true; windKey = ''; } else for (let i = 0; i < MAXP; i++) respawn(i);
   apply1kmFlags(); paintOverlay(true); saveHash();
 }
@@ -1420,7 +1503,14 @@ $('share').addEventListener('click', async e => {
 });
 // legends
 $('temp-legend').style.background = `linear-gradient(90deg,${TEMPERATURE_TICKS.map((t, i) => { const c = temperatureColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(i / (TEMPERATURE_TICKS.length - 1) * 100).toFixed(0)}%`; }).join(',')})`;
-$('wind-legend').style.background = `linear-gradient(90deg,${WIND.map(([v]) => { const c = windColour(v); return `rgb(${c[0]},${c[1]},${c[2]}) ${(v / WIND_MAX * 100).toFixed(1)}%`; }).join(',')})`;
+$('wind-legend').style.background = `linear-gradient(90deg,${WIND.map(([t]) => { const c = windColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(t * 100).toFixed(1)}%`; }).join(',')})`;
+// The scale follows the level: 0, 1/4, 1/2, 3/4 and the top of the level's range (windRange), in m/s with km/h below.
+function updateWindLegend() {
+  const range = windRange(state.level, state.sfcRange);
+  $('wind-ticks').innerHTML = windTicks(range).map(({f, ms, kmh}) => `<span style="left:${f * 100}%">${ms}${f === 0 ? ' m/s' : ''}<br>${kmh}${f === 0 ? ' km/h' : ''}</span>`).join('');
+  $('wind-legend').title = `Trail colour by wind speed: the top colour is ${range} m/s (${Math.round(range * 3.6)} km/h) at this level`;
+}
+updateWindLegend();
 $('legend').style.background = `linear-gradient(90deg,${[0.1, 0.5, 2, 5, 10, 25, 50].map(v => { const c = rainColour(v); return `rgb(${c[0]},${c[1]},${c[2]})`; }).join(',')})`;
 
 // ---- navigation buttons, keys, double-click ----
