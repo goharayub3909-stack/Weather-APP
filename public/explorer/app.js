@@ -709,13 +709,40 @@ float groundM(float mx, float my) {
   if (hIn(tH0, uHB0, uHS0, mx, my, h)) return h;
   return 0.;
 }
-// (u, v, valid, level height in km) from the grid: bilinear in space, linear between the two forecast steps; any missing corner makes it missing.
-vec4 windGrid(vec2 ll) {
+// (u, v, valid, level height in km) from the grid, linear between the two forecast steps; any missing corner of the four around the point makes it missing. The height (w) is bilinear.
+// windGridH is that, bilinear in space too (used where only the level height or validity is wanted). windGrid takes u and v from a Catmull-Rom surface over the 4 x 4 cells around the
+// point (indices clamped at the edge) wherever all 16 are valid (windFromBlock of core.js), the bilinear value elsewhere.
+vec4 windGridH(vec2 ll) {
   vec2 sz = uGrid.zw, f = (ll - uGrid.xy) / uSpacing;
   if (f.x < 0. || f.y < 0. || f.x > sz.x - 1. || f.y > sz.y - 1.) return vec4(0.);
   vec4 a = bil4(tWindA, f, sz), b = bil4(tWindB, f, sz);
   bool ok = uMix <= 0. ? a.z > .999 : (a.z > .999 && b.z > .999);
   return vec4(mix(a.xy, b.xy, uMix), ok ? 1. : 0., mix(a.w, b.w, uMix));
+}
+vec4 crSpline4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
+  float t2 = t * t, t3 = t2 * t;
+  return .5 * (2. * p1 + (p2 - p0) * t + (2. * p0 - 5. * p1 + 4. * p2 - p3) * t2 + (3. * p1 - p0 - 3. * p2 + p3) * t3);
+}
+vec4 bicubic4(sampler2D t, vec2 f, vec2 sz, out bool ok) {
+  ivec2 szi = ivec2(sz), i1 = ivec2(floor(f)); vec2 w = f - floor(f);
+  int x0 = clamp(i1.x - 1, 0, szi.x - 1), x1 = clamp(i1.x, 0, szi.x - 1), x2 = clamp(i1.x + 1, 0, szi.x - 1), x3 = clamp(i1.x + 2, 0, szi.x - 1);
+  vec4 col[4]; ok = true;
+  for (int j = 0; j < 4; j++) {
+    int y = clamp(i1.y - 1 + j, 0, szi.y - 1);
+    vec4 p0 = texelFetch(t, ivec2(x0, y), 0), p1 = texelFetch(t, ivec2(x1, y), 0), p2 = texelFetch(t, ivec2(x2, y), 0), p3 = texelFetch(t, ivec2(x3, y), 0);
+    ok = ok && p0.z > .999 && p1.z > .999 && p2.z > .999 && p3.z > .999;
+    col[j] = crSpline4(p0, p1, p2, p3, w.x);
+  }
+  return crSpline4(col[0], col[1], col[2], col[3], w.y);
+}
+vec4 windGrid(vec2 ll) {
+  vec4 g = windGridH(ll);
+  if (g.z < .5) return g;
+  vec2 sz = uGrid.zw, f = (ll - uGrid.xy) / uSpacing; bool okA, okB = false;
+  vec4 ca = bicubic4(tWindA, f, sz, okA);
+  vec2 a = okA ? ca.xy : bil4(tWindA, f, sz).xy, b = a;
+  if (uMix > 0.) { vec4 cb = bicubic4(tWindB, f, sz, okB); b = okB ? cb.xy : bil4(tWindB, f, sz).xy; }
+  return vec4(mix(a, b, uMix), g.zw);
 }
 bool inB(vec4 b, float mx, float my) { return mx >= b.x && mx < b.y && my >= b.z && my < b.w; }
 // Slope and relief, smoothed: a 5-tap filter (centre weighted twice, plus 1.5 cells either way along both axes) on top of the bilinear lookup,
@@ -751,11 +778,32 @@ vec3 w1Bil(sampler2D t, vec2 f) {
   vec3 a = w1At(t, i0), b = w1At(t, ivec2(i1.x, i0.y)), c = w1At(t, ivec2(i0.x, i1.y)), d = w1At(t, i1);
   return a.z * b.z * c.z * d.z > .5 ? vec3(mix(mix(a.xy, b.xy, w.x), mix(c.xy, d.xy, w.x), w.y), 1.) : vec3(0.);
 }
+// Catmull-Rom over the 4 x 4 cells of the 1 km wind around the point: the same surface as windGrid's, for the packed (u, v) codes; missing (z = 0) if any of the 16 is missing
+vec2 crSpline2(vec2 p0, vec2 p1, vec2 p2, vec2 p3, float t) {
+  float t2 = t * t, t3 = t2 * t;
+  return .5 * (2. * p1 + (p2 - p0) * t + (2. * p0 - 5. * p1 + 4. * p2 - p3) * t2 + (3. * p1 - p0 - 3. * p2 + p3) * t3);
+}
+vec3 w1Cubic(sampler2D t, vec2 f) {
+  ivec2 sz = textureSize(t, 0), i1 = ivec2(floor(f)); vec2 w = f - floor(f);
+  int x0 = clamp(i1.x - 1, 0, sz.x - 1), x1 = clamp(i1.x, 0, sz.x - 1), x2 = clamp(i1.x + 1, 0, sz.x - 1), x3 = clamp(i1.x + 2, 0, sz.x - 1);
+  vec2 col[4]; bool ok = true;
+  for (int j = 0; j < 4; j++) {
+    int y = clamp(i1.y - 1 + j, 0, sz.y - 1);
+    vec3 p0 = w1At(t, ivec2(x0, y)), p1 = w1At(t, ivec2(x1, y)), p2 = w1At(t, ivec2(x2, y)), p3 = w1At(t, ivec2(x3, y));
+    ok = ok && p0.z * p1.z * p2.z * p3.z > .5;
+    col[j] = crSpline2(p0.xy, p1.xy, p2.xy, p3.xy, w.x);
+  }
+  return ok ? vec3(crSpline2(col[0], col[1], col[2], col[3], w.y), 1.) : vec3(0.);
+}
 vec3 wind1km(vec2 ll) {
   vec2 f = vec2((ll.x - u1kBox.x) / u1kBox.z - .5, (u1kBox.y - ll.y) / u1kBox.z - .5); ivec2 sz = textureSize(tW1A, 0);
   if (f.x < 0. || f.y < 0. || f.x > float(sz.x - 1) || f.y > float(sz.y - 1)) return vec3(0.);
   vec3 a = w1Bil(tW1A, f), b = w1Bil(tW1B, f);
-  return a.z * b.z > .5 ? vec3(mix(a.xy, b.xy, u1kMix), 1.) : vec3(0.);
+  if (a.z * b.z < .5) return vec3(0.);
+  vec3 ca = w1Cubic(tW1A, f), cb = w1Cubic(tW1B, f);                   // bicubic where all 16 cells are there, else the bilinear value
+  if (ca.z > .5) a = ca;
+  if (cb.z > .5) b = cb;
+  return vec3(mix(a.xy, b.xy, u1kMix), 1.);
 }
 vec3 velocityAt(vec2 ll) {
   // surface trails with "Follow the terrain": the 1 km mass-consistent wind where it is loaded, else ECMWF with the slope rule below
@@ -799,10 +847,13 @@ void main() {
   vec2 r1 = hash22(vUv * 713.31 + uSeed), r2 = hash22(vUv * 197.77 - uSeed * 1.37);
   vec2 ll = vec2(uO.x + s.x / uO.z, uO.y + s.y / uO.w);                // lon, lat
   vec3 vel = velocityAt(ll);
+  // midpoint (RK2) step: half a step along the wind here, the wind found there carries the whole step. Where that wind is missing the particle is recycled, as for a missing wind here.
+  vec3 vel2 = vec3(0.);
+  if (vel.z > .5) vel2 = velocityAt(ll + vec2(vel.x * uSim * .5 / (111320. * cos(radians(ll.y))), vel.y * uSim * .5 / 111320.));
   bool outBox = ll.x < uBox.x || ll.x > uBox.y || ll.y < uBox.z || ll.y > uBox.w;
   bool far = length(s.xy - uView.xy) > uView.z * ${WIND_SIM.outsideFactor.toFixed(2)};
   bool dead = s.z >= s.w || s.w <= 0.;
-  if (uReset > .5 || dead || outBox || far || vel.z < .5) {            // recycle at once: a random place in the area on screen, a new random lifespan
+  if (uReset > .5 || dead || outBox || far || vel.z < .5 || vel2.z < .5) {   // recycle at once: a random place in the area on screen, a new random lifespan
     float life = uLife.x + r2.x * (uLife.y - uLife.x);
     vec2 p = spawnLonLat(r1, r2);
     if (uLevelKm > 0.) {                                               // at a pressure level a spot where the level is underground is no place to start: try other places
@@ -814,7 +865,7 @@ void main() {
     gl_FragColor = vec4((p.x - uO.x) * uO.z, (p.y - uO.y) * uO.w, uReset > .5 ? r2.y * life : 0., life);
     return;
   }
-  vec2 w = vel.xy; float sp0 = length(w);
+  vec2 w = vel2.xy; float sp0 = length(w);                             // the minimum-speed rule applies to the wind that carries the step
   if (sp0 < uMinSpeed) {                                               // calm or converging: a steady drift, never a random walk (withMinimumSpeed of core.js)
     // this life's own heading: s.w (the lifespan) is fixed for a whole life and new at every respawn. (A heading hashed with uSeed changes every frame:
     // that is a random walk, and the trail recorded it as a tangle of loops in still air.)
@@ -835,9 +886,10 @@ void main() {
   if (slot == int(uHead + .5)) { vec4 s = texelFetch(tState, ivec2(p.x / ${HIST}, p.y), 0); gl_FragColor = vec4(uO.x + s.x / uO.z, uO.y + s.y / uO.w, s.z, s.w); }
   else gl_FragColor = texelFetch(tHist, p, 0);
 }`;
+const SUB = 3, PF = (PTS - 1) * SUB + 1;                              // vertices per recorded segment, points per trail
 const DRAW_VS = GLSL_COMMON + `
-attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, point along the trail (0 = head .. ${PTS - 1} = tail), side of the ribbon
-uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)   // uSimRate: seconds of wind shown per real second
+attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, place along the trail in recorded-point units (0 = head .. ${PTS - 1} = oldest, fractional between), side of the ribbon
+uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)
 uniform sampler2D tState, tHist; uniform vec2 uMC;
 uniform float uExag, uLift, uScale;
 varying vec3 vCol; varying float vA, vSide;
@@ -845,44 +897,62 @@ ${windRampGlsl('windRamp')}                                      // windColour o
 // Clip-space position of a point lying on the terrain: the height of the drawn MESH at exactly this point plus a hover (or the level height for pressure levels).
 vec4 clipAt(vec2 ll) {
   float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;      // the mesh's height, not the DEM's: the mesh is what is seen
-  float lk = uLevelKm; if (lk > 0.) { vec4 g = windGrid(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }      // the level's real height here, else its standard height
+  float lk = uLevelKm; if (lk > 0.) { vec4 g = windGridH(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }     // the level's real height here, else its standard height
   float y = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
   return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, y, (my - uMC.y) * uScale, 1.);
+}
+// The recorded positions of this trail, head first (gP[0]), found by walking back through the ring buffer once; a position from the particle's previous life ends the chain and the
+// older ones repeat the last valid one. gNeed is the highest index used.
+vec2 gP[${PTS}]; bool gOK[${PTS}]; int gNeed;
+// Centripetal Catmull-Rom (alpha 0.5) in lon/lat through P1 (s = 0) and P2 (s = 1): centripetalCatmullRom of core.js. Points are taken relative to P1 for precision.
+float crKnot(float t, vec2 a, vec2 b) { vec2 d = (b - a) * vec2(cos(radians(a.y)), 1.); return t + sqrt(max(length(d), 1e-5)); }
+vec2 crCurve(vec2 q0, vec2 q1, vec2 q2, vec2 q3, float s) {
+  vec2 p0 = q0 - q1, p1 = vec2(0.), p2 = q2 - q1, p3 = q3 - q1;
+  float t0 = 0., t1 = crKnot(t0, q0, q1), t2 = crKnot(t1, q1, q2), t3 = crKnot(t2, q2, q3), t = mix(t1, t2, s);
+  vec2 A1 = (t1 - t) / (t1 - t0) * p0 + (t - t0) / (t1 - t0) * p1, A2 = (t2 - t) / (t2 - t1) * p1 + (t - t1) / (t2 - t1) * p2, A3 = (t3 - t) / (t3 - t2) * p2 + (t - t2) / (t3 - t2) * p3;
+  vec2 B1 = (t2 - t) / (t2 - t0) * A1 + (t - t0) / (t2 - t0) * A2, B2 = (t3 - t) / (t3 - t1) * A2 + (t - t1) / (t3 - t1) * A3;
+  return q1 + (t2 - t) / (t2 - t1) * B1 + (t - t1) / (t2 - t1) * B2;
+}
+// The curve at x recorded-point units from the head; ok is 1 while the chain holds along the segment, fading to 0 towards a break, 0 after it.
+vec2 curveAt(float x, out float ok) {
+  float xf = clamp(x, 0., float(gNeed));
+  int i = min(int(floor(xf)), gNeed - 1); float s = xf - float(i);
+  int i2 = min(i + 1, gNeed);
+  ok = gOK[i] ? (gOK[i2] ? 1. : 1. - s) : 0.;
+  return crCurve(gP[max(i - 1, 0)], gP[i], gP[i2], gP[min(i + 2, gNeed)], s);
 }
 void main() {
   vec4 s = texelFetch(tState, ivec2(aPart), 0);
   vec2 head = vec2(uO.x + s.x / uO.z, uO.y + s.y / uO.w);
-  // trailPoint of core.js: a point beyond the chosen length is drawn at the last visible point (zero-area triangles), so the length changes
-  // without touching any buffer; the fade and the taper run over the visible length
-  int segs = int(clamp(uTrailSegments, ${WIND_SIM.trailSegments.min}., ${WIND_SIM.trailSegments.max}.) + .5);
-  int j = int(aIdx + .5); bool beyond = j > segs; if (beyond) j = segs;
-  // Walk back from the head through the ring buffer (newest first) to point j + 1. A recorded position from the particle's previous life (other
-  // lifespan tag, or recorded at a later age) ends the trail: that point and all older ones repeat the last valid one and are invisible.
-  vec2 last = head, pPrev = head, pCur = head, pNext = head; bool chain = true, okCur = true;
+  // trailPoint of core.js: a vertex beyond the chosen length is drawn at the last visible point (zero-area triangles), so the length changes without touching any buffer; the fade and
+  // the taper run over the visible length
+  float segsF = floor(clamp(uTrailSegments, ${WIND_SIM.trailSegments.min}., ${WIND_SIM.trailSegments.max}.) + .5);
+  bool beyond = aIdx > segsF + .001; float u = min(aIdx, segsF);
+  gNeed = min(int(floor(min(u + .06, segsF))) + 2, ${PTS - 1});
+  vec2 last = head; bool chain = true;
   for (int k = 0; k <= ${PTS - 1}; k++) {
-    if (k > j + 1) break;
+    if (k > gNeed) break;
     vec2 p = head;
     if (k > 0) {
       int slot = int(mod(uHead - float(k - 1) + ${HIST * 8}., ${HIST}.));
       vec4 h = texelFetch(tHist, ivec2(int(aPart.x) * ${HIST} + slot, int(aPart.y)), 0);
       if (chain && h.w == s.w && h.z <= s.z + .001) { last = h.xy; p = h.xy; } else { chain = false; p = last; }
     }
-    if (k == j - 1) pPrev = p;
-    if (k == j) { pCur = p; okCur = chain; }
-    if (k == j + 1) pNext = p;
+    gP[k] = p; gOK[k] = chain;
   }
-  if (j >= segs) pNext = pCur;
+  float okC, okP, okN;
+  vec2 pCur = curveAt(u, okC), pPrev = curveAt(max(u - .05, 0.), okP), pNext = curveAt(u + .05, okN);
   vec3 vh = velocityAt(head);                                          // the wind speed at the head, as the simulation sees it (terrain adjustment and 1 km wind included): colours do not change with zoom or animation speed
-  float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = float(j) / float(segs);
+  float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = u / segsF;
   float fadeIn = min(1., s.z / 12.), fadeOut = min(1., (s.w - s.z) / 20.);
   // trailAlpha and trailWidthPx of core.js: bright head fading smoothly to nothing at the tail, narrower towards the tail, a little wider and stronger in fast wind
-  vA = okCur && !beyond ? .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut : 0.;
+  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.45 + .55 * min(1., sp / 8.)) * fadeIn * fadeOut;
   vCol = windRamp(sp);
   vec4 cPrev = clipAt(pPrev), cCur = clipAt(pCur), cNext = clipAt(pNext);
   // An invisible point (faded tail, previous life, missing wind) keeps its place with zero opacity: moving it off screen would stretch the
   // triangles joining it to its visible neighbour into long faint slivers. Only a particle whose head is behind the camera is removed, all its
   // vertices to the same place, so nothing at all is drawn for it; a point behind the camera falls back to the head.
-  vec4 cHead = j == 0 ? cCur : clipAt(head);
+  vec4 cHead = u == 0. ? cCur : clipAt(head);
   if (cHead.w < .01) { gl_Position = vec4(2., 2., 2., 1.); vA = 0.; return; }
   if (cCur.w < .01) { cCur = cHead; vA = 0.; }
   if (cPrev.w < .01) cPrev = cCur;
@@ -923,12 +993,12 @@ function initGpuWind() {
     simScene = new THREE.Scene(); simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMat));
     histMat = new THREE.ShaderMaterial({uniforms: {tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uO: wu.uO}, vertexShader: SIM_VS, fragmentShader: HIST_FS, depthTest: false, depthWrite: false});
     histScene = new THREE.Scene(); histScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), histMat));
-    // ${PTS} points x 2 sides per particle, ${PTS - 1} segments of two triangles
-    const VP = PTS * 2, part = new Float32Array(GPU_N * VP * 2), idx = new Float32Array(GPU_N * VP), side = new Float32Array(GPU_N * VP), index = new Uint32Array(GPU_N * (PTS - 1) * 6);
+    // PF points (SUB per recorded segment, plus the head) x 2 sides per particle, PF - 1 segments of two triangles; aIdx is the place in recorded-point units
+    const VP = PF * 2, part = new Float32Array(GPU_N * VP * 2), idx = new Float32Array(GPU_N * VP), side = new Float32Array(GPU_N * VP), index = new Uint32Array(GPU_N * (PF - 1) * 6);
     for (let i = 0; i < GPU_N; i++) {
       const px = i % GPU_W, py = Math.floor(i / GPU_W), b = VP * i;
-      for (let k = 0; k < VP; k++) { part[2 * (b + k)] = px; part[2 * (b + k) + 1] = py; idx[b + k] = k >> 1; side[b + k] = k % 2 ? 1 : -1; }
-      for (let s = 0; s < PTS - 1; s++) { const v = b + 2 * s; index.set([v, v + 1, v + 2, v + 1, v + 3, v + 2], (i * (PTS - 1) + s) * 6); }
+      for (let k = 0; k < VP; k++) { part[2 * (b + k)] = px; part[2 * (b + k) + 1] = py; idx[b + k] = (k >> 1) / SUB; side[b + k] = k % 2 ? 1 : -1; }
+      for (let s = 0; s < PF - 1; s++) { const v = b + 2 * s; index.set([v, v + 1, v + 2, v + 1, v + 3, v + 2], (i * (PF - 1) + s) * 6); }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GPU_N * VP * 3), 3)); geo.setAttribute('aPart', new THREE.BufferAttribute(part, 2));
@@ -991,7 +1061,7 @@ function stepWindGpu(dt) {
   du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
   du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
-  gpuLines.geometry.setDrawRange(0, drawn * (PTS - 1) * 6);
+  gpuLines.geometry.setDrawRange(0, drawn * (PF - 1) * 6);
 }
 
 // ---- ray against the height field (fast, and exact enough for a click) ----

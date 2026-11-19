@@ -613,6 +613,40 @@ export function simRowRange(drawn, columns, rowsTotal, prevRows) {
   return {rows, activate: prevRows > 0 && rows > prevRows ? [prevRows, rows] : null};
 }
 
+// ---- smooth sampling and stepping (Batch D): the numerics of the wind shaders, written once here so they can be tested with numbers ----
+// Catmull-Rom through p1 (t = 0) and p2 (t = 1), with p0 and p3 as the neighbours: a cubic with continuous slope across cells. Exact for straight lines.
+export const catmullRom = (p0, p1, p2, p3, t) => 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+// A value from a 4 x 4 block of cells (rows of four, north to south) at (tx, ty) inside the middle cell: Catmull-Rom along x in each row, then along y.
+export function bicubic(cells, tx, ty) {
+  const row = j => catmullRom(cells[j][0], cells[j][1], cells[j][2], cells[j][3], tx);
+  return catmullRom(row(0), row(1), row(2), row(3), ty);
+}
+export const bilinear = (a, b, c, d, tx, ty) => (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+// The wind from a 4 x 4 block of [u, v, valid] cells: bicubic when all 16 are valid, otherwise the bilinear result of the four inner cells (itself missing, null, if one of
+// those is). Mirrors windGrid and wind1km in app.js; the shaders do the same per forecast step and then blend the two steps in time.
+export function windFromBlock(block, tx, ty) {
+  const ok = (j, i) => block[j][i][2] > 0.5;
+  const inner = ok(1, 1) && ok(1, 2) && ok(2, 1) && ok(2, 2);
+  if (!inner) return null;
+  const all = block.every((row, j) => row.every((_, i) => ok(j, i)));
+  const comp = k => all ? bicubic(block.map(row => row.map(c => c[k])), tx, ty) : bilinear(block[1][1][k], block[1][2][k], block[2][1][k], block[2][2][k], tx, ty);
+  return [comp(0), comp(1)];
+}
+// Centripetal Catmull-Rom (alpha 0.5) through p1 (s = 0) and p2 (s = 1) in lon/lat, the curve a trail is drawn along. Knots grow by the square root of the distance (longitude
+// scaled by cos(latitude)), so the curve never loops or cusps where recorded points are unevenly spaced. Barry-Goldman form, as the vertex shader.
+export function centripetalCatmullRom(p0, p1, p2, p3, s) {
+  const knot = (t, a, b) => t + Math.sqrt(Math.max(Math.hypot((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]), 1e-5));
+  const t0 = 0, t1 = knot(t0, p0, p1), t2 = knot(t1, p1, p2), t3 = knot(t2, p2, p3), t = t1 + (t2 - t1) * s;
+  const mix = (a, b, wa, wb) => [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb];
+  const A1 = mix(p0, p1, (t1 - t) / (t1 - t0), (t - t0) / (t1 - t0)), A2 = mix(p1, p2, (t2 - t) / (t2 - t1), (t - t1) / (t2 - t1)), A3 = mix(p2, p3, (t3 - t) / (t3 - t2), (t - t2) / (t3 - t2));
+  const B1 = mix(A1, A2, (t2 - t) / (t2 - t0), (t - t0) / (t2 - t0)), B2 = mix(A2, A3, (t3 - t) / (t3 - t1), (t - t1) / (t3 - t1));
+  return mix(B1, B2, (t2 - t) / (t2 - t1), (t - t1) / (t2 - t1));
+}
+// One step of dt seconds of a velocity field vel(x, y) -> [u, v] by the midpoint rule: a half step along the first velocity, then the full step with the velocity found there.
+// (The shader does this in degrees; the arithmetic is the same.) euler() is the old single-velocity step.
+export const midpointStep = (x, y, vel, dt) => { const [u1, v1] = vel(x, y), [u2, v2] = vel(x + u1 * dt / 2, y + v1 * dt / 2); return [x + u2 * dt, y + v2 * dt]; };
+export const eulerStep = (x, y, vel, dt) => { const [u, v] = vel(x, y); return [x + u * dt, y + v * dt]; };
+
 // ---- wind particles ----
 // The simulation itself runs on the GPU (app.js); these are its rules, written once here so they can be tested with numbers. The shader uses the
 // same constants and the same formulas (advect, withMinimumSpeed, respawnBox, outsideView).

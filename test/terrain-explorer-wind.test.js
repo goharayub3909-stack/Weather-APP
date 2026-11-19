@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {catmullRom, bicubic, bilinear, windFromBlock, centripetalCatmullRom, midpointStep, eulerStep, simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
   assert.equal(WIND_SIM.life[0], 120); assert.equal(WIND_SIM.life[1], 300);
@@ -217,4 +217,63 @@ test('only the rows of the state texture that are drawn are simulated, and rows 
   assert.deepEqual(simRowRange(99999, 256, 96, 94), {rows: 96, activate: [94, 96]});                                            // never more rows than the texture has
   assert.deepEqual(simRowRange(0, 256, 96, 5), {rows: 1, activate: null});                                                      // at least one row
   assert.deepEqual(simRowRange(5000, 256, 96, 20), {rows: 20, activate: null});                                                 // unchanged
+});
+
+// ---- Batch D: fluid motion (numerics only) ----
+const close = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol;
+test('Catmull-Rom passes through its two middle points, is exact for lines and quadratics, and has a continuous slope at the joins', () => {
+  assert.equal(catmullRom(3, 7, 11, 2, 0), 7); assert.equal(catmullRom(3, 7, 11, 2, 1), 11);
+  for (const t of [0.1, 0.5, 0.9]) assert.ok(close(catmullRom(0, 1, 2, 3, t), 1 + t));                                           // a line
+  for (const t of [0.1, 0.35, 0.8]) assert.ok(close(catmullRom(0, 1, 4, 9, t), (1 + t) ** 2));                                    // a quadratic: x^2 at x = 0, 1, 2, 3
+  // the slope at t = 1 of one segment (p0..p3) is (p3 - p1) / 2, and the next segment (p1..p4) starts with the slope (p3 - p1) / 2: the same
+  const h = 1e-6, p = [2, 5, 3, 8, 1], end = (catmullRom(p[0], p[1], p[2], p[3], 1) - catmullRom(p[0], p[1], p[2], p[3], 1 - h)) / h, start = (catmullRom(p[1], p[2], p[3], p[4], h) - catmullRom(p[1], p[2], p[3], p[4], 0)) / h;
+  assert.ok(close(end, start, 1e-4) && close(end, (p[3] - p[1]) / 2, 1e-4), `${end} ${start}`);
+});
+test('the bicubic surface is exact for planes and quadratics where bilinear is not, and equals the cell values at the cell corners', () => {
+  const block = f => [0, 1, 2, 3].map(j => [0, 1, 2, 3].map(i => f(i, j)));
+  const plane = (i, j) => 2 + 3 * i - 4 * j, quad = (i, j) => 1 + i * i + 0.5 * j * j + i * j;
+  for (const [tx, ty] of [[0.2, 0.7], [0.5, 0.5], [0.9, 0.1]]) {
+    assert.ok(close(bicubic(block(plane), tx, ty), plane(1 + tx, 1 + ty)));
+    assert.ok(close(bicubic(block(quad), tx, ty), quad(1 + tx, 1 + ty)));
+    assert.ok(Math.abs(bilinear(quad(1, 1), quad(2, 1), quad(1, 2), quad(2, 2), tx, ty) - quad(1 + tx, 1 + ty)) > 1e-3);       // bilinear is off on a curved field
+  }
+  assert.equal(bicubic(block(quad), 0, 0), quad(1, 1)); assert.equal(bicubic(block(quad), 1, 1), quad(2, 2));
+});
+test('the wind from a 4 x 4 block: bicubic when all 16 cells are valid, bilinear when an outer one is missing, missing when an inner one is', () => {
+  const cell = (i, j, ok = 1) => [(1 + i) ** 2, 3 - j * 2, ok];
+  const make = bad => [0, 1, 2, 3].map(j => [0, 1, 2, 3].map(i => cell(i, j, bad && bad[0] === i && bad[1] === j ? 0 : 1)));
+  const tx = 0.3, ty = 0.6;
+  const full = windFromBlock(make(), tx, ty), b = make();
+  assert.ok(close(full[0], (1 + (1 + tx)) ** 2) && close(full[1], 3 - (1 + ty) * 2));                                           // exact for the quadratic in u and the line in v
+  const outer = windFromBlock(make([0, 0]), tx, ty);
+  assert.ok(close(outer[0], bilinear(b[1][1][0], b[1][2][0], b[2][1][0], b[2][2][0], tx, ty)) && close(outer[1], bilinear(b[1][1][1], b[1][2][1], b[2][1][1], b[2][2][1], tx, ty)));
+  assert.ok(Math.abs(outer[0] - full[0]) > 1e-3);                                                                               // and it is the bilinear value, not the bicubic one
+  assert.equal(windFromBlock(make([1, 1]), tx, ty), null); assert.equal(windFromBlock(make([2, 1]), tx, ty), null);              // an inner cell missing: no wind
+  assert.ok(windFromBlock(make([3, 3]), tx, ty) !== null);
+});
+test('the trail curve passes through its recorded points, is straight through evenly spaced collinear ones, and joins smoothly', () => {
+  const A = [73.0, 33.0], B = [73.2, 33.1], C = [73.3, 33.3], D = [73.1, 33.5], E = [72.9, 33.4];
+  const at = (p0, p1, p2, p3, s) => centripetalCatmullRom(p0, p1, p2, p3, s);
+  for (const [i, pt] of [[0, B], [1, C]]) { const q = at(A, B, C, D, i); assert.ok(close(q[0], pt[0], 1e-9) && close(q[1], pt[1], 1e-9)); }
+  const line = [0, 1, 2, 3].map(k => [70 + 0.1 * k, 30]);                                                                       // four points along a parallel, equal spacing
+  for (const s of [0.25, 0.5, 0.75]) { const q = at(...line, s); assert.ok(close(q[1], 30, 1e-12) && close(q[0], 70.1 + 0.1 * s, 1e-9)); }
+  // slope continuity at the join C: the end of segment (A, B, C, D) and the start of (B, C, D, E) point the same way
+  const dir = (p, q) => { const dx = (q[0] - p[0]) * Math.cos(33.3 * Math.PI / 180), dy = q[1] - p[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
+  const e = 1e-5, d1 = dir(at(A, B, C, D, 1 - e), at(A, B, C, D, 1)), d2 = dir(at(B, C, D, E, 0), at(B, C, D, E, e));
+  assert.ok(close(d1[0], d2[0], 2e-3) && close(d1[1], d2[1], 2e-3), `${d1} ${d2}`);
+  // coincident points (a particle that did not move between two records) must not give NaN
+  const same = at(A, B, B, C, 0.5); assert.ok(Number.isFinite(same[0]) && Number.isFinite(same[1]));
+  // centripetal: a sharp corner does not overshoot or loop; the curve between the two middle points stays near them
+  const corner = [0, 1, 2, 3].map(k => k < 2 ? [60 + 0.2 * k, 30] : [60.2, 30 + 0.2 * (k - 1)]);
+  for (const s of [0.1, 0.5, 0.9]) { const q = at(...corner, s); assert.ok(q[0] >= 60.1 - 0.05 && q[0] <= 60.2 + 0.05 && q[1] >= 30 - 0.05 && q[1] <= 30.2 + 0.05, `${q}`); }
+});
+test('the midpoint step is second order: in a rotating wind it stays on the circle far better than a single-velocity step', () => {
+  const omega = 1, rot = (x, y) => [-omega * y, omega * x];
+  const run = (step, n, T = 3) => { let p = [1, 0]; const dt = T / n; for (let i = 0; i < n; i++) p = step(p[0], p[1], rot, dt); return p; };
+  const exact = [Math.cos(3), Math.sin(3)], err = p => Math.hypot(p[0] - exact[0], p[1] - exact[1]);
+  const e1 = err(run(eulerStep, 50)), m1 = err(run(midpointStep, 50)), m2 = err(run(midpointStep, 100));
+  assert.ok(m1 < e1 / 10, `midpoint ${m1} euler ${e1}`);                                                                        // far more accurate for the same number of steps
+  assert.ok(m1 / m2 > 3.5 && m1 / m2 < 4.5, 'halving the step divides the error by about 4: ' + m1 / m2);                       // second order
+  assert.deepEqual(midpointStep(5, 7, () => [2, -1], 3), [11, 4]);                                                              // a steady wind: the same as before
+  assert.ok(Math.hypot(...run(midpointStep, 50)) > 0.99 && Math.hypot(...run(midpointStep, 50)) < 1.01);                      // the radius is kept
 });
