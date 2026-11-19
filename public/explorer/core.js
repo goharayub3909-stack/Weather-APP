@@ -596,6 +596,12 @@ export function* normalMapJob(hts, w, h, pixelKm, step, exag, out) {
   }
 }
 
+// Height of the drawn MESH inside one grid cell. gridGeometryJob splits each cell a (north-west), b (north-east), c (south-west), d (south-east) into the triangles (a, c, b) and
+// (b, c, d), so the diagonal runs from b to c. tx, ty in 0..1 across the cell (east, south). The draw shader (drawIn in app.js) uses the same formula; the trails lie on this surface.
+export function meshCellHeight(ha, hb, hc, hd, tx, ty) {
+  return tx + ty <= 1 ? ha + tx * (hb - ha) + ty * (hc - ha) : hd + (1 - tx) * (hc - hd) + (1 - ty) * (hb - hd);
+}
+
 // ---- wind particles ----
 // The simulation itself runs on the GPU (app.js); these are its rules, written once here so they can be tested with numbers. The shader uses the
 // same constants and the same formulas (advect, withMinimumSpeed, respawnBox, outsideView).

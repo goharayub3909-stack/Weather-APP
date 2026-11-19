@@ -284,7 +284,8 @@ function scheduleNormals(delay = 300) {
   }, delay);
 }
 function buildTerrain() {
-  const g = gridGeometry(heights, W, H, TX0, TY0, Z, state.detail ? 2 : 4);
+  const step = state.detail ? 2 : 4, g = gridGeometry(heights, W, H, TX0, TY0, Z, step);
+  setDrawHeights(0, g, Math.floor((W - 1) / step) + 1, Math.floor((H - 1) / step) + 1, MX0, MY0, 256 * TILES / step, 256 * TILES / step);      // the trails follow THIS mesh
   if (terrain) { terrain.geometry.dispose(); terrain.geometry = g; scheduleNormals(0); return; }     // another vertex spacing: the base map is rebuilt for it
   const mat = new THREE.MeshLambertMaterial({map: texture});
   mat.customProgramCacheKey = () => 'lod-base'; mat.onBeforeCompile = sh => lodShader(sh, holes.base, false);
@@ -295,7 +296,7 @@ function buildTerrain() {
 
 // ---- detail levels ----
 let patchBusy = false, moveStamp = 0;
-function disposeLevel(L) { scene.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.material.dispose(); L.texture.dispose(); L.hTex?.dispose(); L.fTex?.dispose(); if (L.nrm) { L.nrm.gen++; L.nrm.tex?.dispose(); } }
+function disposeLevel(L) { scene.remove(L.mesh); L.mesh.geometry.dispose(); L.mesh.material.dispose(); L.texture.dispose(); L.hTex?.dispose(); L.fTex?.dispose(); if (L.nrm) { L.nrm.gen++; L.nrm.tex?.dispose(); } if (lods.get(L.z) === L) dropDrawHeights(L.z); }
 function removeLevel(z) { const L = lods.get(z); if (!L) return; disposeLevel(L); lods.delete(z); updateHoles(); setDetailNote(); }
 const lodTimes = window.__lodTimes = [];                                // main-thread milliseconds of each detail level's synchronous stages (read by ?fps and by profiling)
 function tick(lap, name, fn) { const t0 = performance.now(), r = fn(); lap[name] = +(performance.now() - t0).toFixed(1); return r; }
@@ -312,7 +313,8 @@ async function startLevel(z, tx0, ty0) {
     const tex = new THREE.CanvasTexture(pdisplay); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
     const mat = new THREE.MeshLambertMaterial({map: tex, transparent: true, polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -(z - 8)});     // a few depth units only: a slope-dependent offset (factor) pulls grazing terrain over the trails
     mat.customProgramCacheKey = () => 'lod-detail'; mat.onBeforeCompile = sh => lodShader(sh, holes[z], true);
-    const built = await runSliced(gridGeometryJob(hts, w, h, tx0, ty0, z, 2, true)); lap.mesh = +built.work.toFixed(1);     // sliced: the longest single block is about SLICE_MS
+    const built = await runSliced(gridGeometryJob(hts, w, h, tx0, ty0, z, 2, true)); lap.mesh = +built.work.toFixed(1);
+    setDrawHeights(z, built.value, Math.floor((w - 1) / 2) + 1, Math.floor((h - 1) / 2) + 1, tx0 / n, ty0 / n, 256 * n / 2, 256 * n / 2);     // sliced: the longest single block is about SLICE_MS
     const mesh = new THREE.Mesh(built.value, mat);
     mesh.scale.y = state.exag; mesh.renderOrder = z - 8;                     // detail after the opaque base, finer after coarser
     const mx0 = tx0 / n, mx1 = (tx0 + T) / n, my0 = ty0 / n, my1 = (ty0 + T) / n;
@@ -520,12 +522,12 @@ function sampleFlow(mx, my) {
   const lerp = arr => (arr[i] * (1 - tx) + arr[i + 1] * tx) * (1 - ty) + (arr[i + w] * (1 - tx) + arr[i + w + 1] * tx) * ty;
   fGx = lerp(F.gx); fGn = lerp(F.gn); fTpi = lerp(F.tpi);
 }
-const flowOut = [0, 0], minOut = [0, 0];
+const flowOut = [0, 0], minOut = [0, 0], linearCol = new THREE.Color();
 function stepWind(dt) {
   if (!sampler) return;
   const dist = camera.position.distanceTo(controls.target);
   viewR = Math.min(2500, Math.max(25, dist * 1.15));
-  LIFT = Math.min(0.8, Math.max(0.05, dist * 0.0012));
+  LIFT = Math.min(2.5, Math.max(0.05, dist * 0.0012));
   frameNo++;
   const n = Math.min(state.density, 6000), sim = dt * SIM_SECONDS * state.speed * zoomScale(dist);      // the CPU path is the fallback: fewer particles
   for (let i = 0; i < n; i++) {
@@ -542,11 +544,12 @@ function stepWind(dt) {
   }
   let s = 0, c = 0;
   for (let i = 0; i < n; i++) {
-    const col = windColour(speedNow[i]), life = Math.min(1, page[i] / 12, (plife[i] - page[i]) / 20), base = i * TRAIL * 3, calm = 0.4 + 0.6 * Math.min(1, speedNow[i] / 3);
+    const col = windColour(speedNow[i]); linearCol.setRGB(col[0] / 255, col[1] / 255, col[2] / 255, THREE.SRGBColorSpace);          // the line material wants linear vertex colours
+    const life = Math.min(1, page[i] / 12, (plife[i] - page[i]) / 20), base = i * TRAIL * 3, calm = 0.4 + 0.6 * Math.min(1, speedNow[i] / 3);
     for (let k = 0; k < TRAIL - 1; k++) {
       const a = (1 - k / (TRAIL - 1)) ** 1.6 * life * calm * 0.95;
       segPos.set(hist.subarray(base + k * 3, base + k * 3 + 6), s); s += 6;
-      segCol.set([col[0] / 255, col[1] / 255, col[2] / 255, a, col[0] / 255, col[1] / 255, col[2] / 255, a * 0.8], c); c += 8;
+      segCol.set([linearCol.r, linearCol.g, linearCol.b, a, linearCol.r, linearCol.g, linearCol.b, a * 0.8], c); c += 8;
     }
   }
   windGeo.setDrawRange(0, n * (TRAIL - 1) * 2);
@@ -567,7 +570,7 @@ function stepWind(dt) {
 // If the GPU cannot render to float textures the CPU simulation above is used instead.
 const GPU_W = 256, GPU_H = 96, GPU_N = GPU_W * GPU_H, HIST = WIND_SIM.trailPoints - 1, PTS = WIND_SIM.trailPoints;
 // ?cpuwind in the address forces the CPU simulation (for testing the fallback).
-const gpuWind = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float') && renderer.capabilities.maxVertexTextures >= 12 && renderer.capabilities.maxTextureSize >= GPU_W * HIST && !new URLSearchParams(location.search).has('cpuwind');
+const gpuWind = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float') && renderer.capabilities.maxVertexTextures >= 15 && renderer.capabilities.maxTextureSize >= GPU_W * HIST && !new URLSearchParams(location.search).has('cpuwind');
 let gpuReady = false, gpuLines = null, resetNext = true, windKey = '', baseHTex = null, baseFTex = null, simCur = 0, simFrame = 0, histCur = 0, histHead = 0, slotClock = 0;
 function floatTexture(data, w, h, format = THREE.RGBAFormat) { const t = new THREE.DataTexture(data, w, h, format, THREE.FloatType); t.needsUpdate = true; return t; }
 const emptyF = floatTexture(new Float32Array(4), 1, 1), emptyR = floatTexture(new Float32Array(1), 1, 1, THREE.RedFormat);
@@ -586,6 +589,7 @@ const wu = {
   uFB0: {value: v4()}, uFB9: {value: v4()}, uFB10: {value: v4()}, uFB11: {value: v4()}, uFS0: {value: v2()}, uFS9: {value: v2()}, uFS10: {value: v2()}, uFS11: {value: v2()},
   tH0: {value: emptyR}, tH9: {value: emptyR}, tH10: {value: emptyR}, tH11: {value: emptyR},
   uHB0: {value: v4()}, uHB9: {value: v4()}, uHB10: {value: v4()}, uHB11: {value: v4()}, uHS0: {value: v2()}, uHS9: {value: v2()}, uHS10: {value: v2()}, uHS11: {value: v2()},
+  tD: {value: emptyR}, uDB0: {value: v4()}, uDB9: {value: v4()}, uDB10: {value: v4()}, uDB11: {value: v4()}, uDO0: {value: v4()}, uDO9: {value: v4()}, uDO10: {value: v4()}, uDO11: {value: v4()}, uDOn: {value: v4()},
 };
 function makeBaseTextures() {
   if (!gpuWind) return;
@@ -595,6 +599,22 @@ function makeLevelTextures(L) {
   if (!gpuWind) return;
   L.hTex = floatTexture(L.heights, L.w, L.h, THREE.RedFormat); L.fTex = flowTexture(L.flow);
 }
+// Draw-height atlas: the y of every vertex of each mesh (the base: every 4th DEM pixel, 2nd with Detail on; a detail level: every 2nd, border blended), in metres, so the trails
+// are placed on the surface that is drawn. Slots are stacked: base, zoom 9, 10, 11. Rebuilt when the mesh changes (Detail toggled, a level loaded or dropped).
+const DRAW_W = 1024, DRAW_SLOT = {0: [0, 1024], 9: [1024, 640], 10: [1664, 640], 11: [2304, 640]}, DRAW_H = 2944;
+let drawAtlas = null;
+function setDrawHeights(slot, geometry, cols, rows, mx0, my0, cellsPerMercatorX, cellsPerMercatorY) {
+  if (!gpuWind || renderer.capabilities.maxTextureSize < DRAW_H) return;
+  const [y0, maxRows] = DRAW_SLOT[slot];
+  if (cols > DRAW_W || rows > maxRows) { wu.uDOn.value.setComponent(slot === 0 ? 0 : slot - 8, 0); return; }              // does not fit: the full-resolution heights are used
+  if (!drawAtlas) { const data = new Float32Array(DRAW_W * DRAW_H); drawAtlas = {data, tex: floatTexture(data, DRAW_W, DRAW_H, THREE.RedFormat)}; wu.tD.value = drawAtlas.tex; }
+  const pos = geometry.attributes.position.array, d = drawAtlas.data;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) d[(y0 + j) * DRAW_W + i] = pos[(j * cols + i) * 3 + 1] * 1000;
+  drawAtlas.tex.needsUpdate = true;
+  wu['uDB' + slot].value.set(mx0, my0, cellsPerMercatorX, cellsPerMercatorY); wu['uDO' + slot].value.set(0, y0, cols, rows);
+  wu.uDOn.value.setComponent(slot === 0 ? 0 : slot - 8, 1);
+}
+const dropDrawHeights = slot => wu.uDOn.value.setComponent(slot === 0 ? 0 : slot - 8, 0);
 // Points the shaders at the base and at whichever detail levels exist.
 function syncWindLevels() {
   if (!gpuWind) return;
@@ -650,6 +670,7 @@ vec4 bil4(sampler2D t, vec2 f, vec2 sz) {
 }
 // Terrain height (m) of the finest level that covers a Mercator point: the 1 km-class DEM (250 m at the coarsest detail level, 65 m at the finest).
 uniform float uLevelKm; uniform sampler2D tH0, tH9, tH10, tH11; uniform vec4 uHB0, uHB9, uHB10, uHB11; uniform vec2 uHS0, uHS9, uHS10, uHS11;
+uniform sampler2D tD; uniform vec4 uDB0, uDB9, uDB10, uDB11, uDO0, uDO9, uDO10, uDO11, uDOn;
 float bilR(sampler2D t, vec2 f, vec2 sz) {
   vec2 fl = floor(f), w = f - fl; ivec2 i0 = ivec2(fl), i1 = min(i0 + 1, ivec2(sz) - 1);
   float a = texelFetch(t, i0, 0).r, b = texelFetch(t, ivec2(i1.x, i0.y), 0).r, c = texelFetch(t, ivec2(i0.x, i1.y), 0).r, d = texelFetch(t, i1, 0).r;
@@ -659,6 +680,26 @@ bool hIn(sampler2D t, vec4 b, vec2 sz, float mx, float my, out float h) {
   vec2 f = vec2((mx - b.x) * b.z, (my - b.y) * b.w);
   if (f.x < 0. || f.y < 0. || f.x >= sz.x - 1. || f.y >= sz.y - 1.) return false;
   h = max(0., bilR(t, f, sz)); return true;
+}
+// Draw heights: the heights of the MESH (every 4th DEM pixel on the base, every 2nd on a detail level, the blended border heights included), in one atlas texture tD
+// (a slot per level: uDO = x offset, y offset, columns, rows; uDB = Mercator origin and lattice cells per Mercator unit; uDOn says which slots hold a mesh). Inside a cell the
+// height is the one of the triangle the mesh draws there (the cell's diagonal runs from its east-top to its west-bottom corner), so a trail lies ON the surface that is seen.
+bool drawIn(vec4 b, vec4 o, float mx, float my, out float h) {
+  vec2 f = vec2((mx - b.x) * b.z, (my - b.y) * b.w);
+  if (f.x < 0. || f.y < 0. || f.x > o.z - 1. || f.y > o.w - 1.) return false;
+  vec2 fl = min(floor(f), o.zw - 2.), t = f - fl; ivec2 p = ivec2(o.xy) + ivec2(fl);
+  float ha = texelFetch(tD, p, 0).r, hb = texelFetch(tD, p + ivec2(1, 0), 0).r, hc = texelFetch(tD, p + ivec2(0, 1), 0).r, hd = texelFetch(tD, p + ivec2(1, 1), 0).r;
+  h = t.x + t.y <= 1. ? ha + t.x * (hb - ha) + t.y * (hc - ha) : hd + (1. - t.x) * (hc - hd) + (1. - t.y) * (hb - hd);
+  return true;
+}
+float groundM(float mx, float my);
+float groundDrawM(float mx, float my) {
+  float h;
+  if (uDOn.w > .5 && drawIn(uDB11, uDO11, mx, my, h)) return max(h, 0.);
+  if (uDOn.z > .5 && drawIn(uDB10, uDO10, mx, my, h)) return max(h, 0.);
+  if (uDOn.y > .5 && drawIn(uDB9, uDO9, mx, my, h)) return max(h, 0.);
+  if (uDOn.x > .5 && drawIn(uDB0, uDO0, mx, my, h)) return max(h, 0.);
+  return groundM(mx, my);                                              // no mesh heights yet: the full-resolution ones
 }
 float groundM(float mx, float my) {
   float h;
@@ -801,9 +842,9 @@ uniform sampler2D tState, tHist; uniform vec2 uMC;
 uniform float uExag, uLift, uScale;
 varying vec3 vCol; varying float vA, vSide;
 ${windRampGlsl('windRamp')}                                      // windColour of core.js, generated from the same table
-// Clip-space position of a point lying on the terrain: the DEM height at exactly this point plus a small hover (or the level height for 850 / 700 hPa).
+// Clip-space position of a point lying on the terrain: the height of the drawn MESH at exactly this point plus a hover (or the level height for pressure levels).
 vec4 clipAt(vec2 ll) {
-  float mx = mercX(ll.x), my = mercY(ll.y), ground = groundM(mx, my) / 1000. * uExag + uLift;
+  float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;      // the mesh's height, not the DEM's: the mesh is what is seen
   float lk = uLevelKm; if (lk > 0.) { vec4 g = windGrid(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }      // the level's real height here, else its standard height
   float y = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
   return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, y, (my - uMC.y) * uScale, 1.);
@@ -869,8 +910,7 @@ void main() {
   float core = 1. - smoothstep(${(RIBBON.core - 0.06).toFixed(2)}, ${(RIBBON.core + 0.06).toFixed(2)}, e);
   float edge = 1. - smoothstep(.88, 1., e);
   vec3 c = mix(vec3(.02, .05, .1), vCol, core);                        // a dark halo round the colour keeps the streams crisp on bright satellite tiles and snow
-  gl_FragColor = vec4(c, vA * edge * mix(.55, 1., core));
-#include <colorspace_fragment>
+  gl_FragColor = vec4(c, vA * edge * mix(.55, 1., core));       // windRamp and the halo are already sRGB values and the canvas takes them as they are: no colorspace_fragment
 }`;
 
 let simRT = null, histRT = null, simMat = null, histMat = null, drawMat = null, simScene = null, histScene = null, simCam = null;
@@ -952,7 +992,7 @@ function stepWindGpu(dt) {
   renderer.setRenderTarget(null);
   const du = drawMat.uniforms;
   du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
-  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = Math.min(0.8, Math.max(0.05, dist * 0.0012)); du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
+  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = Math.min(2.5, Math.max(0.05, dist * 0.0012)); du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
   gpuLines.geometry.setDrawRange(0, Math.floor(Math.min(state.density * QUALITY_STEPS[quality.level].trails, GPU_N)) * (PTS - 1) * 6);
 }

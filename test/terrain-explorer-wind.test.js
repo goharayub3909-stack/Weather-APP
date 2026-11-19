@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, WIND_MAX, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
   assert.equal(WIND_SIM.life[0], 50); assert.equal(WIND_SIM.life[1], 150);
@@ -175,4 +175,17 @@ test('after the frames speed up again quality comes back, slowly, and a single s
   for (let i = 0; i < 9000; i++) { t += 10; qualityStep(q, t, 10); }                                                        // 90 s of fast frames: one notch per 2.5 s
   assert.equal(q.level, 0);
   const before = q.level; t += 5000; qualityStep(q, t, 250); assert.equal(q.level, before);                                    // one hitch among good frames: nothing happens
+});
+
+// ---- Batch A: trails follow the drawn mesh ----
+test('the height of the drawn mesh inside a cell follows its two triangles, not the bilinear blend', () => {
+  assert.equal(meshCellHeight(10, 20, 30, 40, 0, 0), 10); assert.equal(meshCellHeight(10, 20, 30, 40, 1, 0), 20);          // the corners
+  assert.equal(meshCellHeight(10, 20, 30, 40, 0, 1), 30); assert.equal(meshCellHeight(10, 20, 30, 40, 1, 1), 40);
+  assert.equal(meshCellHeight(10, 20, 30, 40, 0.5, 0.5), 25);                                                                // on the diagonal b-c: halfway between 20 and 30
+  // a saddle: a = d = 0, b = c = 100. Bilinear would give 50 in the middle; the mesh has a ridge along the diagonal, 100 high
+  assert.equal(meshCellHeight(0, 100, 100, 0, 0.5, 0.5), 100);
+  assert.equal(meshCellHeight(0, 100, 100, 0, 0.25, 0.25), 50);                                                              // inside triangle (a, c, b): 0 + 0.25 x 100 + 0.25 x 100
+  assert.equal(meshCellHeight(0, 100, 100, 0, 0.75, 0.75), 50);                                                              // inside triangle (b, c, d): 0 + 0.25 x 100 + 0.25 x 100
+  // a plane z = 3 + 4 tx + 5 ty is reproduced exactly on both sides of the diagonal
+  for (const [tx, ty] of [[0.1, 0.2], [0.4, 0.5], [0.6, 0.7], [0.9, 0.8], [0.3, 0.9]]) assert.ok(Math.abs(meshCellHeight(3, 7, 8, 12, tx, ty) - (3 + 4 * tx + 5 * ty)) < 1e-12);
 });
