@@ -126,11 +126,39 @@ def anchor_day(days, d):
     return min(full, key=lambda i: (abs((days[i]['date'] - d).days), i))
 
 
+def diurnal_position(t_ec, tmin_ec, tmax_ec, min_range=0.5):
+    """Where the ECMWF temperature of a step sits between its own daily minimum (0) and maximum (1)."""
+    return np.clip((t_ec - tmin_ec) / np.maximum(tmax_ec - tmin_ec, min_range), 0, 1)
+
+
 def diurnal(t_ec, tmin_ec, tmax_ec, tmin_1k, tmax_1k, min_range=0.5):
     """1 km temperature at one step: the ECMWF value moved by the 1 km correction of the day's minimum and maximum, blended by where the
     ECMWF value sits between its own daily minimum (s = 0) and maximum (s = 1). At the ECMWF extremes it returns the 1 km extremes."""
-    s = np.clip((t_ec - tmin_ec) / np.maximum(tmax_ec - tmin_ec, min_range), 0, 1)
+    s = diurnal_position(t_ec, tmin_ec, tmax_ec, min_range)
     return t_ec + (tmin_1k - tmin_ec) + ((tmax_1k - tmax_ec) - (tmin_1k - tmin_ec)) * s
+
+
+def night_limited(corr):
+    """The live elevation bias as it may act at night: only where it ADDS warmth (a negative bias, i.e. the model was too cold) is kept; where it would take warmth away (the
+    positive bias of the mountains) it is dropped. The curve is fitted on daytime readings, when the model is too warm in the mountains, and the 1 km model's own minimum is
+    close to unbiased there (checked on PMD and GLOF stations, 19 and 23 Nov 2026), so removing the daytime correction at night over-cooled the mountain minima by about 6 degC."""
+    return np.minimum(corr, 0)
+
+
+NIGHT_WINDOW = (0.0, 1.0)     # (s0, s1): the night-limited bias is used below s0, the whole bias above s1, a linear blend between (screening convention; set by the A/B test of 23 Nov 2026)
+
+
+def warm_weight(s, window=None):
+    """How much of the whole bias a step gets: 0 at and below window[0] (the coldest hours: only the night-limited bias), 1 at and above window[1], linear in between."""
+    s0, s1 = NIGHT_WINDOW if window is None else window
+    return np.clip((np.asarray(s, dtype=float) - s0) / max(s1 - s0, 1e-6), 0, 1)
+
+
+def step_bias(corr, s, window=None):
+    """The live elevation bias to remove at one step: the whole bias at the warm end of the day (so the daily maximum keeps it exactly), its night-limited form at the cold
+    end (the daily minimum), and a blend in between (warm_weight). Where the bias is negative or zero (plains and foothills, below about 1,300 m) both are the same: nothing changes."""
+    w = warm_weight(s, window)
+    return night_limited(corr) * (1 - w) + corr * w
 
 
 def conserve_rain(rate_1k, weight_1k, rate_nodes, nj, ni):

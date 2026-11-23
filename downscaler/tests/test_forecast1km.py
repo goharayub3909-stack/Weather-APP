@@ -13,6 +13,42 @@ import terrain as T  # noqa: E402
 UTC = dt.timezone.utc
 
 
+class NightBias(unittest.TestCase):
+    def test_position_between_the_daily_minimum_and_maximum(self):
+        np.testing.assert_allclose(F.diurnal_position(np.array([5.0, 10.0, 15.0, 2.0, 30.0]), 5.0, 15.0), [0.0, 0.5, 1.0, 0.0, 1.0])     # clipped at both ends
+        self.assertAlmostEqual(float(F.diurnal_position(10.1, 10.0, 10.0)), 0.1 / 0.5)                                                  # a flat day uses min_range, never divides by zero
+        # diurnal() is unchanged by the refactor: at the ECMWF extremes it returns the 1 km extremes
+        self.assertAlmostEqual(float(F.diurnal(5.0, 5.0, 15.0, 3.0, 17.0)), 3.0); self.assertAlmostEqual(float(F.diurnal(15.0, 5.0, 15.0, 3.0, 17.0)), 17.0)
+
+    def test_night_limited_bias_never_cools_but_keeps_the_warming(self):
+        corr = np.array([-1.7, -0.2, 0.0, 3.5, 9.2, 1.2])                      # a live bias curve: negative on the plains, positive in the mountains
+        np.testing.assert_allclose(F.night_limited(corr), [-1.7, -0.2, 0.0, 0.0, 0.0, 0.0])
+
+    def test_step_bias_is_the_whole_bias_by_day_the_limited_bias_at_night_and_a_blend_between(self):
+        corr = np.array([-1.7, 0.0, 3.5, 9.2])
+        np.testing.assert_allclose(F.step_bias(corr, np.ones(4)), corr)                                  # the warm end (and so the daily maximum): exactly the old behaviour
+        np.testing.assert_allclose(F.step_bias(corr, np.zeros(4)), [-1.7, 0.0, 0.0, 0.0])                # the cold end: the bias may only warm
+        np.testing.assert_allclose(F.step_bias(corr, np.full(4, 0.5)), [-1.7, 0.0, 1.75, 4.6])           # half way: half of the whole bias where it would cool
+        for s in (0.0, 0.3, 1.0):                                                                          # plains and foothills: a negative bias is identical at every hour
+            self.assertAlmostEqual(float(F.step_bias(np.array([-1.7]), np.array([s]))[0]), -1.7)
+
+    def test_the_warm_weight_ramps_between_the_window_ends(self):
+        s = np.array([0.0, 0.1, 0.35, 0.5, 1.0])
+        np.testing.assert_allclose(F.warm_weight(s, (0.0, 1.0)), s)                                       # the default window: linear in the diurnal position
+        np.testing.assert_allclose(F.warm_weight(s, (0.0, 0.35)), [0.0, 0.1 / 0.35, 1.0, 1.0, 1.0])       # a narrow window: only the coldest hours are limited
+        np.testing.assert_allclose(F.warm_weight(s, (0.2, 0.4)), [0.0, 0.0, 0.75, 1.0, 1.0])
+        corr = np.array([8.0]); np.testing.assert_allclose(F.step_bias(corr, np.array([0.2]), (0.0, 0.35)), corr * 0.2 / 0.35)
+        np.testing.assert_allclose(F.step_bias(np.array([-1.5]), np.array([0.2]), (0.0, 0.35)), [-1.5])    # a negative bias is untouched by any window
+
+    def test_the_mountain_minimum_is_no_longer_cooled_by_the_daytime_bias(self):
+        # a cell at 3,000 m: the daytime bias removes 9.2 degC; before, the minimum lost it too, now it keeps the model's own minimum
+        corr = np.array([9.2]); tmin_model = 2.0
+        self.assertAlmostEqual(tmin_model - float(F.night_limited(corr)[0]), 2.0)
+        self.assertAlmostEqual(tmin_model - float(corr[0]), -7.2)                                          # the old result
+        # the maximum is unchanged
+        self.assertAlmostEqual(18.0 - float(corr[0]), 8.8)
+
+
 class Packing(unittest.TestCase):
     def test_temperature_and_rain_round_trip(self):
         t = np.array([[-60.0, -12.34, 0.0, 25.06, 54.9, np.nan]])

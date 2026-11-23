@@ -236,9 +236,19 @@ def main():
     ap.add_argument('--out', default=str(OUT))
     ap.add_argument('--no-assim', action='store_true', help='skip the short-term station nudging')
     ap.add_argument('--no-live-bias', action='store_true', help='skip the live elevation bias correction')
+    ap.add_argument('--night-limit', choices=('on', 'off'), default='on', help='off: remove the whole live bias at every hour and from the daily minimum (the behaviour before 23 Nov 2026), for A/B tests')
+    ap.add_argument('--night-window', nargs=2, type=float, metavar=('S0', 'S1'), default=None, help='diurnal positions between which the night-limited bias gives way to the whole bias (default: F.NIGHT_WINDOW)')
+    ap.add_argument('--realtime', default=None, help='realtime.json to read instead of the published one (frozen inputs for A/B tests)')
+    ap.add_argument('--metar', default=None, help='metar.json to read instead of the published one')
+    ap.add_argument('--bias-history', default=None, help='live bias history CSV to read and update instead of data/live_bias_history.csv')
     ap.add_argument('--regime-bias', action='store_true', help='remove the live bias with a curve per weather regime (clear calm / windy) where the history has enough readings; '
                     'without it the regime curves are only fitted and reported (shadow mode) and the pooled curve is applied as before')
     a = ap.parse_args()
+    global REALTIME, METAR, BIAS_HISTORY
+    if a.realtime: REALTIME = Path(a.realtime)
+    if a.metar: METAR = Path(a.metar)
+    if a.bias_history: BIAS_HISTORY = Path(a.bias_history)
+    night_window = tuple(a.night_window) if a.night_window else F.NIGHT_WINDOW
     t0 = time.time()
     now = dt.datetime.now(dt.timezone.utc)
 
@@ -280,10 +290,18 @@ def main():
     # ---- 3-hourly fields
     rates = rain_rates(f, times)
     day_of = lambda t: t.date() if t.hour or t.minute else (t - dt.timedelta(hours=1)).date()   # 00 UTC closes the day before
+    def day_index(t):
+        d_idx = next((i for i, d in enumerate(days) if d['date'] == day_of(t)), None)
+        return F.anchor_day(days, day_of(t)) if d_idx is None or not days[d_idx]['full'] else d_idx
+
+    def step_position(k):
+        """Where step k sits between its day's ECMWF minimum and maximum (F.diurnal_position), or None when the day has no 1 km extremes."""
+        d_idx = day_index(times[k])
+        if d_idx not in tmax1k: return None
+        return F.diurnal_position(F.to_1km(f['2t'][k] - 273.15), F.to_1km(days[d_idx]['tmin']), F.to_1km(days[d_idx]['tmax']))
     T, P, U, V = [], [], [], []
     for k, t in enumerate(times):
-        d_idx = next((i for i, d in enumerate(days) if d['date'] == day_of(t)), None)
-        d_idx = F.anchor_day(days, day_of(t)) if d_idx is None or not days[d_idx]['full'] else d_idx
+        d_idx = day_index(t)
         t_ec = F.to_1km(f['2t'][k] - 273.15)
         if d_idx in tmax1k:
             day = days[d_idx]
@@ -360,18 +378,21 @@ def main():
             if use_regime:                                                                         # each cell takes the curve of its own regime at this step
                 reg_k = F.classify_regime(F.to_1km(f['tcc'][k] * 100), np.hypot(U[k], V[k]))
                 T[k] = T[k] - F.regime_bias(rfit, elev, reg_k)
-            else:
-                T[k] = T[k] - corr
-        for store in (tmax1k, tmin1k):
-            for k in store:
-                store[k] = store[k] - corr
+            else:                                                                                      # the warm end of the day gets the whole bias, the cold end only where it adds warmth (F.step_bias)
+                s_k = step_position(k)
+                T[k] = T[k] - (corr if (s_k is None or a.night_limit == 'off') else F.step_bias(corr, s_k, night_window))
+        for k in tmax1k:
+            tmax1k[k] = tmax1k[k] - corr                                                               # the daily maximum: unchanged, the whole bias
+        night_corr = F.night_limited(corr) if a.night_limit == 'on' else corr
+        for k in tmin1k:
+            tmin1k[k] = tmin1k[k] - night_corr                                                         # the daily minimum: never cooled by the daytime bias
         reg0 = F.classify_regime(F.to_1km(f['tcc'][0] * 100), np.hypot(U[0], V[0])) if 'tcc' in f else None
         regime = dict(mode='applied' if use_regime else 'shadow', constants=F.REGIME, counts=rfit['counts'],
                       curves={F.REGIME_NAMES[c]: v for c, v in rfit['curves'].items()},
                       land_share_first_step=None if reg0 is None else {F.REGIME_NAMES[c]: float(np.mean(reg0[land] == c)) for c in F.REGIME_NAMES},
                       note='Screening conventions for the regimes; the curves need min_readings residuals from min_analyses analysis times each. Not validated: the history had no regimes before this run.')
         log('  weather regimes (' + regime['mode'] + '): ' + ', '.join(f'{n} {c["readings"]} readings / {c["analyses"]} analyses' + (' (own curve)' if c['curve'] else ' (pooled curve)') for n, c in rfit['counts'].items()))
-        live = dict(used=True, qc_excluded=qc_excluded, regime=regime, curve=curve, analyses=int(hist.time.nunique()), readings=int(len(hist)),
+        live = dict(used=True, night_limit=dict(applied=(not use_regime) and a.night_limit == 'on', window=list(night_window), rule='at the daily minimum and at night the bias is min(curve, 0): it may warm the model but never cool it; the daily maximum keeps the whole bias'), qc_excluded=qc_excluded, regime=regime, curve=curve, analyses=int(hist.time.nunique()), readings=int(len(hist)),
                     first=str(hist.time.min()), last=str(hist.time.max()))
         log(f'  live elevation bias from {live["readings"]} readings in {live["analyses"]} analyses: '
             + ', '.join(f'{int(k)} m {v:+.1f}' for k, v in zip(curve['knots'], curve['values'])) + ' degC removed')
