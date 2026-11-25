@@ -87,9 +87,9 @@ export function tickerData(hourly, now = Date.now()) {
 }
 
 /* ------------------------------------------------------------------ layers offered on the map */
-const PRIMARY_LAYERS = [['rgb', 'True colour'], ['fcc', 'False colour'], ['ndvi', 'NDVI'], ['evi', 'EVI'], ['evi2', 'EVI2'], ['ndwi', 'NDWI'], ['nri', 'NRI'], ['dswi', 'DSWI']];
+const PRIMARY_LAYERS = [['none', 'None'], ['rgb', 'True colour'], ['fcc', 'False colour'], ['ndvi', 'NDVI'], ['evi', 'EVI'], ['evi2', 'EVI2'], ['ndwi', 'NDWI'], ['nri', 'NRI'], ['dswi', 'DSWI']];
 const MORE_LAYERS = [['ndre', 'NDRE'], ['savi', 'SAVI'], ['msavi', 'MSAVI'], ['ndmi', 'NDMI'], ['lst', 'LST'], ['smi', 'SMI']];
-const LAYER_HINT = { rgb: 'Natural colour', fcc: 'Healthy crops show red', ndvi: 'Greenness', evi: 'Greenness, dense crops', evi2: 'EVI without blue band', ndwi: 'Surface water', nri: 'Nitrogen status', dswi: 'Water / disease stress' };
+const LAYER_HINT = { none: 'Base map only', rgb: 'Natural colour', fcc: 'Healthy crops show red', ndvi: 'Greenness', evi: 'Greenness, dense crops', evi2: 'EVI without blue band', ndwi: 'Surface water', nri: 'Nitrogen status', dswi: 'Water / disease stress' };
 
 /* ------------------------------------------------------------------ DOM */
 const TEMPLATE = `
@@ -146,7 +146,7 @@ const TEMPLATE = `
   </div>
 </aside>
 
-<section id="fw-sheet" aria-label="Detailed panels" class="absolute bottom-0 left-0 z-20 flex flex-col rounded-t-2xl border border-b-0 border-slate-500/70 bg-slate-950/95 shadow-2xl shadow-black/70 backdrop-blur-xl transition-[height] duration-300 ease-out motion-reduce:transition-none" style="height:var(--fw-sheet);right:var(--fw-sheet-right)">
+<section id="fw-sheet" aria-label="Detailed panels" class="absolute bottom-0 left-0 z-20 flex flex-col border-t border-slate-500/60 bg-slate-950/90 shadow-2xl shadow-black/70 backdrop-blur-xl transition-[height] duration-300 ease-out motion-reduce:transition-none" style="height:var(--fw-sheet);right:var(--fw-sheet-right)">
   <div class="flex shrink-0 items-center gap-2 px-2">
     <button id="fw-sheet-toggle" type="button" aria-expanded="false" aria-controls="fw-sheet-body" aria-label="Expand detailed panels" class="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-xl text-white hover:bg-slate-800"><span id="fw-sheet-icon">⌃</span></button>
     <div id="fw-tabs-slot" class="min-w-0 flex-1 overflow-x-auto"></div>
@@ -275,7 +275,7 @@ function renderDecisions() {
 
 /* ------------------------------------------------------------------ sheet, sidebar, popovers */
 function setVars() {
-  const w = innerWidth, sheetPx = { peek: 56, half: Math.round(innerHeight * 0.46), full: Math.round(innerHeight - ($('fw-ticker')?.offsetHeight || 84) - 8) }[state.sheet];
+  const w = innerWidth, sheetPx = { peek: 56, half: Math.round((innerHeight - ($('fw-ticker')?.offsetHeight || 84)) / 2), full: Math.round(innerHeight - ($('fw-ticker')?.offsetHeight || 84) - 8) }[state.sheet];
   const wide = w >= 1000, sideW = state.sidebar ? Math.min(384, Math.round(w * (wide ? 0.34 : 0.92))) : 0;
   root.style.setProperty('--fw-ticker', ($('fw-ticker')?.offsetHeight || 84) + 'px');
   root.style.setProperty('--fw-sheet', sheetPx + 'px');

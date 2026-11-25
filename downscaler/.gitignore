@@ -1,0 +1,4 @@
+# PMD data, caches and trained models stay local until we decide what to publish
+data/
+models/
+__pycache__/

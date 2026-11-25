@@ -5,9 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { resolve, extname } from 'node:path';
 
 const root = fileURLToPath(new URL('./public/', import.meta.url));
+const projectRoot = fileURLToPath(new URL('./', import.meta.url));
 const cache = new Map();
 export { forecastURL } from './public/weather.js';
 import { forecastURL } from './public/weather.js';
+import { liveObservation, warmObservations } from './scripts/observation-sync.mjs';
+import { startRefresher, refreshStatus } from './scripts/dev-refresh.mjs';
+// Local secrets (git-ignored .env) are optional: without them the dev server serves published copies.
+try { process.loadEnvFile(fileURLToPath(new URL('./.env', import.meta.url))); } catch { /* no .env file */ }
 export function createServer(fetcher = fetch) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -18,6 +23,8 @@ export function createServer(fetcher = fetch) {
       if(!process.env.SOIL_SENSOR_FEED_URL)return res.end(JSON.stringify({schema_version:1,status:'not_configured',devices:[]}));
       try{const target=new URL(process.env.SOIL_SENSOR_FEED_URL);if(target.protocol!=='https:')throw Error();const headers=process.env.SOIL_SENSOR_API_KEY?{Authorization:'Bearer '+process.env.SOIL_SENSOR_API_KEY}:{};const upstream=await fetcher(target,{headers,signal:AbortSignal.timeout(10000)});if(!upstream.ok)throw Error();return res.end(JSON.stringify(validateSoilFeed(await upstream.json())));}catch{res.writeHead(502);return res.end(JSON.stringify({error:'Soil sensor bridge unavailable; no readings inferred.'}));}
     }
+    // What the local auto-refresh (scripts/dev-refresh.mjs) is doing, and cheap stamps of the data on disk: the 3D explorer polls this to notice newer data while it stays open.
+    if (url.pathname === '/api/refresh-status') { res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); return res.end(JSON.stringify(refreshStatus(projectRoot))); }
     if (url.pathname === '/api/forecast') {
       res.setHeader('Content-Type', 'application/json');
       let target;
@@ -38,19 +45,27 @@ export function createServer(fetcher = fetch) {
         return res.end(JSON.stringify({ error: 'Live forecast is unavailable. Please retry shortly. Network access to api.open-meteo.com is required.' }));
       }
     }
-    const files = { '/explorer/': ['explorer/index.html','text/html'], '/explorer/index.html': ['explorer/index.html','text/html'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/cities.js': ['cities.js', 'text/javascript'], '/weather.js': ['weather.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/tailwind.css': ['tailwind.css', 'text/css'] };
+    // Dev only: serve live airport reports (NOAA) and stations (WeatherWalay login from .env, else the newest
+    // published copy) so localhost is not stuck on the snapshot committed to git. Falls through to the file.
+    const feedName = /^\/observation-data\/(stations|metar|realtime)\.json$/.exec(url.pathname)?.[1];
+    if (feedName && process.env.LIVE_OBSERVATIONS !== 'off') {
+      const live = await liveObservation(feedName, { fetcher });
+      if (live) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'no-store'); return res.end(JSON.stringify(live)); }
+    }
+    const files = { '/realtime/': ['realtime/index.html','text/html'], '/realtime/index.html': ['realtime/index.html','text/html'], '/explorer/': ['explorer/index.html','text/html'], '/explorer/index.html': ['explorer/index.html','text/html'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/cities.js': ['cities.js', 'text/javascript'], '/weather.js': ['weather.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/tailwind.css': ['tailwind.css', 'text/css'] };
     let file = files[url.pathname];
-    if (['/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js','/geolocation.js','/icons.js','/storms.js','/farmers.js','/health-engine.js','/farm-workspace.js','/health-panel.js','/farm-data.js','/farm-advice.js','/current-weather.js','/agri-dss.js','/agri-models.js','/farm-satellite.js','/farm-indices.js','/farm-monitoring.js','/field-workspace.js','/tile-help.js','/virtual-sensors.js','/disease-risk.js','/disease-panel.js','/station-history.js','/field-context.js','/field-operations.js','/crop-manual.js','/crop-manual-data.js','/soil-sensors.js','/storm-outlook.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
-    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data|studio-data|station-history|sensor-data|storm-data|disease-images)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
+    if (['/sw.js','/pwa.js','/radar.js','/radar-core.js','/satellite.js','/satellite-core.js','/lightning.js','/city-images.js','/locations.js','/location-worker.js','/map-utils.js','/maps.js','/observations.js','/place-photos.js','/geolocation.js','/icons.js','/storms.js','/farmers.js','/health-engine.js','/farm-workspace.js','/health-panel.js','/observation-feed.js','/station-feed.js','/station-records.js','/terrain-source.js','/lightning-nearby.js','/hail.js','/forecast-periods.js','/views.js','/climate-hazards.js','/climate-era5.js','/climate-panel.js','/flood-logic.js','/flood-terrain.js','/flood-model.js','/flood-data.js','/flood-chart.js','/flood-panel.js','/flood-eo.js','/flood-eo-panel.js','/farm-data.js','/farm-advice.js','/current-weather.js','/agri-dss.js','/agri-models.js','/farm-satellite.js','/farm-indices.js','/farm-monitoring.js','/field-workspace.js','/tile-help.js','/virtual-sensors.js','/disease-risk.js','/disease-panel.js','/station-history.js','/field-context.js','/field-operations.js','/crop-manual.js','/crop-manual-data.js','/soil-sensors.js','/storm-outlook.js'].includes(url.pathname)) file=[url.pathname.slice(1),'text/javascript'];
+    if (/^\/(vendor|radar-data|satellite-data|city-data|location-data|observation-data|studio-data|terrain-data|explorer|realtime|station-history|sensor-data|storm-data|disease-images|icons)\/[A-Za-z0-9_./-]+$/.test(url.pathname)) {
       const relative=url.pathname.slice(1);
       const path=resolve(root,relative);
       const types={'.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.txt':'text/plain','.csv':'text/csv'};
       if(path.startsWith(root)&&types[extname(path)])file=[relative,types[extname(path)]];
     }
     if (['/pest-criteria.json','/agri-reference.json','/pakistan-guidance.json','/maps-config.json'].includes(url.pathname)) file=[url.pathname.slice(1),'application/json'];
+    if (url.pathname==='/manifest.webmanifest') file=['manifest.webmanifest','application/manifest+json'];
     if (!file) { res.writeHead(404); return res.end('Not found'); }
     try { res.setHeader('Content-Type', `${file[1]}; charset=utf-8`); res.end(await readFile(root + file[0])); }
     catch { res.writeHead(500); res.end('Unable to load application'); }
   });
 }
-if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => console.log('WeatherWalay Kissan & Sehat Hub listening on port ' + (process.env.PORT || 3000)));
+if (process.argv[1] === fileURLToPath(import.meta.url)) createServer().listen(Number(process.env.PORT || 3000), '0.0.0.0', () => { console.log('WeatherWalay Kissan & Sehat Hub listening on port ' + (process.env.PORT || 3000)); if (process.env.LIVE_OBSERVATIONS !== 'off') warmObservations(); if (process.env.AUTO_REFRESH !== 'off') { startRefresher({ root: projectRoot, log: console.log }); console.log('Auto-refresh is on: stations, METAR and PMD every 10 min, products every 30-180 min, ECMWF and the 1 km step as new runs arrive (AUTO_REFRESH=off to stop it; status at /api/refresh-status).'); } });

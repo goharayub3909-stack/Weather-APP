@@ -94,7 +94,7 @@ def retrieve():
 if __name__=='__main__':
     path=Path('public/observation-data/stations.json');path.parent.mkdir(exist_ok=True)
     previous=os.environ.get('PREVIOUS_STATIONS_URL','')
-    if previous and urlsplit(previous).hostname=='goharayub3909-stack.github.io':
+    if previous and urlsplit(previous).hostname in ('goharayub3909-stack.github.io','raw.githubusercontent.com'):
         try:
             with urlopen(previous,timeout=20) as r: old=json.load(r)
             if old.get('source')=='WeatherWalay realtime' and isinstance(old.get('stations'),list):

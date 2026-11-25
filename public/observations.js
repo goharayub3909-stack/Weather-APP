@@ -1,6 +1,11 @@
 import {darkMap,pkt} from './map-utils.js';
 import {icon} from './icons.js';
+import {fetchFeed} from './observation-feed.js';
+import {fetchStationFeed} from './station-feed.js';
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
+// Same freshness limits as the main page's current weather: stations 3 h, airport METARs 2 h.
+export const MAX_AGE_HOURS={station:3,metar:2};
+export const isStale=(time,airport,now=Date.now())=>!Number.isFinite(time)||now-time>MAX_AGE_HOURS[airport?'metar':'station']*3600000;
 const number=(v,suffix='',digits=1)=>finite(v)?v.toFixed(digits)+suffix:'—';
 export const RAIN_PARAMETERS={rain_daily:'Daily rain · mm',rain_24h:'Last 24h rain · mm',rain_monthly:'Monthly rain · mm',rain_yearly:'Yearly rain · mm',rain_monsoon:'Monsoon JJAS rain · mm',rain_rate:'Current rain rate · mm/h',rain_rate_instant:'Instantaneous rain rate · mm/h',rain_rate_max:'Maximum rain rate · mm/h'};
 export function observationValue(p,airport,parameter){
@@ -12,10 +17,10 @@ export function observationPopup(p,airport){
  const root=document.createElement('article');root.className='observation-detail';
  const head=document.createElement('div');head.className='observation-detail-head';const glyph=document.createElement('span');glyph.className='observation-type-icon';glyph.innerHTML=icon(airport?'plane':'station');const title=document.createElement('div'),small=document.createElement('span'),name=document.createElement('h3');small.textContent=airport?'AIRPORT · '+p.icaoId:(p.network||'WeatherWalay')+' · WEATHER STATION';name.textContent=p.name||p.icaoId||'Weather station';title.append(small,name);head.append(glyph,title);
  const derivedRH=airport&&finite(p.temp)&&finite(p.dewp)?Math.min(100,Math.max(0,100*Math.exp(17.625*p.dewp/(243.04+p.dewp)-17.625*p.temp/(243.04+p.temp)))):null;
- const grid=document.createElement('div');grid.className='observation-readings';grid.append(metric('Temperature',number(airport?p.temp:p.temperature,' °C'),'temperature'),metric(airport?'Humidity · derived':'Humidity',number(airport?derivedRH:p.humidity,'%',0),'humidity'),metric(airport?'Wind · knots':'Wind · km/h',number(airport?p.wspd:p.wind_speed,airport?' kt':' km/h'),'wind'),metric(airport?'Sea-level pressure':'Wind direction',airport?number(p.altim,' hPa',0):number(p.wind_direction,'°',0),airport?'pressure':'gust'));
- const time=airport?p.obsTime*1000:Date.parse(p.observed_at),known=Number.isFinite(time),old=known&&Date.now()-time>3*3600000;
+ const grid=document.createElement('div');grid.className='observation-readings';grid.append(metric('Temperature',number(airport?p.temp:p.temperature,' °C'),'temperature'),metric(airport?'Humidity · derived':'Humidity',number(airport?derivedRH:p.humidity,'%',0),'humidity'),metric(airport?'Wind · knots':'Wind · km/h',number(airport?p.wspd:p.wind_speed,airport?' kt':' km/h'),'wind'),metric(airport?'Pressure · QNH':'Wind direction',airport?number(p.altim,' hPa',0):number(p.wind_direction,'°',0),airport?'pressure':'gust'));
+ const time=airport?p.obsTime*1000:Date.parse(p.observed_at),known=Number.isFinite(time),old=known&&isStale(time,airport);
  const footer=document.createElement('div');footer.className='observation-detail-time';const stamp=document.createElement('p');stamp.textContent=known?'Observed '+pkt(time):p.observed_label?'Provider local time: '+p.observed_label:'Observation time unavailable';
- const badge=document.createElement('span');badge.className='observation-age '+(old||!known?'age-uncertain':'age-recent');badge.textContent=old?'Report over 3 hours old':known?'Recent report':'Age unverified · provider omits year/offset';footer.append(stamp,badge);root.append(head,grid);
+ const badge=document.createElement('span');badge.className='observation-age '+(old||!known?'age-uncertain':'age-recent');badge.textContent=old?'Report over '+MAX_AGE_HOURS[airport?'metar':'station']+' hours old':known?'Recent report':'Age unverified · provider omits year/offset';footer.append(stamp,badge);root.append(head,grid);
  if(!airport){
   const section=document.createElement('section');section.className='observation-rainfall';const heading=document.createElement('h4');heading.textContent='Rainfall & rain rate';const rain=document.createElement('div');rain.className='observation-readings';
   for(const [key,label]of Object.entries(RAIN_PARAMETERS))rain.append(metric(label.split(' · ')[0],number(p[key],key.startsWith('rain_rate')?' mm/h':' mm'),'rain'));
@@ -35,14 +40,14 @@ export function observationColor(value,parameter){
  return (stops.find(([limit])=>value<limit)||stops.at(-1))[1];
 }
 export function initObservations(){
- const $=id=>document.getElementById(id);for(const [value,label]of Object.entries(RAIN_PARAMETERS))$('observation-parameter').append(new Option(label,value));const weekly=new Option('Weekly rain · not supplied','rain_weekly');weekly.disabled=true;$('observation-parameter').append(weekly);let map,airports,stations,renderer,reports=[null,null],generation=0;
+ const $=id=>document.getElementById(id);for(const [value,label]of Object.entries(RAIN_PARAMETERS))$('observation-parameter').append(new Option(label,value));const weekly=new Option('Weekly rain · not supplied','rain_weekly');weekly.disabled=true;$('observation-parameter').append(weekly);let map,airports,stations,renderer,reports=[null,null],generation=0,popupOpen=false;
  function toggle(){if(!map)return;for(const[id,layer]of [['show-metar',airports],['show-stations',stations]])if($(id).checked)layer.addTo(map);else map.removeLayer(layer);}
  function plot(){
   if(!map)return;const parameter=$('observation-parameter').value;let counts=[0,0],uncertain=0;const messages=[];
   for(let i=0;i<2;i++){
    const group=i?stations:airports;group.clearLayers();const data=reports[i];if(!data){messages.push(i?'WeatherWalay unavailable.':'Airport reports unavailable.');continue;}
    for(const p of data.stations){
-    if(!finite(p.lat)||!finite(p.lon))continue;const time=i?Date.parse(p.observed_at):p.obsTime*1000,stale=!Number.isFinite(time)||Date.now()-time>3*3600000;
+    if(!finite(p.lat)||!finite(p.lon))continue;const time=i?Date.parse(p.observed_at):p.obsTime*1000,stale=isStale(time,!i);
     if(stale)uncertain++;
     const value=observationValue(p,!i,parameter);
     const color=observationColor(value,parameter);
@@ -53,11 +58,16 @@ export function initObservations(){
   $('observations-status').textContent=messages.join(' ');$('observation-airport-count').textContent=counts[0];$('observation-station-count').textContent=counts[1];$('observation-age-count').textContent=uncertain;
   const legends={temperature:'Temperature · °C · cold → hot',humidity:'Humidity · % · dry → humid',wind:'Wind · km/h · calm → strong',...RAIN_PARAMETERS};$('observation-map-legend').textContent=legends[parameter]+(parameter.startsWith('rain_')?' · pale blue: zero · green → yellow → purple: increasing · grey: unavailable':'')+' · outlined dots: airports · dotted border: age unverified/old';
  }
- async function load(){
+ async function load(silent=false){
   if(!window.L)return;const token=++generation;$('observations-map').hidden=false;$('observation-map-legend').hidden=false;
-  if(!map){map=darkMap('observations-map');renderer=L.canvas();airports=L.layerGroup();stations=L.layerGroup();toggle();}map.invalidateSize();$('observations-status').textContent='Loading timestamped observations…';$('load-observations').disabled=true;
-  const results=await Promise.allSettled(['metar','stations'].map(async source=>{const r=await fetch(new URL('./observation-data/'+source+'.json',import.meta.url),{cache:'no-store',signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error();const d=await r.json();if(!Array.isArray(d.stations))throw Error();return d;}));if(token!==generation)return;
+  if(!map){map=darkMap('observations-map');map.on('popupopen',()=>{popupOpen=true;});map.on('popupclose',()=>{popupOpen=false;});renderer=L.canvas();airports=L.layerGroup();stations=L.layerGroup();toggle();}map.invalidateSize();if(!silent){$('observations-status').textContent='Loading timestamped observations…';$('load-observations').disabled=true;}
+  const results=await Promise.allSettled(['metar','stations'].map(source=>source==='stations'?fetchStationFeed({signal:AbortSignal.timeout(20000)}):fetchFeed(source,{signal:AbortSignal.timeout(20000)})));if(token!==generation)return;
   reports=results.map(r=>r.status==='fulfilled'?r.value:null);plot();$('load-observations').disabled=false;$('load-observations').innerHTML=icon('refresh')+' Refresh observations';
  }
- $('load-observations').addEventListener('click',load);$('show-metar').addEventListener('change',toggle);$('show-stations').addEventListener('change',toggle);$('observation-parameter').addEventListener('change',plot);document.addEventListener('mapchange',()=>{if(!$('observations').hidden)map?.invalidateSize();});
+ // The map loads when its tab is first shown, then refreshes every minute while visible (the station feed updates
+ // about every minute). A refresh is skipped while a popup is open so it is not closed under the reader.
+ const showing=()=>!document.hidden&&!$('observations').hidden&&!document.getElementById('maps-view')?.hidden;
+ setInterval(()=>{if(map&&!popupOpen&&showing())load(true);},60000);
+ document.addEventListener('viewchange',()=>{if(showing()&&!popupOpen)load(!!map);});
+ $('load-observations').addEventListener('click',()=>load());$('show-metar').addEventListener('change',toggle);$('show-stations').addEventListener('change',toggle);$('observation-parameter').addEventListener('change',plot);document.addEventListener('mapchange',()=>{if(!$('observations').hidden){map?.invalidateSize();if(!map&&showing())load();}});
 }

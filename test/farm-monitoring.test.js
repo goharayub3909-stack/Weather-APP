@@ -139,3 +139,47 @@ test('field-relative colour range uses percentiles, falls back to min / max, and
   assert.equal(stretchRange({percentile_2: NaN, percentile_98: 1}), null, 'no usable low value at all');
   assert.deepEqual(stretchRange({percentile_2: NaN, percentile_98: 1, min: 0.2, max: 0.9}), {lo: 0.2, hi: 1}, 'a NaN percentile falls back to min');
 });
+
+test('month view: Pakistan month bounds, month list and one row per day with gaps kept empty', async () => {
+  const {pktMonthRange, monthKeys, monthDays} = await import('../public/farm-monitoring.js');
+  const t = s => Date.parse(s);
+  // Pakistan midnight is 19:00 UTC the previous day.
+  assert.deepEqual(pktMonthRange('2026-02'), [t('2026-01-31T19:00Z'), t('2026-02-28T19:00Z')]);
+  assert.deepEqual(pktMonthRange('2026-12'), [t('2026-11-30T19:00Z'), t('2026-12-31T19:00Z')]);
+  assert.equal(pktMonthRange('2026-13'), null);
+  assert.equal(pktMonthRange('Feb'), null);
+  assert.deepEqual(monthKeys(t('2025-11-15T00:00Z'), t('2026-02-01T10:00Z')), ['2026-02', '2026-01', '2025-12', '2025-11']);
+  // 31 Jan 20:00 UTC is already 1 Feb in Pakistan.
+  assert.deepEqual(monthKeys(t('2026-01-31T20:00Z'), t('2026-02-10T00:00Z')), ['2026-02']);
+  assert.deepEqual(monthKeys(5, 1), []);
+  const passes = [
+    {time: t('2026-02-03T06:00Z'), value: 0.41, clear: 0.7, scene: 'a'},
+    {time: t('2026-02-03T06:10Z'), value: 0.45, clear: 0.95, scene: 'b'},
+    {time: t('2026-02-08T06:00Z'), value: null, clear: 0.2, scene: 'c'},
+    {time: t('2026-01-31T20:00Z'), value: 0.3, clear: 1, scene: 'd'},
+    {time: t('2026-03-01T06:00Z'), value: 0.9, clear: 1, scene: 'outside'},
+  ];
+  const weather = [
+    {time: t('2026-02-03T07:00Z'), rain: 0, tmax: 21.5, tmin: 6.2},
+    {time: t('2026-02-04T07:00Z'), rain: 12.4, tmax: null, tmin: 8},
+  ];
+  const days = monthDays('2026-02', passes, weather);
+  assert.equal(days.length, 28);
+  assert.equal(days[0].date, '2026-02-01');
+  assert.equal(days[27].date, '2026-02-28');
+  assert.equal(days[0].pass.scene, 'd');
+  // Two passes the same day: the clearer usable one wins.
+  assert.equal(days[2].passes, 2);
+  assert.equal(days[2].pass.scene, 'b');
+  // A cloudy pass is kept as a cloudy pass, not a value.
+  assert.equal(days[7].pass.scene, 'c');
+  assert.equal(days[7].pass.value, null);
+  // Zero rain is a reading; missing weather stays null, never zero.
+  assert.equal(days[2].rain, 0);
+  assert.equal(days[2].tmax, 21.5);
+  assert.equal(days[3].rain, 12.4);
+  assert.equal(days[3].tmax, null);
+  assert.equal(days[10].pass, null);
+  assert.equal(days[10].rain, null);
+  assert.equal(monthDays('bad', passes, weather).length, 0);
+});

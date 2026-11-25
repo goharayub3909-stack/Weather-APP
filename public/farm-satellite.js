@@ -1,6 +1,6 @@
 import { FIELD_LIBRARY_KEY, readFieldLibrary, sameFieldLocation, boundaryGeoJSON, fieldChangeSummary } from "./field-workspace.js";
 import { addTileHelp } from "./tile-help.js";
-import { vegetationSamples, finite, thermalMoistureIndex, validField, fieldSamplePoints, rasterValue, validPixel, qualityAsset, recentSceneDays, historyNarrative, renderFieldChart, renderMonthlyChart } from "./farm-monitoring.js";
+import { vegetationSamples, finite, thermalMoistureIndex, validField, fieldSamplePoints, rasterValue, validPixel, qualityAsset, recentSceneDays, historyNarrative, renderFieldChart, renderMonthlyChart, pktMonthRange, monthKeys, monthDays } from "./farm-monitoring.js";
 import { currentValue, distanceKm } from "./current-weather.js";
 import { darkMap, pkt } from "./map-utils.js";
 import { fieldAreaHa } from "./agri-models.js";
@@ -120,7 +120,6 @@ export function initFarmSatellite() {
     controller,
     scenes = [],
     layer,
-    contextLayer,
     outline,
     sceneBounds,
     polygon,
@@ -140,7 +139,11 @@ export function initFarmSatellite() {
     historyController,
     historyVersion = 0,
     farmContext = null,
-    historyRows = [];
+    historyRows = [],
+    monthKey = "",
+    monthRows = [],
+    monthState = "",
+    monthController = null;
   const sampleCache = new Map(),
     calibration = () => ({
       wet: $("agri-smi-wet").value.trim() === "" ? null : Number($("agri-smi-wet").value),
@@ -242,8 +245,7 @@ export function initFarmSatellite() {
     probeVersion++;
     if (layer) map?.removeLayer(layer);
     if (outline) map?.removeLayer(outline);
-    if (contextLayer) map?.removeLayer(contextLayer);
-    layer = contextLayer = outline = null;
+    layer = outline = null;
     sceneBounds = null;
     $("agri-index-legend").hidden = true;
     $("agri-satellite-retry").hidden = true;
@@ -522,13 +524,15 @@ export function initFarmSatellite() {
   function historyMode() {
     const selected = $("agri-history-mode").value,
       display = $("agri-satellite-mode").value;
-    return selected === "follow" ? (display === "rgb" || display === "fcc" ? "ndvi" : display) : selected;
+    return selected === "follow" ? (display === "rgb" || display === "fcc" || display === "none" ? "ndvi" : display) : selected;
   }
   function syncModes() {
     const sensor = $("agri-satellite-source").value;
     for (const option of $("agri-satellite-mode").options)
       option.disabled =
-        sensor === "modis-lst"
+        option.value === "none"
+          ? false
+          : sensor === "modis-lst"
           ? !["lst", "smi"].includes(option.value)
           : sensor === "modis"
             ? option.value !== "ndvi"
@@ -642,6 +646,12 @@ export function initFarmSatellite() {
     syncModes();
     const mode = $("agri-satellite-mode").value,
       index = FIELD_INDICES[mode];
+    if (mode === "none") {
+      $("agri-satellite-palette").disabled = true;
+      $("agri-index-legend").hidden = true;
+      status("Base map only: no satellite layer is drawn. Choose an index or colour layer to overlay it on the base map.");
+      return;
+    }
     let recipe;
     try {
       recipe = index ? recipeFor(sensor, mode, scene) : null;
@@ -855,34 +865,6 @@ export function initFarmSatellite() {
       syncModeButtons();
       if (probe) inspectPoint();
       status(metadata + (clipped ? " Clipped to the drawn boundary." : "") + " Loading scene coverage…");
-      if (index && clipped && !sensor.startsWith("modis")) {
-        const rgb = new URL(base + "/api/data/v1/item/tilejson.json");
-        rgb.search = new URLSearchParams({ collection: source.id, item: scene.id });
-        source.assets.forEach((a) => rgb.searchParams.append("assets", a));
-        if (sensor === "landsat") {
-          rgb.searchParams.set("unscale", "true");
-          rgb.searchParams.set("rescale", "0,0.3");
-          rgb.searchParams.set("color_formula", "gamma RGB 2.2");
-        }
-        fetch(rgb, { signal })
-          .then(async (response) => {
-            if (!response.ok) throw Error();
-            return response.json();
-          })
-          .then((background) => {
-            if (!current() || !background.tiles?.[0] || new URL(background.tiles[0]).origin !== base) return;
-            contextLayer = L.tileLayer(background.tiles[0], {
-              pane: "farm-imagery",
-              zIndex: 200,
-              bounds: sceneBounds,
-              noWrap: true,
-              keepBuffer: 0,
-              maxNativeZoom: sensor === "landsat" ? 15 : 17,
-              maxZoom: 22,
-            }).addTo(map);
-          })
-          .catch(() => {});
-      }
     } catch (e) {
       if (version === drawVersion && !signal?.aborted) {
         status("Satellite unavailable: " + e.message);
@@ -976,7 +958,7 @@ export function initFarmSatellite() {
     root.textContent = "Reading source pixels and checking cloud / quality flags…";
     pointPopup();
     const currentMode = $("agri-satellite-mode").value,
-      mode = currentMode === "rgb" || currentMode === "fcc" ? "ndvi" : currentMode;
+      mode = currentMode === "rgb" || currentMode === "fcc" || currentMode === "none" ? "ndvi" : currentMode;
     const modes = [
       ...new Set([
         mode,
@@ -1112,6 +1094,7 @@ export function initFarmSatellite() {
     lastChart = null;
     lastRisks = [];
     stopPlay();
+    resetMonth();
     $("crop-monthly-chart").replaceChildren();
     $("crop-pass-label").textContent = "";
     for (const id of ["crop-prev", "crop-next", "crop-play"]) $(id).disabled = true;
@@ -1270,6 +1253,33 @@ export function initFarmSatellite() {
       root.append(card);
     }
   }
+  // One report row for one pass: whole-field mean, or interior samples for MODIS / SMI. Null once aborted.
+  async function readPass([date, scene], { mode, sensor, whole, points, signal }) {
+    const time = Date.parse(scene.properties.datetime || scene.properties.start_datetime);
+    if (whole) {
+      try {
+        const r = await fieldStats(scene, mode, sensor, signal);
+        return { date, time, value: r.value, clear: r.clear, pixels: r.pixels, scene: scene.id };
+      } catch {
+        return signal.aborted ? null : { date, time, value: null, failed: true, scene: scene.id };
+      }
+    }
+    const values = await Promise.allSettled(points.map((p) => sample(scene, p, mode, sensor, signal)));
+    if (signal.aborted) return null;
+    const valid = values.flatMap((r) => (r.status === "fulfilled" && finite(r.value) ? [r.value] : [])),
+      enough = valid.length >= Math.ceil(points.length * MIN_CLEAR_FRACTION);
+    return {
+      date,
+      time,
+      value: enough ? valid.reduce((a, b) => a + b, 0) / valid.length : null,
+      min: enough ? Math.min(...valid) : null,
+      max: enough ? Math.max(...valid) : null,
+      samples: points.map((point, i) => ({ point, value: values[i].status === "fulfilled" ? values[i].value : null })),
+      count: valid.length,
+      expected: points.length,
+      scene: scene.id,
+    };
+  }
   async function loadHistory() {
     $("agri-field-zones").replaceChildren();
     $("agri-field-history-chart").replaceChildren();
@@ -1278,6 +1288,9 @@ export function initFarmSatellite() {
     $("agri-zone-details").hidden = true;
     historyController?.abort();
     historyController = new AbortController();
+    monthController?.abort();
+    monthRows = [];
+    $("crop-month-detail").replaceChildren();
     const signal = historyController.signal,
       version = ++historyVersion,
       root = $("agri-field-history-status");
@@ -1308,33 +1321,9 @@ export function initFarmSatellite() {
       done = 0;
     async function worker() {
       while (cursor < days.length && !signal.aborted) {
-        const [date, scene] = days[cursor++],
-          time = Date.parse(scene.properties.datetime || scene.properties.start_datetime);
-        if (whole) {
-          try {
-            const r = await fieldStats(scene, mode, sensor, signal);
-            results.push({ date, time, value: r.value, clear: r.clear, pixels: r.pixels, scene: scene.id });
-          } catch {
-            if (signal.aborted) return;
-            results.push({ date, time, value: null, failed: true, scene: scene.id });
-          }
-        } else {
-          const values = await Promise.allSettled(points.map((p) => sample(scene, p, mode, sensor, signal)));
-          if (signal.aborted) return;
-          const valid = values.flatMap((r) => (r.status === "fulfilled" && finite(r.value) ? [r.value] : [])),
-            enough = valid.length >= Math.ceil(points.length * MIN_CLEAR_FRACTION);
-          results.push({
-            date,
-            time,
-            value: enough ? valid.reduce((a, b) => a + b, 0) / valid.length : null,
-            min: enough ? Math.min(...valid) : null,
-            max: enough ? Math.max(...valid) : null,
-            samples: points.map((point, i) => ({ point, value: values[i].status === "fulfilled" ? values[i].value : null })),
-            count: valid.length,
-            expected: points.length,
-            scene: scene.id,
-          });
-        }
+        const row = await readPass(days[cursor++], { mode, sensor, whole, points, signal });
+        if (!row) return;
+        results.push(row);
         root.textContent = "Building the 12-month field report: " + ++done + " / " + days.length + " passes checked…";
         // Draw the chart as passes arrive so the report is never blank while it loads.
         if (done % 8 === 0 && version === historyVersion)
@@ -1357,6 +1346,8 @@ export function initFarmSatellite() {
       start: Date.now() - HISTORY_DAYS * 86400000,
       color: mode === "lst" ? "#f0a26c" : "#5fbf6a",
     };
+    fillMonthPicker();
+    if (monthKey) loadMonth();
     drawTrend();
     snapshotCards(mode, historyRows, usable, days.length, whole);
     renderDataChips(usable, days.length);
@@ -1515,9 +1506,204 @@ export function initFarmSatellite() {
     if (!lastChart) return;
     const mode = historyMode();
     renderFieldChart($("agri-field-history-chart"), historyRows, { ...lastChart, events: fieldEvents(), marker: selectedSceneTime(), onPick: pickRow });
-    renderMonthlyChart($("crop-monthly-chart"), historyRows, { title: FIELD_INDICES[mode].label.split(" · ")[0] + " · monthly average", unit: FIELD_INDICES[mode].unit || "", color: lastChart.color, start: lastChart.start });
+    renderMonthlyChart($("crop-monthly-chart"), historyRows, { title: FIELD_INDICES[mode].label.split(" · ")[0] + " · monthly average", unit: FIELD_INDICES[mode].unit || "", color: lastChart.color, start: lastChart.start, selected: monthKey, onPick: chooseMonth });
+    renderMonth();
     updatePassLabel();
   }
+  // ---- Month view: every pass in one month (not thinned) beside daily archived weather ----
+  const monthName = (key) => new Date(pktMonthRange(key)[0] + 5 * 3600000).toLocaleDateString("en-GB", { timeZone: "UTC", month: "long", year: "numeric" });
+  function fillMonthPicker() {
+    const pick = $("crop-month");
+    pick.replaceChildren(new Option("Whole 12 months", ""), ...monthKeys(Date.now() - HISTORY_DAYS * DAY, Date.now()).map((k) => new Option(monthName(k), k)));
+    pick.disabled = !historyRows.length;
+    pick.value = monthKey;
+  }
+  function resetMonth() {
+    monthController?.abort();
+    monthKey = "";
+    monthRows = [];
+    monthState = "";
+    $("crop-month").value = "";
+    $("crop-month").disabled = true;
+    $("crop-month-detail").replaceChildren();
+    $("crop-month-detail").hidden = true;
+  }
+  function chooseMonth(key) {
+    monthKey = key === monthKey ? "" : key;
+    $("crop-month").value = monthKey;
+    loadMonth();
+    drawTrend();
+    if (monthKey) $("crop-month-detail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  async function loadMonth() {
+    monthController?.abort();
+    monthRows = [];
+    monthState = "";
+    const range = monthKey && pktMonthRange(monthKey);
+    if (!range || !validField(vertices)) return renderMonth();
+    monthController = new AbortController();
+    const signal = monthController.signal,
+      key = monthKey,
+      sensor = $("agri-satellite-source").value,
+      mode = historyMode(),
+      ctx = { mode, sensor, whole: usesWholeField(sensor, mode), points: fieldSamplePoints(vertices), signal },
+      known = new Map(historyRows.map((r) => [r.scene, r])),
+      days = recentSceneDays(scenes, Date.now(), HISTORY_DAYS).filter(([, s]) => {
+        const t = Date.parse(s.properties.datetime || s.properties.start_datetime);
+        return t >= range[0] && t < range[1];
+      }),
+      todo = days.filter(([, s]) => !known.has(s.id));
+    monthRows = days.flatMap(([, s]) => (known.has(s.id) ? [known.get(s.id)] : []));
+    loadWeatherYear(signal).then(() => key === monthKey && renderMonth(), () => {});
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < todo.length && !signal.aborted) {
+        const row = await readPass(todo[cursor++], ctx);
+        if (!row || key !== monthKey) return;
+        monthRows.push(row);
+        monthState = "Reading the remaining passes for " + monthName(key) + ": " + (monthRows.length - (days.length - todo.length)) + " / " + todo.length + "…";
+        renderMonth();
+      }
+    };
+    monthState = todo.length ? "Reading " + todo.length + " more pass" + (todo.length === 1 ? "" : "es") + " for " + monthName(key) + "…" : "";
+    renderMonth();
+    await Promise.all(Array.from({ length: 2 }, worker));
+    if (signal.aborted || key !== monthKey) return;
+    monthState = days.length ? "" : "No satellite pass with cloud cover ≤60% over this field in " + monthName(key) + ".";
+    renderMonth();
+  }
+  function renderMonth() {
+    const root = $("crop-month-detail");
+    root.hidden = !monthKey;
+    root.replaceChildren();
+    if (!monthKey || !lastChart) return;
+    const range = pktMonthRange(monthKey),
+      mode = historyMode(),
+      unit = FIELD_INDICES[mode].unit || "",
+      rows = [...monthRows].sort((a, b) => a.time - b.time),
+      days = monthDays(monthKey, rows, weatherYear?.days || []);
+    const head = document.createElement("div");
+    head.className = "crop-month-head";
+    const h = document.createElement("h4");
+    h.textContent = monthName(monthKey) + " · day by day";
+    const back = document.createElement("button");
+    back.type = "button";
+    back.textContent = "Back to 12 months";
+    back.addEventListener("click", () => chooseMonth(monthKey));
+    head.append(h, back);
+    const status = document.createElement("p");
+    status.className = "farm-explainer";
+    status.setAttribute("role", "status");
+    const clear = rows.filter((r) => finite(r.value)).length;
+    status.textContent =
+      monthState ||
+      clear + " of " + rows.length + " pass" + (rows.length === 1 ? "" : "es") + " this month " + (rows.length === 1 ? "was" : "were") + " clear enough to use. The satellite does not see the field every day; days without a pass stay blank.";
+    const chart = document.createElement("div");
+    renderFieldChart(chart, rows, { title: FIELD_INDICES[mode].label + " · every pass", unit, color: lastChart.color, start: range[0], end: range[1], events: fieldEvents(), marker: selectedSceneTime(), onPick: pickRow });
+    const weather = document.createElement("div");
+    weather.className = "crop-weather-chart";
+    renderWeatherDays(weather, days);
+    root.append(head, status, chart, weather, monthTable(days, mode, unit));
+  }
+  // Daily rain bars with daily max / min temperature lines for the selected month.
+  function renderWeatherDays(root, days) {
+    const h4 = document.createElement("h4");
+    h4.textContent = "Rain & temperature · daily";
+    root.append(h4);
+    if (!days.some((d) => finite(d.rain) || finite(d.tmax))) {
+      const p = document.createElement("small");
+      p.textContent = weatherYear ? "No archived weather for this month yet (the archive runs about two days behind)." : "Loading archived weather…";
+      root.append(p);
+      return;
+    }
+    const ns = "http://www.w3.org/2000/svg",
+      W = 720,
+      H = 160,
+      P = { l: 54, r: 46, t: 18, b: 26 },
+      maxRain = Math.max(5, ...days.map((d) => (finite(d.rain) ? d.rain : 0))),
+      temps = days.flatMap((d) => [d.tmax, d.tmin].filter(finite)),
+      tLo = Math.min(...temps) - 2,
+      tHi = Math.max(...temps) + 2,
+      bw = (W - P.l - P.r) / days.length,
+      ty = (v) => H - P.b - ((v - tLo) / (tHi - tLo)) * (H - P.t - P.b),
+      svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Daily rainfall bars with daily maximum and minimum temperature lines");
+    const add = (tag, attrs, text) => {
+      const e = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (text !== undefined) e.textContent = text;
+      svg.append(e);
+      return e;
+    };
+    const line = (key, color) => {
+      // Break the line at missing days instead of bridging them.
+      let run = [];
+      const flush = () => {
+        if (run.length > 1) add("polyline", { points: run.join(" "), fill: "none", stroke: color, "stroke-width": 2 });
+        run = [];
+      };
+      days.forEach((d, i) => (finite(d[key]) ? run.push(P.l + i * bw + bw / 2 + "," + ty(d[key])) : flush()));
+      flush();
+    };
+    days.forEach((d, i) => {
+      const x = P.l + i * bw,
+        day = Number(d.date.slice(8));
+      if (finite(d.rain) && d.rain > 0) {
+        const bh = (d.rain / maxRain) * (H - P.t - P.b),
+          bar = add("rect", { x: x + bw * 0.15, y: H - P.b - bh, width: bw * 0.7, height: bh, fill: "#5aa9e6", opacity: 0.75, rx: 1 }),
+          tip = document.createElementNS(ns, "title");
+        tip.textContent = niceDay(d.time) + ": " + d.rain.toFixed(1) + " mm rain";
+        bar.append(tip);
+      }
+      if (day === 1 || day % 5 === 0) add("text", { x: x + bw / 2, y: H - 8, "text-anchor": "middle", fill: "currentColor", "font-size": 10, opacity: 0.7 }, String(day));
+    });
+    line("tmax", "#f0a26c");
+    line("tmin", "#8ad9ff");
+    add("text", { x: P.l - 8, y: P.t + 8, "text-anchor": "end", fill: "#5aa9e6", "font-size": 10 }, maxRain.toFixed(0) + " mm");
+    add("text", { x: W - P.r + 6, y: P.t + 8, fill: "#f0a26c", "font-size": 10 }, tHi.toFixed(0) + " °C");
+    add("text", { x: W - P.r + 6, y: H - P.b, fill: "#8ad9ff", "font-size": 10 }, tLo.toFixed(0) + " °C");
+    const total = days.reduce((a, d) => a + (finite(d.rain) ? d.rain : 0), 0),
+      note = document.createElement("small");
+    note.textContent = "Bars: daily rainfall (month total " + total.toFixed(0) + " mm). Lines: daily maximum (orange) and minimum (blue) temperature. Open-Meteo reanalysis at the field centre.";
+    root.append(svg, note);
+  }
+  function monthTable(days, mode, unit) {
+    const wrap = document.createElement("details");
+    wrap.className = "crop-month-table";
+    wrap.open = true;
+    const summary = document.createElement("summary");
+    summary.textContent = "Daily table";
+    const table = document.createElement("table"),
+      thead = table.createTHead().insertRow();
+    for (const t of ["Date", FIELD_INDICES[mode].label.split(" · ")[0] + (unit ? " (" + unit + ")" : ""), "Field clear", "Rain mm", "Max °C", "Min °C"]) thead.append(Object.assign(document.createElement("th"), { scope: "col", textContent: t }));
+    const body = table.createTBody(),
+      num = (v, d = 1) => (finite(v) ? v.toFixed(d) : "–");
+    for (const d of days) {
+      const tr = body.insertRow(),
+        p = d.pass;
+      tr.insertCell().textContent = new Date(d.time).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Karachi" });
+      const v = tr.insertCell();
+      if (p && finite(p.value)) {
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "text-button";
+        go.textContent = fmtValue(mode, p.value);
+        go.setAttribute("aria-label", "Show the satellite image from " + niceDay(d.time));
+        go.addEventListener("click", () => pickRow(p));
+        v.append(go);
+      } else v.textContent = p ? (p.failed ? "Not readable" : "Cloudy") : "No pass";
+      tr.insertCell().textContent = p && finite(p.clear) ? Math.round(p.clear * 100) + "%" : p && p.count ? p.count + " / " + p.expected + " points" : "–";
+      tr.insertCell().textContent = num(d.rain);
+      tr.insertCell().textContent = num(d.tmax);
+      tr.insertCell().textContent = num(d.tmin);
+      if (!p) tr.className = "is-empty";
+    }
+    wrap.append(summary, table);
+    return wrap;
+  }
+  $("crop-month").addEventListener("change", (e) => chooseMonth(e.target.value || monthKey));
   $("agri-scene").addEventListener("change", drawTrend);
   $("crop-prev").addEventListener("click", () => {
     stopPlay();

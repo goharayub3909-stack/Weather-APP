@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>WeatherWalay Kissan & Sehat Hub · Realtime stations</title>
+<link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<style>
+/* Self-contained page. MapLibre is vendored; basemap tiles come from OpenStreetMap or Esri. */
+:root{color-scheme:light dark;--bg:#f4f6f9;--panel:#fff;--text:#16202c;--muted:#5d6b7a;--line:#d9e0e8;--accent:#0b6bcb;--soft:#eaf2fb;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1621;--panel:#16212e;--text:#e8eef5;--muted:#9fb0c1;--line:#2a3a4c;--accent:#6db3ff;--soft:#1d2d40;--bad:#ff8a80}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;height:100%}
+header{grid-column:1/3;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:15px;margin:0}header .meta{color:var(--muted);font-size:12px;flex:1;min-width:200px}
+.btn{padding:6px 10px;border:1px solid var(--line);background:var(--panel);border-radius:8px}.btn:hover{background:var(--soft)}.btn[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+aside{overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:10px}
+aside h2{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}aside h2:first-child{margin-top:0}
+.param{border:1px solid var(--line);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.param>button{display:flex;justify-content:space-between;width:100%;padding:7px 10px;border:0;background:transparent;text-align:left}
+.param.open>button{background:var(--soft);font-weight:600}
+.cats{display:none;flex-wrap:wrap;gap:4px;padding:6px 8px 8px}.param.open .cats{display:flex}
+.cat{padding:3px 8px;border:1px solid var(--line);border-radius:14px;background:transparent;font-size:12px}.cat[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.net{display:flex;justify-content:space-between;gap:6px;padding:2px 0}.net label{flex:1}.net span{color:var(--muted)}
+input[type=search]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+main{position:relative;overflow:hidden}
+#map,#table,#labels{position:absolute;inset:0}
+#labels{pointer-events:none;width:100%;height:100%}
+#table{overflow:auto;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}th[aria-sort]::after{content:attr(data-arrow);margin-left:4px}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--soft)}
+.num{text-align:right}.dim{color:var(--muted)}.off{opacity:.6}
+#tip{position:absolute;z-index:5;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 4px 16px #0003;max-width:300px;font-size:12px}
+#tip b{font-size:13px}#tip .v{font-size:20px;font-weight:700}#tip small{display:block;color:var(--muted)}
+#detail{position:absolute;z-index:6;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 14px}
+#detail h2{margin:0;font-size:16px}#detail h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:14px 0 4px}
+#detail .close{position:absolute;top:8px;right:10px}
+#detail td:first-child{color:var(--muted)}
+.note{background:var(--soft);border-radius:8px;padding:6px 8px;margin:8px 0;font-size:12px}
+.status{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px}
+@media (max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}aside{max-height:36vh;border-right:0;border-bottom:1px solid var(--line)}header{grid-column:1}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>WeatherWalay realtime stations</h1>
+    <div class="meta" id="meta">Loading…</div>
+    <button class="btn" id="view-map" type="button" aria-pressed="true">Map</button>
+    <button class="btn" id="view-table" type="button" aria-pressed="false">Table</button>
+    <button class="btn" id="csv" type="button" title="Every station and all 178 labelled columns">Download CSV</button>
+    <a class="btn" id="json" href="../observation-data/realtime.json" download>JSON</a>
+    <a class="btn" id="meta-csv" href="../observation-data/station-meta.csv" download title="Exact names, latitude, longitude and elevation">Station list (CSV)</a>
+  </header>
+  <aside>
+    <h2>Parameter</h2>
+    <div id="params"></div>
+    <h2>Stations</h2>
+    <input id="q" type="search" placeholder="Search station name" aria-label="Search station name" autocomplete="off">
+    <div style="margin-top:6px"><label><input type="checkbox" id="f-active" checked> Active (updated within 30 min)</label></div>
+    <div><label><input type="checkbox" id="f-inactive" checked> Inactive</label></div>
+    <h2>Networks <button class="btn" id="net-all" type="button" style="padding:1px 6px;font-size:11px">all</button> <button class="btn" id="net-none" type="button" style="padding:1px 6px;font-size:11px">none</button></h2>
+    <div id="nets"></div>
+    <h2>Basemap</h2>
+    <select id="base" aria-label="Basemap"><option value="osm">Street map</option><option value="sat">Satellite</option></select>
+    <p class="dim" style="font-size:11px">Values, time stamps and station details are exactly as the WeatherWalay realtime feed gives them. Elevation is added from a terrain model.</p>
+  </aside>
+  <main>
+    <div id="map" aria-label="Map of WeatherWalay stations"></div>
+    <canvas id="labels" aria-hidden="true"></canvas>
+    <div id="table" hidden></div>
+    <div id="tip" hidden></div>
+    <div id="status" class="status" role="status">Loading stations…</div>
+    <section id="detail" hidden aria-label="Station details"></section>
+  </main>
+</div>
+<script src="../vendor/maplibre-gl.js"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -31,17 +31,15 @@ Four 24-hour charts (temperature/rain/wind/humidity) handle constant and all-zer
 
 The old Windy embeds and PMD link-card section have been removed. Source attribution remains in the maps and footer. The weather studio uses actual model forecasts; observed radar, satellite, lightning and stations are presented separately. The Weather.com viewer has been removed.
 
-### Windy-style Pakistan weather studio — single HTML file
+### 3D terrain weather map
 
-`public/explorer/index.html` contains all custom HTML, CSS and modular, commented JavaScript in one file. It loads pinned OpenLayers 10.6.1 JS/CSS from jsDelivr using verified SHA-384 integrity attributes, with key-free OpenStreetMap tiles styled in dark colours and required attribution. The main website embeds this same-origin file; it is also available independently at `explorer/`.
+`public/explorer/` (`index.html`, `app.js`, `core.js`) is a three.js map of Pakistan over real terrain (AWS Terrain Tiles, zoom 7). It shows animated 10 m wind trails, hourly rain and snow (snow in purple, as water equivalent), town labels, time controls, regional views, place search, a shareable view link and a click-for-forecast panel with a 72 h rain and temperature chart. three.js is vendored in `public/vendor/three/` (MIT).
 
-- Center: Pakistan, 30.3753°N / 69.3451°E, zoom 5; navigation is constrained around the region.
-- Parameters: wind, rain, temperature and relative humidity. Elevations: surface/10 m, 925, 850, 700, 500, 300, 250 and 200 hPa.
-- `scripts/sync-studio.py` fetches **actual ECMWF IFS 0.25° forecasts** from Open-Meteo for 304 regular display cells over 60–78°E and 23–38°N. A 1° display mesh keeps the free service affordable; interpolation does not recreate native 0.25° detail. The mesh is a regional rectangle, not a political boundary.
-- The shared snapshot `public/studio-data/forecast.json` contains 48 hourly frames of temperature, RH and U/V wind at all eight elevations. It is refreshed at most every six hours by the existing scheduled Pages build, rather than making 304 provider queries per visitor. The API does not supply model initialization time; fetched time and valid time are displayed separately in PKT.
-- Wind U/V components come from the actual forecast speed/direction, converted to metres per second. Pressure levels below surface pressure are masked; missing values never become zeros or fabricated replacements. Total-column cloud cover is labeled as such, independent of selected pressure level.
-- Canvas rasters interpolate actual fields bilinearly. Wind particles follow U/V with accelerated display motion, trails and a pause control. Parameter, elevation and hourly time changes update both raster and anchored picker. Forecast playback, Now, Refresh, valid/fetched time and old-data warnings are provided. Reduced motion, hidden browser tabs and inactive map panels suspend animation.
-- No demo dataset or synthetic fallback exists. An initial/expired-data failure leaves the weather layer empty; a failed refresh may retain only a previous actual forecast whose valid times still continue, with an explicit warning.
+- Forecast: **ECMWF IFS 0.1° (about 9 km) open data** (CC BY 4.0, free, no key). `scripts/sync-terrain-weather-ecmwf.py` downloads only 10 m wind, total cloud cover, total precipitation and snowfall by byte range, decodes them with eccodes and writes `public/terrain-data/grid-hires.json` (3-hourly, 72 h). If that is unavailable the map uses `grid.json`, a 0.5° sample of the same model from Open-Meteo (`scripts/sync-terrain-weather.mjs`). Both files are generated during the Pages build and not committed. The click-for-forecast panel requests the model at the exact point.
+- Layers: animated wind trails (coloured by speed), animated clouds from the forecast cloud cover, hourly rain and snow. Terrain: Esri World Imagery draped on AWS Terrain Tiles, with 130 m / 65 m detail loaded around the view when zoomed in. Controls: drag to move, right-drag to rotate and tilt, wheel to zoom, buttons and keys.
+- Open-Meteo is free for non-commercial use only; a commercial deployment needs its paid API key.
+- ECMWF has no convective-rain field, so rain in an hour with CAPE of at least 500 J/kg and at least 0.5 mm is drawn as "Rain, high CAPE" (a screening convention). Not an official forecast or warning.
+- Pure logic (grid sampling, wind components, Mercator, colour ramps, share link, summary) is in `core.js` and tested in `test/terrain-explorer.test.js`.
 
 ### Natural-colour satellite — EUMETView WMS
 
@@ -93,11 +91,8 @@ Run `npm test` and `python3 -m unittest discover -s test -p "*_test.py"`. Browse
 
 The Node server and static Pages paths must both serve all module/worker/data files. No build or dependency install is needed. Free services have availability, attribution and usage limits; scheduled GitHub refresh times are not guaranteed.
 
-The studio also offers a surface Rain view using actual ECMWF hourly rain amounts (mm), cached with the wind fields. Falling blue streaks appear only in forecast wet cells (at least 0.05 mm); white trails follow actual U/V vectors. Motion is accelerated for visualization. Rain is a surface field; returning to Wind restores the previously selected pressure level. No demo wind or rain is substituted when a feed fails.
 
-The studio pressure selector includes Surface, 925, 850, 700, 500, 300, 250 and 200 hPa. Pressure surfaces are not fixed heights: the picker shows the actual ECMWF geopotential height in metres above sea level at the chosen hour, alongside surface pressure. The coverage line distinguishes below-terrain grid nodes from missing provider values. Terrain-aware interpolation omits only corners known to be underground, and only where interpolated surface pressure confirms the selected point is above ground; genuine missing provider values remain missing. Explicit +/− buttons support touch zoom alongside wheel/pinch controls.
 
-For a source audit after refreshing, run `python3 scripts/verify-studio.py`. It independently re-requests the 500 hPa temperature, RH, speed, direction and height at three grid nodes (near Karachi, Islamabad and northern mountains), compares every cached hour including the U/V conversion, and fails if values differ. This checks ingestion/mapping, not forecast accuracy against observations. Expanded fields are fetched in paced batches with a fixed UTC hour range to avoid free API bursts and cross-hour gaps. Refreshes remain shared every six hours, without per-visitor model API queries.
 
 ### Farmers view
 
@@ -121,7 +116,6 @@ The farmer satellite tab queries public Microsoft Planetary Computer STAC scenes
 
 The main current-weather panel fills each parameter independently: the nearest fresh station (50 km / 3 hours), then a fresh METAR (100 km / 2 hours), then ECMWF. Each tile labels its actual source; valid zero values remain zero. METAR humidity is derived only from that airport's own temperature and dew point. Observed agri indices continue to use a single report without inserting model values into observations. All forecast sections remain separately labelled ECMWF. Station yearless dates are accepted only when they align within 48 hours of an authenticated full feed timestamp; the year/PKT interpretation is disclosed. The observation map includes provider daily, 24-hour, monthly, yearly and JJAS rainfall plus available rain rates. PMD and AWS daily periods differ and are labelled. The source does not supply weekly totals.
 
-The studio uses a finer 0.5° rainfall display mesh of 1,147 real samples from the native 0.25° ECMWF model, with smooth gradients and precipitation-driven particles. The shared 72-hour rain snapshot is refreshed at most twice daily to limit free API use; it aligns with the wind timeline by timestamp. Missing values remain blank, and the original actual 1° mesh is used if a finer hour is unavailable. Seven-day thunder wording uses explicit ECMWF thunder codes or simultaneous CAPE and convective precipitation as a labelled qualitative screen, not a calibrated thunder probability. CAPE and hail-potential tiles are removed from the main current-weather page.
 
 
 ### Rolling disease risk and field decisions

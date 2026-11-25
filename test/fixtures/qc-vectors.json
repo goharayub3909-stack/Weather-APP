@@ -1,0 +1,1006 @@
+{
+ "note": "Shared by test/obs-qc.test.js and downscaler/tests/test_obs_qc.py. T0 is 1700000000000 ms. Ring stations sit 5 to 11 km from (34.0, 73.0).",
+ "cases": [
+  {
+   "name": "range limits catch impossible values and nothing else",
+   "readings": [
+    {
+     "key": "a",
+     "param": "temperature",
+     "value": 60,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "b",
+     "param": "temperature",
+     "value": -90,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "c",
+     "param": "temperature",
+     "value": 56.7,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "d",
+     "param": "humidity",
+     "value": 101,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "e",
+     "param": "humidity",
+     "value": 100,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "f",
+     "param": "pressure",
+     "value": 81.6,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "g",
+     "param": "pressure",
+     "value": 850,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "h",
+     "param": "wind_direction",
+     "value": -43.3,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "i",
+     "param": "wind_direction",
+     "value": 360,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "j",
+     "param": "rain_rate",
+     "value": -1,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "k",
+     "param": "rain_24h",
+     "value": 1826,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "l",
+     "param": "wind_speed",
+     "value": 409,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {
+     "a|temperature": [
+      "range"
+     ],
+     "b|temperature": [
+      "range"
+     ],
+     "d|humidity": [
+      "range"
+     ],
+     "f|pressure": [
+      "range"
+     ],
+     "h|wind_direction": [
+      "range"
+     ],
+     "j|rain_rate": [
+      "range"
+     ],
+     "k|rain_24h": [
+      "range"
+     ],
+     "l|wind_speed": [
+      "range"
+     ]
+    },
+    "no_state": [
+     "a|temperature",
+     "f|pressure"
+    ]
+   }
+  },
+  {
+   "name": "dew point above the air temperature by more than 1 degC",
+   "readings": [
+    {
+     "key": "K",
+     "param": "temperature",
+     "value": 10,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "K",
+     "param": "dew_point",
+     "value": 11.5,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "L",
+     "param": "temperature",
+     "value": 10,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "L",
+     "param": "dew_point",
+     "value": 10.9,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "M",
+     "param": "dew_point",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {
+     "K|dew_point": [
+      "dew_above_temperature"
+     ]
+    }
+   }
+  },
+  {
+   "name": "spatial: a station 11 degC under its neighbours at its own height is flagged",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 5,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 600
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N4",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.9,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {
+     "A|temperature": [
+      "spatial"
+     ]
+    }
+   }
+  },
+  {
+   "name": "spatial: 16.0 at 600 m against 20 at sea level is within the lapse rate (expected 16.1)",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 16.0,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 600
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N4",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.9,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {}
+   }
+  },
+  {
+   "name": "spatial: fewer than 3 neighbours, no judgement",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 5,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {}
+   }
+  },
+  {
+   "name": "spatial: neighbours read 3 h earlier, or 46 km away, do not count",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 5,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 20,
+     "time": 1699989200000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 20,
+     "time": 1699989200000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 20,
+     "time": 1699989200000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "F",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.5,
+     "z": 0
+    },
+    {
+     "key": "G",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 72.5,
+     "z": 0
+    },
+    {
+     "key": "H",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.4,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {}
+   }
+  },
+  {
+   "name": "spatial: neighbours 800 m higher are not used (limit 700 m)",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 5,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 800
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 800
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 800
+    },
+    {
+     "key": "N4",
+     "param": "temperature",
+     "value": 20,
+     "time": 1700000000000,
+     "lat": 33.9,
+     "lon": 73.0,
+     "z": 800
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {}
+   }
+  },
+  {
+   "name": "step: 8 degC in 10 min with no neighbours is under twice the allowed 5 degC",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 18,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {},
+    "state": {
+     "A|temperature": {
+      "v": 18,
+      "run": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "step: 11 degC in 10 min with no neighbours is a spike and the old value stays the reference",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 21,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {
+     "A|temperature": [
+      "spike"
+     ]
+    },
+    "state": {
+     "A|temperature": {
+      "v": 10,
+      "run": 1
+     }
+    }
+   }
+  },
+  {
+   "name": "step: a jump the neighbours share is real",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 17,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 17,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 17,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 17,
+     "time": 1700000000000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {},
+    "state": {
+     "A|temperature": {
+      "v": 17,
+      "run": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "step: a jump the neighbours do not share (5 degC off) is a spike",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 17,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N1",
+     "param": "temperature",
+     "value": 12,
+     "time": 1700000000000,
+     "lat": 34.05,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N2",
+     "param": "temperature",
+     "value": 12,
+     "time": 1700000000000,
+     "lat": 34.1,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "N3",
+     "param": "temperature",
+     "value": 12,
+     "time": 1700000000000,
+     "lat": 33.95,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {
+     "A|temperature": [
+      "spike"
+     ]
+    }
+   }
+  },
+  {
+   "name": "step: a gap of more than 3 h is not judged",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 30,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699985600000,
+      "same_since": 1699985600000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {},
+    "state": {
+     "A|temperature": {
+      "v": 30,
+      "run": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "step: pressure 12 hPa in 30 min equals twice the allowed 6 and passes, 13 hPa does not",
+   "readings": [
+    {
+     "key": "P",
+     "param": "pressure",
+     "value": 912,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "Q",
+     "param": "pressure",
+     "value": 913,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "P": {
+     "pressure": {
+      "v": 900,
+      "t": 1699998200000,
+      "same_since": 1699998200000,
+      "n_same": 1,
+      "run": 0
+     }
+    },
+    "Q": {
+     "pressure": {
+      "v": 900,
+      "t": 1699998200000,
+      "same_since": 1699998200000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {
+     "Q|pressure": [
+      "spike"
+     ]
+    }
+   }
+  },
+  {
+   "name": "stuck: the same temperature for over 6 h of readings",
+   "readings": [
+    {
+     "key": "S",
+     "param": "temperature",
+     "value": 15.2,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "U",
+     "param": "temperature",
+     "value": 15.2,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "S": {
+     "temperature": {
+      "v": 15.2,
+      "t": 1699999400000,
+      "same_since": 1699978400000,
+      "n_same": 5,
+      "run": 0
+     }
+    },
+    "U": {
+     "temperature": {
+      "v": 15.2,
+      "t": 1699999400000,
+      "same_since": 1699978400000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {
+     "S|temperature": [
+      "stuck"
+     ]
+    }
+   }
+  },
+  {
+   "name": "stuck: not before 6 hours, and humidity and wind are never stuck-tested",
+   "readings": [
+    {
+     "key": "S",
+     "param": "temperature",
+     "value": 15.2,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "H",
+     "param": "humidity",
+     "value": 40,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "W",
+     "param": "wind_speed",
+     "value": 0,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "S": {
+     "temperature": {
+      "v": 15.2,
+      "t": 1699999400000,
+      "same_since": 1699982000000,
+      "n_same": 9,
+      "run": 0
+     }
+    },
+    "H": {
+     "humidity": {
+      "v": 40,
+      "t": 1699999400000,
+      "same_since": 1699928000000,
+      "n_same": 50,
+      "run": 0
+     }
+    },
+    "W": {
+     "wind_speed": {
+      "v": 0,
+      "t": 1699999400000,
+      "same_since": 1699928000000,
+      "n_same": 50,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {}
+   }
+  },
+  {
+   "name": "the same time stamp seen again is skipped: no flag, state unchanged",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 50,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1700000000000,
+      "same_since": 1700000000000,
+      "n_same": 1,
+      "run": 0
+     }
+    }
+   },
+   "expect": {
+    "flags": {},
+    "state": {
+     "A|temperature": {
+      "v": 10,
+      "run": 0
+     }
+    }
+   }
+  },
+  {
+   "name": "a spike seen on the third run in a row becomes the new reference",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": 21,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    },
+    {
+     "key": "B",
+     "param": "temperature",
+     "value": 21,
+     "time": 1700000000000,
+     "lat": 34.0,
+     "lon": 73.0,
+     "z": 0
+    }
+   ],
+   "state": {
+    "A": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 2
+     }
+    },
+    "B": {
+     "temperature": {
+      "v": 10,
+      "t": 1699999400000,
+      "same_since": 1699999400000,
+      "n_same": 1,
+      "run": 1
+     }
+    }
+   },
+   "expect": {
+    "flags": {
+     "A|temperature": [
+      "spike"
+     ],
+     "B|temperature": [
+      "spike"
+     ]
+    },
+    "state": {
+     "A|temperature": {
+      "v": 21,
+      "run": 0
+     },
+     "B|temperature": {
+      "v": 10,
+      "run": 2
+     }
+    }
+   }
+  },
+  {
+   "name": "missing values and unknown parameters are ignored",
+   "readings": [
+    {
+     "key": "A",
+     "param": "temperature",
+     "value": null,
+     "time": 1700000000000,
+     "lat": 34,
+     "lon": 73,
+     "z": 0
+    },
+    {
+     "key": "B",
+     "param": "visibility",
+     "value": 9000000000.0,
+     "time": 1700000000000,
+     "lat": 34,
+     "lon": 73,
+     "z": 0
+    },
+    {
+     "key": "C",
+     "param": "temperature",
+     "value": 20,
+     "time": null,
+     "lat": 34,
+     "lon": 73,
+     "z": null
+    }
+   ],
+   "state": {},
+   "expect": {
+    "flags": {}
+   }
+  }
+ ]
+}
