@@ -146,7 +146,7 @@ export const snowColour = mm => ramp(SNOW, mm);
 // Wind trail colour: a palette over the NORMALISED speed t = speed / the level's range (WIND_RANGES), so every level uses the whole palette: pale cyan-white in calm
 // air, then yellow, amber, orange, red and magenta at the top of the range. High contrast against terrain and snow (the trails also carry a dark halo, see RIBBON).
 // The shader's ramp is generated from this table (windRampGlsl).
-export const WIND = [[0, 247, 245, 230], [0.22, 250, 232, 173], [0.42, 250, 204, 97], [0.62, 242, 156, 44], [0.8, 228, 92, 46], [1, 196, 48, 112]];
+export const WIND = [[0, 255, 244, 110], [0.1, 255, 232, 20], [0.35, 255, 214, 0], [0.55, 255, 160, 20], [0.75, 240, 100, 40], [1, 200, 45, 110]];
 export const windColour = t => ramp(WIND, t);
 export function windRampGlsl(name = 'windRamp') {
   const c = i => 'vec3(' + WIND[i].slice(1).map(v => v.toFixed(1)).join(', ') + ') / 255.';
@@ -155,7 +155,7 @@ export function windRampGlsl(name = 'windRamp') {
   return body + '  return ' + c(WIND.length - 1) + ';\n}';
 }
 // The speed (m/s) that gets the top colour at each level: a screening choice so the palette is used fully at every level (the winds aloft are much stronger), not a threshold.
-export const WIND_RANGES = {sfc: 10, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80};
+export const WIND_RANGES = {sfc: 7, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80};
 export const windRange = (level, sfcRange = WIND_RANGES.sfc) => level === 'sfc' ? sfcRange : WIND_RANGES[level] ?? WIND_RANGES.sfc;
 // The p-th percentile (0..1) of a list of numbers by linear interpolation between ranks; null for an empty list.
 export function percentile(values, p) {
@@ -206,7 +206,7 @@ export const LEVEL_GRID = {opacity: 0.12, fineBelowKm: 150, coarse: 1, fine: 0.2
 export const gridSpacings = viewWidthKm => viewWidthKm < LEVEL_GRID.fineBelowKm ? [LEVEL_GRID.coarse, LEVEL_GRID.fine] : [LEVEL_GRID.coarse];
 export const gridOpacity = (distKm, mix = 1) => LEVEL_GRID.opacity * mix * Math.min(1, Math.max(0, (LEVEL_GRID.fadeToKm - distKm) / (LEVEL_GRID.fadeToKm - LEVEL_GRID.fadeFromKm)));
 // Wind trails are ribbons of triangles: the coloured core is the width of trailWidthPx, the quad is OUTLINE times wider and its outer part is a dark halo.
-export const RIBBON = {outline: 1.45, core: 1 / 1.45};
+export const RIBBON = {outline: 1.5, core: 1 / 1.5};      // the quad is 1.5 x the coloured core: about half a pixel of navy edge on each side at the head of a streak
 
 // ---- rain split ----
 // ECMWF through Open-Meteo has no convective rain field (showers is always 0), so convective rain is inferred:
@@ -262,7 +262,7 @@ export function summariseHours(hours) {
 // Metres above sea level to a land or sea colour. Negative values are the sea floor (darker with depth).
 const LAND = [[0, 84, 107, 61], [550, 102, 117, 69], [900, 115, 102, 69],
   [1500, 128, 97, 71], [2400, 140, 120, 102], [3400, 175, 165, 155],
-  [4500, 217, 217, 217], [5500, 242, 244, 246], [7000, 255, 255, 255]];
+  [4500, 217, 217, 217], [5500, 213, 220, 230], [7000, 213, 220, 230]];      // snow: a light grey-blue (#D5DCE6), not white, so white wind streaks stand out on it
 export const elevationColour = m => m <= 0 ? ramp([[-4000, 6, 18, 36], [0, 20, 52, 82]], m) : ramp(LAND, m);
 
 // ---- terrain-following wind ----
@@ -710,7 +710,7 @@ export const WIND_SIM = {
   calmBlend: [0.02, 0.2],   // m/s: the direction goes from the particle's own heading (still air) to the wind's own (this fast) smoothly, so it never jumps
   trailPoints: 14,          // a trail is the live head plus 13 recorded positions (a ring buffer on the GPU)
   slotSeconds: 6 / 60,      // at 1x a position is recorded this often (1.3 s for 13 segments); at other speeds as often as the same amount of WIND time passes
-  defaultCount: 4000,       // trails drawn by default (up to maxParticles)
+  defaultCount: 10000,       // trails drawn by default (up to maxParticles)
   trailSegments: {min: 4, max: 13, default: 8},    // segments drawn per trail: the Trail length control (13 is the whole ring buffer)
   outsideFactor: 1.6,       // a particle further than this many view radii from the view centre is recycled
   maxParticles: 24576,      // 256 x 96 state texture
@@ -739,8 +739,30 @@ export const ringSlot = (head, k, n = WIND_SIM.trailPoints - 1) => ((head - (k -
 export const sameLife = (slotLife, slotAge, life, age) => slotLife === life && slotAge <= age + 1e-3;
 // Along a trail, t = 0 at the head and 1 at the tail: bright head fading smoothly to nothing, and a ribbon that narrows towards the tail. Faster wind is
 // a little wider and more opaque. Pixels are CSS pixels (times the device pixel ratio in the shader).
-export const trailAlpha = (t, speed, range = 20) => 0.95 * Math.pow(1 - Math.min(1, Math.max(0, t)), 1.4) * (0.5 + 0.5 * Math.min(1, speed / (range * 0.4)));      // speed against the level's colour range, as the shader does (sp / uRange / .4): light wind stays visible at every level
-export const trailWidthPx = (t, speed, range = 20) => (1.3 + 1.2 * Math.min(1, speed / (range * 0.6))) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
+export const trailAlpha = (t, speed, range = 20) => 0.95 * Math.pow(1 - Math.min(1, Math.max(0, t)), 1.4) * (0.75 + 0.25 * Math.min(1, speed / (range * 0.4)));      // speed against the level's colour range, as the shader does (sp / uRange / .4): light wind stays visible at every level
+// ---- the Pakistan boundary line ----
+// A black line (BOUNDARY.coreHalfPx either side of its centre, a white halo to BOUNDARY.haloHalfPx so it shows on dark ground) draped on the terrain. The data file is
+// public/explorer/pakistan-boundary.json: closed rings in lon/lat. boundarySegments turns the rings into the segments the shader draws.
+export const BOUNDARY = {coreHalfPx: 1.1, haloHalfPx: 2.4, haloAlpha: 0.4};
+export function boundarySegments(rings) {
+  const out = [];
+  for (const ring of rings) for (let i = 0; i + 1 < ring.length; i++) out.push([ring[i][0], ring[i][1], ring[i + 1][0], ring[i + 1][1]]);
+  return out;
+}
+// The Particle width control: a factor on the width of every streak (1 = the designed width).
+export const WIDTH_CONTROL = {min: 0.5, max: 2.5, step: 0.1, default: 1};
+export const clampWidthControl = v => Math.min(WIDTH_CONTROL.max, Math.max(WIDTH_CONTROL.min, Number.isFinite(v) ? v : WIDTH_CONTROL.default));
+// ---- the streaks ----
+// Every particle is drawn as one straight, tapered streak behind its head, lying along the local wind: sharp, dense and the same look at every level. Its length on screen grows with
+// the speed against the level's colour range (so a light surface wind and a jet at 250 hPa both read clearly), times the Trail length control (segments / the default 8).
+// Colour: white (STREAK.white = 1); lower it towards 0 to tint the streaks by speed with the palette (WIND, windRange), which the CPU fallback always uses. The shader mirrors these numbers (DRAW_VS); the CPU fallback keeps the old trails.
+export const STREAK = {white: 1, minPx: 12, maxPx: 42, fullAtFraction: 0.6, headWidthPx: 2.2, tailWidthPx: 1.1, fadePow: 1.0, alphaHead: 1.0, halo: 0.55, fadeInFrames: 12, fadeOutFrames: 20, segments: 6};      // segments: the streak is a smooth curve drawn in this many pieces
+const smooth01 = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const streakLengthPx = (speed, range, lengthControl = 1) => (STREAK.minPx + (STREAK.maxPx - STREAK.minPx) * smooth01(0, STREAK.fullAtFraction, speed / range)) * lengthControl;
+export const streakWidthPx = t => STREAK.headWidthPx + (STREAK.tailWidthPx - STREAK.headWidthPx) * Math.min(1, Math.max(0, t));       // t: 0 at the head, 1 at the tail
+export const streakAlpha = (t, fade = 1) => STREAK.alphaHead * Math.pow(1 - Math.min(1, Math.max(0, t)), STREAK.fadePow) * fade;
+export const lengthControl = segments => segments / WIND_SIM.trailSegments.default;
+export const trailWidthPx = (t, speed, range = 20) => (1.7 + 1.0 * Math.min(1, speed / (range * 0.6))) * (1 - 0.5 * Math.min(1, Math.max(0, t)));
 export const lifespan = r => WIND_SIM.life[0] + Math.min(1, Math.max(0, r)) * (WIND_SIM.life[1] - WIND_SIM.life[0]);
 // Move a point by a wind (u east, v north, m/s) for some seconds. Writes into out so the caller can avoid allocating.
 export function advect(lon, lat, u, v, seconds, out = [0, 0]) {
@@ -772,4 +794,110 @@ export const outsideBox = (lon, lat, grid = GRID) => lon < grid.west || lon > gr
 export function outsideView(lon, lat, cLon, cLat, radiusKm) {
   const dx = (lon - cLon) * 111.19 * Math.cos(cLat * Math.PI / 180), dy = (lat - cLat) * 111.19;
   return Math.hypot(dx, dy) > radiusKm * WIND_SIM.outsideFactor;
+}
+
+// ---- station readings, the 1 km model and the difference at every pin (temperature, current) ----
+// The model is the 1 km product of the local downscaler (public/terrain-data/grid-1km: one RGB PNG of temperature and rain per 3-hourly step, manifest.json describes it).
+// It is nudged towards fresh stations at the analysis time, so at an active station the difference (observed minus model) is what is left AFTER that live assimilation. The
+// reading is NOT adjusted to the height of the 1 km cell, so a station well above or below its cell carries that difference in its bias.
+export const PIN_MODES = [['obs', 'Observed'], ['fcst', 'Model (1 km)'], ['bias', 'Obs - model']];
+// One pixel of a temperature + rain step image: value = R * 65536 + G * 256 + B, temperature code = value >> 13, degC = code / 10 - 60, 2047 = no value.
+export function decodeTempPixel(r, g, b) {
+  const code = Math.floor((r * 65536 + g * 256 + b) / 8192);
+  return code === 2047 ? NaN : code / 10 - 60;
+}
+// Bilinear value of a row-major grid (row 0 north) at a point; box = {west, north, res} of the grid's outer edge. Missing cells (NaN) are left out of the weights; null outside the
+// grid or where all four neighbours are missing.
+export function sampleGrid(grid, nx, ny, box, lon, lat) {
+  const fx = (lon - box.west) / box.res - 0.5, fy = (box.north - lat) / box.res - 0.5;
+  if (!(fx >= -0.5 && fy >= -0.5 && fx <= nx - 0.5 && fy <= ny - 0.5)) return null;
+  const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+  let sum = 0, wsum = 0;
+  for (const [dx, dy, w] of [[0, 0, (1 - tx) * (1 - ty)], [1, 0, tx * (1 - ty)], [0, 1, (1 - tx) * ty], [1, 1, tx * ty]]) {
+    const x = Math.min(nx - 1, Math.max(0, x0 + dx)), y = Math.min(ny - 1, Math.max(0, y0 + dy)), v = grid[y * nx + x];
+    if (Number.isFinite(v) && w > 0) { sum += v * w; wsum += w; }
+  }
+  return wsum > 0 ? sum / wsum : null;
+}
+// The two steps around a time and the weight of the second: {i0, i1, w}, or null when the time is more than 1.5 h outside the steps.
+export function stepsAround(hours, hour) {
+  if (!hours.length || hour < hours[0] - 1.5 || hour > hours.at(-1) + 1.5) return null;
+  const h = Math.min(Math.max(hour, hours[0]), hours.at(-1));
+  let i = 0; while (i < hours.length - 2 && h >= hours[i + 1]) i++;
+  return hours.length === 1 ? {i0: 0, i1: 0, w: 0} : {i0: i, i1: i + 1, w: Math.min(1, Math.max(0, (h - hours[i]) / (hours[i + 1] - hours[i])))};
+}
+// The model temperature at a place and a time (ms): the loaded steps (Map of step index -> {grid, nx, ny}) around it, interpolated in space and time; null while a step is missing.
+export function modelTemperature(man, steps, lon, lat, tMs) {
+  const around = stepsAround(man.hours, (tMs - Date.parse(man.times[0])) / 3600000);
+  if (!around) return null;
+  const at = i => { const s = steps.get(i); return s ? sampleGrid(s.grid, s.nx, s.ny, man.grid, lon, lat) : undefined; };
+  const a = around.w < 1 ? at(around.i0) : 0, b = around.w > 0 ? at(around.i1) : 0;                // a step with no weight is not needed
+  if (a === undefined || b === undefined || a === null || b === null) return null;
+  return a * (1 - around.w) + b * around.w;
+}
+// The steps needed for a list of times (ms): a Set of step indexes.
+export function stepsNeeded(man, timesMs) {
+  const need = new Set();
+  for (const t of timesMs) { const s = stepsAround(man.hours, (t - Date.parse(man.times[0])) / 3600000); if (s) { if (s.w < 1) need.add(s.i0); if (s.w > 0) need.add(s.i1); } }
+  return need;
+}
+// Bias text and colour: signed, one decimal. Blue: the station is colder than the model, red: warmer, green: within half a degree.
+export const fmtBias = b => b === null || !Number.isFinite(b) ? '' : (b > 0 ? '+' : b < 0 ? '-' : '') + Math.abs(b).toFixed(1);
+// Coordinates typed in the search box: decimal degrees, latitude first ("35.3254, 75.5322", "35.3254 75.5322", "35.3254N 75.5322E", "N35.3254 E75.5322",
+// "75.5322E, 35.3254N"). Letters N/S/E/W fix which number is which (S and W make it negative). Without letters the order is latitude, longitude; the numbers are only swapped when
+// the first cannot be a latitude (above 90) or when it falls in the forecast area's longitudes (above its north edge) and the second in its latitudes, i.e. someone typed longitude first.
+// Returns {lat, lon} or null (not coordinates, or out of range).
+export function parseLatLon(text) {
+  if (typeof text !== 'string') return null;
+  const s = text.trim().replace(/[°º]/g, ' ').replace(/[,;]/g, ' ').replace(/\s+/g, ' ');
+  const re = /(-?\d+(?:\.\d+)?)/g, nums = []; let m;
+  while ((m = re.exec(s))) nums.push({v: parseFloat(m[1]), at: m.index, end: m.index + m[1].length});
+  if (nums.length !== 2) return null;
+  const rest = s.replace(re, '|'), parts = rest.split('|');                                // [before first, between, after second]
+  if (parts.length !== 3 || parts.some(p => !/^[\sNSEWnsew]*$/.test(p))) return null;
+  const letters = parts.map(p => p.replace(/\s/g, '').toUpperCase());
+  const idx = [{pre: letters[0], post: ''}, {pre: '', post: ''}];                          // letter written before and after each number
+  const between = letters[1], first = nums[0], second = nums[1];
+  if (between.length > 1) return null;
+  if (between) { if (letters[0]) idx[1].pre = between; else idx[0].post = between; }
+  idx[1].post = letters[2];
+  if (letters[0].length > 1 || letters[2].length > 1) return null;
+  const hem = idx.map(x => x.pre + x.post); if (hem.some(h => h.length > 1)) return null;
+  let lat, lon;
+  if (hem[0] || hem[1]) {
+    if (!hem[0] || !hem[1]) return null;                                                   // letters on both numbers or on neither
+    const isLat = h => h === 'N' || h === 'S'; if (isLat(hem[0]) === isLat(hem[1])) return null;
+    const sign = h => h === 'S' || h === 'W' ? -1 : 1, one = (n, h) => sign(h) * Math.abs(n.v);
+    if (isLat(hem[0])) { lat = one(first, hem[0]); lon = one(second, hem[1]); } else { lon = one(first, hem[0]); lat = one(second, hem[1]); }
+  } else {
+    lat = first.v; lon = second.v;
+    if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) { [lat, lon] = [lon, lat]; }
+    else if (lat > GRID.north && lat <= GRID.east && lat >= GRID.west && lon >= GRID.south && lon <= GRID.north) { [lat, lon] = [lon, lat]; }
+  }
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? {lat, lon} : null;
+}
+export const inForecastArea = (lat, lon) => lon >= GRID.west && lon <= GRID.east && lat >= GRID.south && lat <= GRID.north;
+export function biasColour(b) {
+  if (b === null || !Number.isFinite(b)) return '#888888';
+  const a = Math.abs(b);
+  if (a < 0.5) return '#8ee66e';
+  const strong = a >= 3;
+  return b < 0 ? (strong ? '#2f7bff' : '#69b2ff') : (strong ? '#ff4d3a' : '#ff9a7a');
+}
+// Pins from the two observation feeds: WeatherWalay and PMD stations of realtime.json (temperature in column 5, its sync time in column 161, up to 3 h old; active within 30 min) and
+// METAR airport reports (active within 90 min). parseLabel reads the feed's time labels (public/realtime/core.js). -> [{name, network, lat, lon, value, tMs, active}], active ones first.
+export function obsPins(realtime, metar, parseLabel, now = Date.now()) {
+  const pins = [];
+  for (const s of realtime?.stations ?? []) {
+    const v = s.v, t = v?.[5], tMs = parseLabel(v?.[161], now), lat = s.map_lat ?? s.lat, lon = s.map_lon ?? s.lon;
+    if (!Number.isFinite(t) || tMs === null || tMs === undefined || now - tMs > 3 * 3600000 || tMs - now > 3600000 || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    pins.push({name: String(s.name ?? '').trim(), network: s.network, lat, lon, value: t, tMs, active: now - tMs <= 30 * 60000});
+  }
+  for (const s of metar?.stations ?? []) {
+    if (!Number.isFinite(s.temp) || !Number.isFinite(s.obsTime) || !Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
+    const tMs = s.obsTime * 1000;
+    if (now - tMs > 3 * 3600000 || tMs - now > 3600000) continue;
+    pins.push({name: s.icaoId, network: 'METAR', lat: s.lat, lon: s.lon, value: s.temp, tMs, active: now - tMs <= 90 * 60000});
+  }
+  return pins.sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
 }

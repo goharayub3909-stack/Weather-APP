@@ -7,8 +7,11 @@ import {cities} from '../cities.js';
 import {GRID, GridSampler, validDataset, unpackDataset, mercX, mercY, lonOfX, latOfY, terrarium, WORLD_KM, rainColour, snowColour, windColour,
   elevationColour, splitPrecip, terrainWind, flowGrid, flowGridJob, summariseHours, encodeView, decodeView, PRESETS, SNOW_WATER_MM_PER_CM, temperatureColour, WIND_LEVELS, pointRows,
   maxTierFor, labelIndex, labelsNear, LOD_LEVELS, LOD_TILES, FADE_FRACTION, lodAlpha, blendHeight, lodWanted, lodHole, TEMPERATURE_TICKS,
-  FLOW, WIND_SIM, simRowRange, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, RIBBON, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
-  validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT} from './core.js';
+  FLOW, WIND_SIM, simRowRange, spawnPlaneHeight, QUALITY_STEPS, newQuality, qualityStep, resetQuality, normalMapJob, windRampGlsl, RIBBON, STREAK, lengthControl, BOUNDARY, boundarySegments, WIDTH_CONTROL, clampWidthControl, zoomScale, lifespan, withMinimumSpeed, respawnBox, speedFromStep, slotInterval, trailLabel,
+  validManifest, tileOf, tileSeries, phaseSeries, hasPhase, with1km, temperatureLut, rainLut, snowLut, LUT, parseLatLon, inForecastArea} from './core.js';
+import {PIN_MODES, decodeTempPixel, modelTemperature, stepsNeeded, fmtBias, biasColour, obsPins} from './core.js';
+import {fetchFeed} from '../observation-feed.js';
+import {parseLabel} from '../realtime/core.js';
 import {PRESSURE_LEVELS, levelAltitude, levelFile, levelReady, unpackLevelFile, mergeLevel, levelUnderground, UNDERGROUND_MARGIN_M, levelTemperatureColour, temperatureTicksFor, temperatureRange, forecastTable, WIND, WIND_RANGES, windRange, windMotion, wind1kmWeight, transitionAt, gridSpacings, gridOpacity, windTicks, surfaceRangeFrom, histogramPercentile, windSpeedFromCode, LEVEL_FADE_M} from './core.js';
 
 const $ = id => document.getElementById(id);
@@ -20,7 +23,7 @@ const MX0 = TX0 / TILES, MX1 = (TX1 + 1) / TILES, MY0 = TY0 / TILES, MY1 = (TY1 
 const MXC = (MX0 + MX1) / 2, MYC = (MY0 + MY1) / 2, SCALE = WORLD_KM * Math.cos(30.5 * Math.PI / 180);   // km per Mercator unit at 30.5 N
 const toScene = (lon, lat) => [(mercX(lon) - MXC) * SCALE, (mercY(lat) - MYC) * SCALE];                    // x east, z south
 const toLonLat = (x, z) => [lonOfX(x / SCALE + MXC), latOfY(z / SCALE + MYC)];
-const state = {hour: 0, playing: false, exag: 3, layers: new Set(['w', 'r', 's', 'c', 'k']), density: WIND_SIM.defaultCount, speed: 1, trailSegs: WIND_SIM.trailSegments.default, visible: true, detail: false, imagery: false, follow: true, level: 'sfc', sfcRange: WIND_RANGES.sfc};
+const state = {hour: 0, playing: false, exag: 3, layers: new Set(['w', 'r', 's', 'c', 'k']), density: WIND_SIM.defaultCount, speed: 1, trailSegs: WIND_SIM.trailSegments.default, visible: true, detail: false, imagery: false, follow: true, border: true, obs: false, obsMode: 'bias', widthScale: WIDTH_CONTROL.default, level: 'sfc', sfcRange: WIND_RANGES.sfc};
 let data = null, sampler = null, heights = null;
 { const q = +new URLSearchParams(location.search).get('density'); if (q >= 100) state.density = Math.min(q, WIND_SIM.maxParticles); }      // ?density=N: trails drawn (for testing)
 
@@ -568,10 +571,11 @@ function stepWind(dt) {
 //   Recorded positions from the particle's previous life are not used, so a respawned particle grows a new trail instead of drawing a line across the map.
 // Rules (lifespan, recycling, minimum speed, zoom scaling, trail fade): WIND_SIM and the trail functions in core.js, mirrored by the GLSL below.
 // If the GPU cannot render to float textures the CPU simulation above is used instead.
-const GPU_W = 256, GPU_H = 96, GPU_N = GPU_W * GPU_H, HIST = WIND_SIM.trailPoints - 1, PTS = WIND_SIM.trailPoints;
+const GPU_W = 256, GPU_H = 96, GPU_N = GPU_W * GPU_H;
+const STREAK_KEEP = 0.85;                                                // share of the chosen density the quality governor may take away: streaks are cheap, the terrain is what is slow
 // ?cpuwind in the address forces the CPU simulation (for testing the fallback).
-const gpuWind = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float') && renderer.capabilities.maxVertexTextures >= 15 && renderer.capabilities.maxTextureSize >= GPU_W * HIST && !new URLSearchParams(location.search).has('cpuwind');
-let gpuReady = false, gpuLines = null, activeRows = 0, resetNext = true, windKey = '', baseHTex = null, baseFTex = null, simCur = 0, simFrame = 0, histCur = 0, histHead = 0, slotClock = 0;
+const gpuWind = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float') && renderer.capabilities.maxVertexTextures >= 15 && renderer.capabilities.maxTextureSize >= GPU_W && !new URLSearchParams(location.search).has('cpuwind');
+let gpuReady = false, gpuLines = null, activeRows = 0, resetNext = true, windKey = '', baseHTex = null, baseFTex = null, simCur = 0, simFrame = 0;
 function floatTexture(data, w, h, format = THREE.RGBAFormat) { const t = new THREE.DataTexture(data, w, h, format, THREE.FloatType); t.needsUpdate = true; return t; }
 const emptyF = floatTexture(new Float32Array(4), 1, 1), emptyR = floatTexture(new Float32Array(1), 1, 1, THREE.RedFormat);
 function flowTexture(F) {
@@ -888,113 +892,83 @@ void main() {
   }
   gl_FragColor = vec4(s.x + w.x * uSim / (111320. * cos(radians(ll.y))) * uO.z, s.y + w.y * uSim / 111320. * uO.w, s.z + uAge, s.w);   // metres to degrees to local km
 }`;
-// Ring buffer update: the history texture is ${HIST} slots wide per particle; the slot uHead receives every particle's current position (as lon, lat, with
-// its age and its lifespan as the tag of this life), every other slot is copied unchanged.
-const HIST_FS = `
-uniform sampler2D tState, tHist; uniform float uHead; uniform vec4 uO;
-void main() {
-  ivec2 p = ivec2(gl_FragCoord.xy);
-  int slot = p.x - (p.x / ${HIST}) * ${HIST};
-  if (slot == int(uHead + .5)) { vec4 s = texelFetch(tState, ivec2(p.x / ${HIST}, p.y), 0); gl_FragColor = vec4(uO.x + s.x / uO.z, uO.y + s.y / uO.w, s.z, s.w); }
-  else gl_FragColor = texelFetch(tHist, p, 0);
-}`;
-const SUB = 3, PF = (PTS - 1) * SUB + 1;                              // vertices per recorded segment, points per trail
+// ---- drawing: one tapered streak per particle ----
+// The head is the particle's place; the streak lies behind it along the local wind (velocityAt, with the simulation's own calm-air heading) and is STREAK.minPx..maxPx long on
+// SCREEN, whatever the zoom: found by projecting a probe point a little behind the head and scaling it. Both ends sit on the terrain (or at the level's height), so the streak
+// follows relief; it bends where the wind at its middle points another way (the tail is found by stepping back from the middle along the wind THERE). No history is kept: nothing to smooth, nothing to break when a particle respawns.
 const DRAW_VS = GLSL_COMMON + `
-attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, place along the trail in recorded-point units (0 = head .. ${PTS - 1} = oldest, fractional between), side of the ribbon
-uniform vec2 uViewport; uniform float uPixelRatio, uHead, uSimRate, uTrailSegments, uMinSpeed;   // uTrailSegments: segments drawn (the Trail length control)
-uniform sampler2D tState, tHist; uniform vec2 uMC;
-uniform float uExag, uLift, uScale, uRange, uFromKm, uLevelMix, uFadeA, uMinLenPx;   // uRange: the speed with the top colour; uFromKm, uLevelMix: the level change (draw only); uFadeA: its fade
-varying vec3 vCol; varying float vA, vSide;
+attribute vec2 aPart; attribute float aIdx, aSide;                     // particle texel, 0 = head, .5 = middle, 1 = tail, side of the streak
+uniform vec2 uViewport; uniform float uPixelRatio, uMinSpeed, uStreak, uWidthScale, uRange, uFromKm, uLevelMix, uFadeA, uExag, uLift, uScale;
+uniform sampler2D tState; uniform vec2 uMC;
+varying vec3 vCol; varying float vA, vSide, vT;
 ${windRampGlsl('windRamp')}                                      // windColour of core.js, generated from the same table
+vec2 hash22(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+// A point on the smooth curve through p0 (t = 0), the middle point m (t = .5) and p2 (t = 1): a quadratic Bezier whose control point is chosen so that it passes through m.
+vec2 bez(vec2 p0, vec2 m, vec2 p2, float t) { vec2 c = 2. * m - .5 * (p0 + p2); float u = 1. - t; return u * u * p0 + 2. * u * t * c + t * t * p2; }
 // Clip-space position of a point lying on the terrain: the height of the drawn MESH at exactly this point plus a hover (or the level height for pressure levels).
 vec4 clipAt(vec2 ll) {
-  float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;      // the mesh's height, not the DEM's: the mesh is what is seen
+  float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;
   float lk = uLevelKm; if (lk > 0.) { vec4 g = windGridH(ll); if (g.z > .5 && g.w > 0.) lk = g.w; }     // the level's real height here, else its standard height
   float yTo = lk > 0. ? max(ground, lk * uExag + uLift) : ground;
-  float yFrom = uFromKm > 0. ? max(ground, uFromKm * uExag + uLift) : ground;                          // while the level changes: the height the trails come from (the ground at the surface)
+  float yFrom = uFromKm > 0. ? max(ground, uFromKm * uExag + uLift) : ground;                          // while the level changes: the height the streaks come from
   float y = mix(yFrom, yTo, uLevelMix);
   return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, y, (my - uMC.y) * uScale, 1.);
-}
-// The recorded positions of this trail, head first (gP[0]), found by walking back through the ring buffer once; a position from the particle's previous life ends the chain and the
-// older ones repeat the last valid one. gNeed is the highest index used.
-vec2 gP[${PTS}]; bool gOK[${PTS}]; int gNeed;
-// Centripetal Catmull-Rom (alpha 0.5) in lon/lat through P1 (s = 0) and P2 (s = 1): centripetalCatmullRom of core.js. Points are taken relative to P1 for precision.
-float crKnot(float t, vec2 a, vec2 b) { vec2 d = (b - a) * vec2(cos(radians(a.y)), 1.); return t + sqrt(max(length(d), 1e-5)); }
-vec2 crCurve(vec2 q0, vec2 q1, vec2 q2, vec2 q3, float s) {
-  vec2 p0 = q0 - q1, p1 = vec2(0.), p2 = q2 - q1, p3 = q3 - q1;
-  float t0 = 0., t1 = crKnot(t0, q0, q1), t2 = crKnot(t1, q1, q2), t3 = crKnot(t2, q2, q3), t = mix(t1, t2, s);
-  vec2 A1 = (t1 - t) / (t1 - t0) * p0 + (t - t0) / (t1 - t0) * p1, A2 = (t2 - t) / (t2 - t1) * p1 + (t - t1) / (t2 - t1) * p2, A3 = (t3 - t) / (t3 - t2) * p2 + (t - t2) / (t3 - t2) * p3;
-  vec2 B1 = (t2 - t) / (t2 - t0) * A1 + (t - t0) / (t2 - t0) * A2, B2 = (t3 - t) / (t3 - t1) * A2 + (t - t1) / (t3 - t1) * A3;
-  return q1 + (t2 - t) / (t2 - t1) * B1 + (t - t1) / (t2 - t1) * B2;
-}
-// The curve at x recorded-point units from the head; ok is 1 while the chain holds along the segment, fading to 0 towards a break, 0 after it.
-vec2 curveAt(float x, out float ok) {
-  float xf = clamp(x, 0., float(gNeed));
-  int i = min(int(floor(xf)), gNeed - 1); float s = xf - float(i);
-  int i2 = min(i + 1, gNeed);
-  ok = gOK[i] ? (gOK[i2] ? 1. : 1. - s) : 0.;
-  return crCurve(gP[max(i - 1, 0)], gP[i], gP[i2], gP[min(i + 2, gNeed)], s);
 }
 void main() {
   vec4 s = texelFetch(tState, ivec2(aPart), 0);
   vec2 head = vec2(uO.x + s.x / uO.z, uO.y + s.y / uO.w);
-  // trailPoint of core.js: a vertex beyond the chosen length is drawn at the last visible point (zero-area triangles), so the length changes without touching any buffer; the fade and
-  // the taper run over the visible length
-  float segsF = floor(clamp(uTrailSegments, ${WIND_SIM.trailSegments.min}., ${WIND_SIM.trailSegments.max}.) + .5);
-  bool beyond = aIdx > segsF + .001; float u = min(aIdx, segsF);
-  gNeed = min(int(segsF) + 2, ${PTS - 1});            // the whole visible chain for every vertex: the calm-air stretch below needs the trail's full length
-  vec2 last = head; bool chain = true;
-  for (int k = 0; k <= ${PTS - 1}; k++) {
-    if (k > gNeed) break;
-    vec2 p = head;
-    if (k > 0) {
-      int slot = int(mod(uHead - float(k - 1) + ${HIST * 8}., ${HIST}.));
-      vec4 h = texelFetch(tHist, ivec2(int(aPart.x) * ${HIST} + slot, int(aPart.y)), 0);
-      if (chain && h.w == s.w && h.z <= s.z + .001) { last = h.xy; p = h.xy; } else { chain = false; p = last; }
-    }
-    gP[k] = p; gOK[k] = chain;
+  vec3 vh = velocityAt(head);                                          // the wind the simulation sees: terrain adjustment, 1 km wind and the level rules included
+  vec2 w = vh.xy; float sp0 = length(w), sp = vh.z > .5 ? sp0 : uMinSpeed;
+  if (vh.z < .5 || sp0 < uMinSpeed) {                                  // calm: the heading of this particle's life, as the simulation drifts it (withMinimumSpeed of core.js)
+    float a = hash22((aPart + .5) / vec2(${GPU_W}., ${GPU_H}.) * 331.7 + vec2(s.w, s.w * .371)).x * 6.2831853, ang = a;
+    if (sp0 > 1e-6) { float d = atan(w.y, w.x) - a; ang = a + atan(sin(d), cos(d)) * smoothstep(${WIND_SIM.calmBlend[0].toFixed(3)}, ${WIND_SIM.calmBlend[1].toFixed(3)}, sp0); }
+    w = vec2(cos(ang), sin(ang)) * uMinSpeed;
   }
-  float okC, okP, okN;
-  vec2 pCur = curveAt(u, okC), pPrev = curveAt(max(u - .05, 0.), okP), pNext = curveAt(u + .05, okN);
-  // Calm air: a trail shorter than uMinLenPx on screen is stretched from its head along its own path to that length. Display only: the simulation, the wind and the recorded
-  // positions are untouched; the stretched dashes stay pale and thin in light wind, so they read as calm, not as strong wind.
-  { float okE; vec2 pEnd = curveAt(segsF, okE); vec4 cH0 = clipAt(head), cE0 = clipAt(pEnd);
-    if (cH0.w > .01 && cE0.w > .01) { float Lpx = length((cE0.xy / cE0.w - cH0.xy / cH0.w) * uViewport) * .5; float st = clamp(uMinLenPx * uPixelRatio / max(Lpx, .5), 1., 14.);
-      pCur = head + (pCur - head) * st; pPrev = head + (pPrev - head) * st; pNext = head + (pNext - head) * st; } }
-  vec3 vh = velocityAt(head);                                          // the wind speed at the head, as the simulation sees it (terrain adjustment and 1 km wind included): colours do not change with zoom or animation speed
-  float sp = vh.z > .5 ? length(vh.xy) : uMinSpeed, t = u / segsF;
-  float fadeIn = min(1., s.z / 12.), fadeOut = min(1., (s.w - s.z) / 20.);
-  // trailAlpha and trailWidthPx of core.js: bright head fading smoothly to nothing at the tail, narrower towards the tail, a little wider and stronger in fast wind
+  vec2 dir = normalize(w);                                             // east, north
+  vec2 step1 = dir * vec2(1. / cos(radians(head.y)), 1.);              // one degree of travel along dir, in lon/lat
+  vec4 cH = clipAt(head);
+  if (cH.w < .01) { gl_Position = vec4(2., 2., 2., 1.); vA = 0.; return; }
+  float calm = smoothstep(0., .5, vh.z > .5 ? sp0 : 0.);               // still air: the particle only drifts, so its streak is a short dash (no starbursts)
+  float lenPx = ${STREAK.minPx.toFixed(1)} + ${(STREAK.maxPx - STREAK.minPx).toFixed(1)} * smoothstep(0., ${STREAK.fullAtFraction.toFixed(2)}, sp / uRange);
+  lenPx *= uStreak * uPixelRatio * mix(.35, 1., calm);
+  const float PROBE = .01;                                             // degrees: how far back the probe point is
+  vec4 cP = clipAt(head - step1 * PROBE);
+  float pxPer = cP.w > .01 ? length((cP.xy / cP.w - cH.xy / cH.w) * uViewport * .5) : 0.;
+  float k = pxPer > 1e-4 ? clamp(lenPx / pxPer, 0., 5000.) : 0.;
+  vec2 mid = head - step1 * PROBE * k * .5;                            // half way back along the wind at the head
+  vec3 vm = velocityAt(mid); vec2 dirM = dir;
+  if (vm.z > .5 && length(vm.xy) > .5 * uMinSpeed) dirM = normalize(vm.xy);   // the wind at the middle bends the rest of the streak
+  vec2 tail = mid - dirM * vec2(1. / cos(radians(mid.y)), 1.) * PROBE * k * .5;
+  vec4 cM = clipAt(mid), cT = clipAt(tail);
+  if (cM.w < .01) cM = cH;
+  if (cT.w < .01) cT = cM;
+  float segPx = max(length((cM.xy / cM.w - cH.xy / cH.w) * uViewport * .5), length((cT.xy / cT.w - cM.xy / cM.w) * uViewport * .5));
+  float sane = segPx < lenPx * 1.6 + 4. ? 1. : 0.;                           // a point near the horizon can project very far: such a streak is not drawn
+  vec4 c = clipAt(bez(head, mid, tail, aIdx));                          // this vertex's place on the smooth curve (no kinks)
+  vec4 cA = clipAt(bez(head, mid, tail, max(aIdx - .06, 0.))), cB = clipAt(bez(head, mid, tail, min(aIdx + .06, 1.)));      // the curve's direction here: from a little before to a little after
+  if (c.w < .01 || cA.w < .01 || cB.w < .01) { gl_Position = vec4(2., 2., 2., 1.); vA = 0.; return; }
+  vec2 d = (cB.xy / cB.w - cA.xy / cA.w) * uViewport;
+  vec2 n = length(d) > 1e-3 ? normalize(vec2(-d.y, d.x)) : vec2(0., 1.);
+  float widthPx = uPixelRatio * uWidthScale * (${STREAK.headWidthPx.toFixed(2)} + (${STREAK.tailWidthPx.toFixed(2)} - ${STREAK.headWidthPx.toFixed(2)}) * aIdx);
+  c.xy += n * aSide * (widthPx * ${RIBBON.outline.toFixed(2)} / uViewport) * c.w;      // the quad is wider than the coloured core: the rest is the dark edge
+  float fadeIn = min(1., s.z / ${STREAK.fadeInFrames.toFixed(1)}), fadeOut = min(1., (s.w - s.z) / ${STREAK.fadeOutFrames.toFixed(1)});
   float lvlFade = 1.;                                                  // a level close to the ground fades out (levelFade of core.js): 300 m above the ground it is fully visible
   if (uLevelKm > 0.) { vec4 g = windGridH(head); float hm = g.z > .5 && g.w > 0. ? g.w * 1000. : uLevelKm * 1000.; lvlFade = clamp((hm - groundM(mercX(head.x), mercY(head.y))) / ${LEVEL_FADE_M.toFixed(1)}, 0., 1.); }
-  vA = beyond ? 0. : okC * .95 * pow(1. - t, 1.4) * (.5 + .5 * min(1., sp / uRange / .4)) * fadeIn * fadeOut * lvlFade * uFadeA;
-  vCol = windRamp(clamp(sp / uRange, 0., 1.));
-  vec4 cPrev = clipAt(pPrev), cCur = clipAt(pCur), cNext = clipAt(pNext);
-  // An invisible point (faded tail, previous life, missing wind) keeps its place with zero opacity: moving it off screen would stretch the
-  // triangles joining it to its visible neighbour into long faint slivers. Only a particle whose head is behind the camera is removed, all its
-  // vertices to the same place, so nothing at all is drawn for it; a point behind the camera falls back to the head.
-  vec4 cHead = u == 0. ? cCur : clipAt(head);
-  if (cHead.w < .01) { gl_Position = vec4(2., 2., 2., 1.); vA = 0.; return; }
-  if (cCur.w < .01) { cCur = cHead; vA = 0.; }
-  if (cPrev.w < .01) cPrev = cCur;
-  if (cNext.w < .01) cNext = cCur;
-  vec2 d = (cNext.xy / cNext.w - cPrev.xy / cPrev.w) * uViewport; float len = length(d);
-  vec2 n = len > 1e-4 ? vec2(-d.y, d.x) / len : vec2(0., 1.);
-  float widthPx = uPixelRatio * (1.3 + 1.2 * min(1., sp / uRange / .6)) * (1. - .5 * t);          // trailWidthPx of core.js: the coloured core
-  vSide = aSide;
-  cCur.xy += n * aSide * (widthPx * ${RIBBON.outline.toFixed(2)} / uViewport) * cCur.w;     // the quad is wider than the core: the rest is the dark halo
-  gl_Position = cCur;
+  vA = ${STREAK.alphaHead.toFixed(2)} * fadeIn * fadeOut * lvlFade * uFadeA * sane;
+  vCol = mix(windRamp(clamp(sp / uRange, 0., 1.)), vec3(1.), ${STREAK.white.toFixed(2)});        // white (STREAK.white = 1), or tinted by speed when it is lowered
+  vSide = aSide; vT = aIdx;
+  gl_Position = c;
 }`;
-const DRAW_FS = `varying vec3 vCol; varying float vA, vSide;
+const DRAW_FS = `varying vec3 vCol; varying float vA, vSide, vT;
 void main() {
-  float e = abs(vSide);                                                // 0 on the centre line of the ribbon, 1 at its outer edge
-  float core = 1. - smoothstep(${(RIBBON.core - 0.06).toFixed(2)}, ${(RIBBON.core + 0.06).toFixed(2)}, e);
-  float edge = 1. - smoothstep(.88, 1., e);
-  vec3 c = mix(vec3(.02, .05, .1), vCol, core);                        // a dark halo round the colour keeps the streams crisp on bright satellite tiles and snow
-  gl_FragColor = vec4(c, vA * edge * mix(.3, 1., core));       // windRamp and the halo are already sRGB values and the canvas takes them as they are: no colorspace_fragment
+  float e = abs(vSide);                                                // 0 on the centre line of the streak, 1 at its outer edge
+  float core = 1. - smoothstep(${(RIBBON.core - 0.03).toFixed(2)}, ${(RIBBON.core + 0.03).toFixed(2)}, e);
+  float edge = 1. - smoothstep(.94, 1., e);
+  vec3 c = mix(vec3(.04, .1, .3), vCol, core);                        // a dark edge round the colour keeps the streaks crisp on bright terrain and snow
+  gl_FragColor = vec4(c, vA * pow(1. - vT, ${STREAK.fadePow.toFixed(2)}) * edge * mix(${STREAK.halo.toFixed(2)}, 1., core));       // windRamp and the edge are sRGB values and the canvas takes them as they are
 }`;
 
-let simRT = null, histRT = null, simMat = null, histMat = null, drawMat = null, simScene = null, histScene = null, simCam = null;
+let simRT = null, simMat = null, drawMat = null, simScene = null, simCam = null;
 let smoothR = null;
 const drawSize = new THREE.Vector2(), spawnBox = {}, origin = {lon: 0, lat: 0, R: 0, set: false}, prevOrigin = {lon: 0, lat: 0};
 function initGpuWind() {
@@ -1003,7 +977,6 @@ function initGpuWind() {
     const g = sampler.d.grid; wu.uGrid.value.set(g.west, g.south, g.columns, g.rows); wu.uSpacing.value = g.spacing;
     const rtOptions = {type: THREE.FloatType, format: THREE.RGBAFormat, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: false, stencilBuffer: false, generateMipmaps: false};
     simRT = [new THREE.WebGLRenderTarget(GPU_W, GPU_H, rtOptions), new THREE.WebGLRenderTarget(GPU_W, GPU_H, rtOptions)];
-    histRT = [new THREE.WebGLRenderTarget(GPU_W * HIST, GPU_H, rtOptions), new THREE.WebGLRenderTarget(GPU_W * HIST, GPU_H, rtOptions)];
     simCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     simMat = new THREE.ShaderMaterial({
       uniforms: {...wu, tState: {value: simRT[0].texture}, uSim: {value: 0}, uAge: {value: 1}, uSeed: {value: 0}, uReset: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uRebase: {value: 0}, uOold: {value: new THREE.Vector4(g.west, g.south, 100, 111.19)},
@@ -1012,21 +985,19 @@ function initGpuWind() {
         uSpawn: {value: new THREE.Vector4(g.west, g.east, g.south, g.north)}, uBox: {value: new THREE.Vector4(g.west, g.east, g.south, g.north)}, uView: {value: new THREE.Vector3(0, 0, 2500)}, uLife: {value: new THREE.Vector2(WIND_SIM.life[0], WIND_SIM.life[1])}},
       vertexShader: SIM_VS, fragmentShader: SIM_FS, depthTest: false, depthWrite: false});
     simScene = new THREE.Scene(); simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMat));
-    histMat = new THREE.ShaderMaterial({uniforms: {tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uO: wu.uO}, vertexShader: SIM_VS, fragmentShader: HIST_FS, depthTest: false, depthWrite: false});
-    histScene = new THREE.Scene(); histScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), histMat));
-    // PF points (SUB per recorded segment, plus the head) x 2 sides per particle, PF - 1 segments of two triangles; aIdx is the place in recorded-point units
-    const VP = PF * 2, part = new Float32Array(GPU_N * VP * 2), idx = new Float32Array(GPU_N * VP), side = new Float32Array(GPU_N * VP), index = new Uint32Array(GPU_N * (PF - 1) * 6);
+    // (STREAK.segments + 1) points x 2 sides per particle and two triangles per segment; aIdx runs from 0 at the head to 1 at the tail along the curve
+    const SEG = STREAK.segments, VP = (SEG + 1) * 2, part = new Float32Array(GPU_N * VP * 2), idx = new Float32Array(GPU_N * VP), side = new Float32Array(GPU_N * VP), index = new Uint32Array(GPU_N * SEG * 6);
     for (let i = 0; i < GPU_N; i++) {
       const px = i % GPU_W, py = Math.floor(i / GPU_W), b = VP * i;
-      for (let k = 0; k < VP; k++) { part[2 * (b + k)] = px; part[2 * (b + k) + 1] = py; idx[b + k] = (k >> 1) / SUB; side[b + k] = k % 2 ? 1 : -1; }
-      for (let s = 0; s < PF - 1; s++) { const v = b + 2 * s; index.set([v, v + 1, v + 2, v + 1, v + 3, v + 2], (i * (PF - 1) + s) * 6); }
+      for (let k = 0; k < VP; k++) { part[2 * (b + k)] = px; part[2 * (b + k) + 1] = py; idx[b + k] = (k >> 1) / SEG; side[b + k] = k % 2 ? 1 : -1; }
+      for (let s = 0; s < SEG; s++) { const v = b + 2 * s; index.set([v, v + 1, v + 2, v + 1, v + 3, v + 2], (i * SEG + s) * 6); }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GPU_N * VP * 3), 3)); geo.setAttribute('aPart', new THREE.BufferAttribute(part, 2));
     geo.setAttribute('aIdx', new THREE.BufferAttribute(idx, 1)); geo.setAttribute('aSide', new THREE.BufferAttribute(side, 1)); geo.setIndex(new THREE.BufferAttribute(index, 1));
     drawMat = new THREE.ShaderMaterial({
-      uniforms: {...wu, tState: {value: simRT[0].texture}, tHist: {value: histRT[0].texture}, uHead: {value: 0}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE},
-        uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uSimRate: {value: 1}, uRange: {value: WIND_RANGES.sfc}, uFromKm: {value: 0}, uLevelMix: {value: 1}, uFadeA: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uMinLenPx: {value: 14}, uTrailSegments: {value: WIND_SIM.trailSegments.default}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
+      uniforms: {...wu, tState: {value: simRT[0].texture}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE}, uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1},
+        uRange: {value: WIND_RANGES.sfc}, uFromKm: {value: 0}, uLevelMix: {value: 1}, uFadeA: {value: 1}, uMinSpeed: {value: WIND_SIM.minSpeed}, uStreak: {value: 1}, uWidthScale: {value: 1}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
       vertexShader: DRAW_VS, fragmentShader: DRAW_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide});
     gpuLines = new THREE.Mesh(geo, drawMat); gpuLines.frustumCulled = false; gpuLines.renderOrder = 20; scene.add(gpuLines);
     windLines.visible = false; gpuReady = true; resetNext = true; syncWindLevels();
@@ -1071,6 +1042,60 @@ function updateLevelGrid(lon, lat, R, dist, tr) {
   levelGrid.position.y = (tr.fromKm + (lvl.heightKm - tr.fromKm) * tr.mix) * state.exag + Math.min(2.5, Math.max(0.05, dist * 0.0012));
   levelGrid.material.opacity = gridOpacity(dist, tr.alpha);
 }
+// ---- the Pakistan boundary: a black line draped on the terrain ----
+// Drawn like the streaks: each segment is a screen-space quad whose ends sit on the drawn terrain (groundDrawM) plus a hover, so it follows relief at every zoom. Needs the same
+// vertex textures as the wind drawing; without them (an old GPU) it is simply not drawn.
+const BOUNDARY_VS = GLSL_COMMON + `
+attribute vec2 aA, aB; attribute float aEnd, aSide;
+uniform vec2 uViewport, uMC; uniform float uPixelRatio, uExag, uLift, uScale;
+varying float vSide;
+vec4 clipAt(vec2 ll) {
+  float mx = mercX(ll.x), my = mercY(ll.y), ground = groundDrawM(mx, my) / 1000. * uExag + uLift;
+  return projectionMatrix * modelViewMatrix * vec4((mx - uMC.x) * uScale, ground, (my - uMC.y) * uScale, 1.);
+}
+void main() {
+  vec4 cA = clipAt(aA), cB = clipAt(aB);
+  if (cA.w < .01 || cB.w < .01) { gl_Position = vec4(2., 2., 2., 1.); vSide = 0.; return; }
+  vec4 c = aEnd < .5 ? cA : cB;
+  vec2 d = (cB.xy / cB.w - cA.xy / cA.w) * uViewport;
+  vec2 n = length(d) > 1e-4 ? normalize(vec2(-d.y, d.x)) : vec2(0., 1.);
+  c.xy += n * aSide * (${BOUNDARY.haloHalfPx.toFixed(2)} * uPixelRatio / uViewport) * c.w;
+  vSide = aSide; gl_Position = c;
+}`;
+const BOUNDARY_FS = `varying float vSide;
+void main() {
+  float e = abs(vSide);
+  float core = 1. - smoothstep(${(BOUNDARY.coreHalfPx / BOUNDARY.haloHalfPx - 0.06).toFixed(2)}, ${(BOUNDARY.coreHalfPx / BOUNDARY.haloHalfPx + 0.06).toFixed(2)}, e);
+  float edge = 1. - smoothstep(.9, 1., e);
+  gl_FragColor = vec4(mix(vec3(1.), vec3(0.), core), edge * mix(${BOUNDARY.haloAlpha.toFixed(2)}, 1., core));       // a black line with a thin white halo so it also shows on dark ground
+}`;
+let boundaryMesh = null;
+async function initBoundary() {
+  if (!gpuWind || boundaryMesh) return;
+  try {
+    const r = await fetch('pakistan-boundary.json'); if (!r.ok) return;
+    const segs = boundarySegments((await r.json()).rings), n = segs.length;
+    const aA = new Float32Array(n * 8), aB = new Float32Array(n * 8), aEnd = new Float32Array(n * 4), aSide = new Float32Array(n * 4), index = new Uint32Array(n * 6);
+    segs.forEach(([x0, y0, x1, y1], i) => {
+      const b = 4 * i;
+      for (let k = 0; k < 4; k++) { aA.set([x0, y0], 2 * (b + k)); aB.set([x1, y1], 2 * (b + k)); aEnd[b + k] = k >> 1; aSide[b + k] = k % 2 ? 1 : -1; }
+      index.set([b, b + 1, b + 2, b + 1, b + 3, b + 2], 6 * i);
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 12), 3)); geo.setAttribute('aA', new THREE.BufferAttribute(aA, 2)); geo.setAttribute('aB', new THREE.BufferAttribute(aB, 2));
+    geo.setAttribute('aEnd', new THREE.BufferAttribute(aEnd, 1)); geo.setAttribute('aSide', new THREE.BufferAttribute(aSide, 1)); geo.setIndex(new THREE.BufferAttribute(index, 1));
+    const mat = new THREE.ShaderMaterial({uniforms: {...wu, uViewport: {value: new THREE.Vector2(1, 1)}, uPixelRatio: {value: 1}, uExag: {value: state.exag}, uLift: {value: 0.1}, uScale: {value: SCALE}, uMC: {value: new THREE.Vector2(MXC, MYC)}},
+      vertexShader: BOUNDARY_VS, fragmentShader: BOUNDARY_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide});
+    boundaryMesh = new THREE.Mesh(geo, mat); boundaryMesh.frustumCulled = false; boundaryMesh.renderOrder = 12; scene.add(boundaryMesh);
+  } catch (e) { console.warn('Pakistan boundary unavailable:', e.message); }
+}
+function updateBoundary() {
+  if (!boundaryMesh) return;
+  boundaryMesh.visible = state.border;
+  const u = boundaryMesh.material.uniforms, dist = camera.position.distanceTo(controls.target);
+  u.uExag.value = state.exag; u.uLift.value = Math.min(3.5, Math.max(0.1, dist * 0.0018));
+  renderer.getDrawingBufferSize(drawSize); u.uViewport.value.copy(drawSize); u.uPixelRatio.value = renderer.getPixelRatio();
+}
 function stepWindGpu(dt) {
   const dist = camera.position.distanceTo(controls.target), scale = zoomScale(dist), Rraw = Math.min(2500, Math.max(25, dist * 1.15)), g = sampler.d.grid;
   smoothR = smoothR === null ? Rraw : smoothR + (Rraw - smoothR) * (1 - Math.exp(-dt / 0.15));       // eased: a fast zoom changes the spawn and recycle radius smoothly, not all at once
@@ -1102,29 +1127,18 @@ function stepWindGpu(dt) {
   su.tState.value = simRT[simCur].texture;
   const next = 1 - simCur;
   // only the particles that are drawn are simulated: a scissor on the first rows of the state texture (the viewport stays whole, so every texel still reads its own place)
-  const drawn = Math.floor(Math.min(state.density * QUALITY_STEPS[quality.level].trails, GPU_N)), {rows, activate} = simRowRange(drawn, GPU_W, GPU_H, fullReset ? 0 : activeRows);
+  const drawn = Math.floor(Math.min(state.density * Math.max(QUALITY_STEPS[quality.level].trails, STREAK_KEEP), GPU_N)), {rows, activate} = simRowRange(drawn, GPU_W, GPU_H, fullReset ? 0 : activeRows);
   const limit = (rt, y0, y1) => { rt.scissor.set(0, y0, rt.width, y1 - y0); rt.scissorTest = y1 - y0 < rt.height; };
   limit(simRT[next], 0, rows); renderer.setRenderTarget(simRT[next]); renderer.render(simScene, simCam);
   if (activate) { limit(simRT[next], activate[0], activate[1]); su.uReset.value = 1; renderer.render(simScene, simCam); su.uReset.value = 0; }      // rows that were idle start afresh
   activeRows = rows;
   simCur = next;
-  // record the current positions into the next ring-buffer slot each time slotSeconds of 1x time has passed (slotInterval: by time, so a trail covers
-  // the same motion at any frame rate, and by wind time, so it is the same length on screen at every speed setting)
-  const slotEvery = slotInterval(state.speed);
-  slotClock += dt;
-  if (slotClock >= slotEvery) {
-    slotClock = Math.min(slotClock - slotEvery, slotEvery);
-    histHead = (histHead + 1) % HIST;
-    const hu = histMat.uniforms; hu.uHead.value = histHead; hu.tState.value = simRT[simCur].texture; hu.tHist.value = histRT[histCur].texture;
-    limit(histRT[1 - histCur], 0, rows); renderer.setRenderTarget(histRT[1 - histCur]); renderer.render(histScene, simCam);
-    histCur = 1 - histCur;
-  }
   renderer.setRenderTarget(null);
   const du = drawMat.uniforms;
-  du.tState.value = simRT[simCur].texture; du.tHist.value = histRT[histCur].texture; du.uHead.value = histHead;
-  du.uSimRate.value = WIND_SIM.simSeconds * state.speed * scale * motion; du.uRange.value = windRange(state.level, state.sfcRange); du.uFromKm.value = tr.fromKm; du.uLevelMix.value = tr.mix; du.uFadeA.value = tr.alpha; du.uTrailSegments.value = state.trailSegs; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
+  du.tState.value = simRT[simCur].texture; du.uStreak.value = lengthControl(state.trailSegs); du.uWidthScale.value = state.widthScale;
+  du.uRange.value = windRange(state.level, state.sfcRange); du.uFromKm.value = tr.fromKm; du.uLevelMix.value = tr.mix; du.uFadeA.value = tr.alpha; du.uExag.value = state.exag; du.uLift.value = lift; du.uLevelKm.value = WIND_LEVELS[state.level].heightKm;
   renderer.getDrawingBufferSize(drawSize); du.uViewport.value.copy(drawSize); du.uPixelRatio.value = renderer.getPixelRatio();
-  gpuLines.geometry.setDrawRange(0, drawn * (PF - 1) * 6);
+  gpuLines.geometry.setDrawRange(0, drawn * STREAK.segments * 6);
   updateLevelGrid(lon, lat, R, dist, tr);
 }
 
@@ -1191,6 +1205,77 @@ function placeLabels() {
   }
   for (let i = used; i < labelPool.length; i++) labelPool[i].hidden = true;
 }
+
+// ---- station readings, the 1 km model and the difference at every pin ----
+// Switched on in the Layers list: the temperature of every WeatherWalay and PMD station and METAR airport that has reported in the last 3 hours, as the reading, the 1 km model value at
+// that place and that reading time, or their difference. The model is nudged toward fresh stations, so at an active station the difference is what remains after assimilation; the
+// reading is not adjusted to the height of the 1 km cell. Temperature only. The model exists on the local server only: on the published site only the readings are shown.
+const pinBox = $('pins'), pinPool = [], obsData = {pins: [], steps: new Map(), loading: new Set(), realtime: null, metar: null, timer: 0};
+function attachPinModel() {
+  for (const p of obsData.pins) { p.model = km1.m ? modelTemperature(km1.m, obsData.steps, p.lon, p.lat, p.tMs) : null; p.bias = p.model !== null && Number.isFinite(p.value) ? p.value - p.model : null; }
+}
+async function loadObsStep(i) {
+  if (obsData.steps.has(i) || obsData.loading.has(i) || !km1.m) return;
+  obsData.loading.add(i);
+  try {
+    const bmp = await load1km(km1.m.steps[i].tr);                                                    // the same image the terrain shader draws, read here for the numbers
+    const c2 = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', {willReadFrequently: true}); c2.drawImage(bmp, 0, 0);
+    const px = c2.getImageData(0, 0, bmp.width, bmp.height).data, grid = new Float32Array(bmp.width * bmp.height);
+    for (let k = 0; k < grid.length; k++) grid[k] = decodeTempPixel(px[4 * k], px[4 * k + 1], px[4 * k + 2]);
+    obsData.steps.set(i, {grid, nx: bmp.width, ny: bmp.height}); bmp.close?.();
+    while (obsData.steps.size > 4) obsData.steps.delete(obsData.steps.keys().next().value);
+  } catch { /* the pins that need this step show no model value */ } finally { obsData.loading.delete(i); }
+}
+async function ensureObsSteps() {
+  if (!state.obs || !km1.m || state.obsMode === 'obs') return;
+  const missing = [...stepsNeeded(km1.m, obsData.pins.map(p => p.tMs))].filter(i => !obsData.steps.has(i));
+  if (!missing.length) return;
+  await Promise.all(missing.map(loadObsStep)); attachPinModel();
+}
+async function refreshObs() {
+  const [rt, mt] = await Promise.allSettled([fetchFeed('realtime'), fetchFeed('metar')]);
+  if (rt.status === 'fulfilled') obsData.realtime = rt.value;
+  if (mt.status === 'fulfilled') obsData.metar = mt.value;
+  obsData.pins = obsPins(obsData.realtime, obsData.metar, parseLabel); attachPinModel(); ensureObsSteps();
+  $('obs-note').textContent = obsData.pins.length ? `${obsData.pins.length} stations, PMD and airports reported in the last 3 hours.` + (km1.m ? ' The 1 km model is nudged toward fresh stations, so the difference is what remains after assimilation; readings are not height-adjusted to the 1 km cell.' : ' The 1 km model is not available here: only the readings are shown.') : 'No recent station readings are available.';
+}
+function setObs(on) {
+  state.obs = on; $('obs-modes').hidden = !on; $('obs-note').hidden = !on; clearInterval(obsData.timer);
+  if (on) { refreshObs(); obsData.timer = setInterval(() => { if (!document.hidden) refreshObs(); }, 60000); } else for (const el of pinPool) el.hidden = true;
+}
+function pinText(p) {
+  const mode = km1.m ? state.obsMode : 'obs';
+  if (mode === 'obs') return {text: p.value.toFixed(1), color: '#ffffff'};
+  if (p.model === null || p.model === undefined) return null;
+  return mode === 'fcst' ? {text: p.model.toFixed(1), color: '#d6ecff'} : {text: fmtBias(p.bias), color: biasColour(p.bias)};
+}
+function placePins() {
+  if (!state.obs || !obsData.pins.length) { for (const el of pinPool) el.hidden = true; return; }
+  const w = canvas.clientWidth, h = canvas.clientHeight, v = new THREE.Vector3(), taken = new Set();
+  let used = 0;
+  for (const p of obsData.pins) {                                                                    // active stations first, so a fresh reading is never hidden by an old one
+    if (used >= 400) break;
+    const lab = pinText(p); if (!lab) continue;
+    const [x, z] = toScene(p.lon, p.lat);
+    v.set(x, sceneHeightAt(x, z) + 1.2, z).project(camera);
+    if (v.z >= 1 || Math.abs(v.x) > 1.02 || Math.abs(v.y) > 1.02) continue;
+    const px = (v.x * 0.5 + 0.5) * w, py = (-v.y * 0.5 + 0.5) * h, cell = `${Math.floor(px / 34)},${Math.floor(py / 20)}`;
+    if (taken.has(cell)) continue;
+    taken.add(cell);
+    const el = pinPool[used] || (pinPool[used] = (() => { const e = document.createElement('span'); e.hidden = true; pinBox.appendChild(e); return e; })());
+    el.hidden = false; el.style.left = px + 'px'; el.style.top = py + 'px'; el.style.opacity = p.active ? '1' : '0.6';
+    if (el._text !== lab.text) { el.textContent = lab.text; el._text = lab.text; }
+    if (el._color !== lab.color) { el.style.color = lab.color; el._color = lab.color; }
+    const tip = `${p.name} (${p.network}): observed ${p.value.toFixed(1)} °C` + (p.model !== null && p.model !== undefined ? `, 1 km model ${p.model.toFixed(1)} °C, obs - model ${fmtBias(p.bias)} °C` : '') + (p.active ? '' : ' · older reading');
+    if (el._tip !== tip) { el.title = tip; el._tip = tip; }
+    used++;
+  }
+  for (let i = used; i < pinPool.length; i++) pinPool[i].hidden = true;
+}
+$('l-obs').addEventListener('change', e => setObs(e.target.checked));
+document.querySelectorAll('#obs-modes button').forEach(b => b.addEventListener('click', () => {
+  state.obsMode = b.dataset.mode; document.querySelectorAll('#obs-modes button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); ensureObsSteps();
+}));
 
 // ---- time ----
 const fmtDay = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short'});
@@ -1481,6 +1566,9 @@ $('w-density').value = state.density; $('o-density').textContent = state.density
 $('w-trail').value = state.trailSegs; $('o-trail').textContent = trailLabel(state.trailSegs);
 $('w-density').addEventListener('input', e => { state.density = +e.target.value; $('o-density').textContent = e.target.value; });
 $('w-follow').addEventListener('change', e => { state.follow = e.target.checked; });
+$('w-width').value = state.widthScale; $('o-width').textContent = state.widthScale.toFixed(1) + '×';
+$('w-width').addEventListener('input', e => { state.widthScale = clampWidthControl(+e.target.value); $('o-width').textContent = state.widthScale.toFixed(1) + '×'; });
+$('l-border').addEventListener('change', e => { state.border = e.target.checked; });
 $('w-speed').addEventListener('input', e => { state.speed = speedFromStep(+e.target.value); $('o-speed').textContent = state.speed + '×'; });
 $('w-trail').addEventListener('input', e => { state.trailSegs = +e.target.value; $('o-trail').textContent = trailLabel(state.trailSegs); });
 $('t-exag').addEventListener('input', e => { setExag(+e.target.value); });
@@ -1508,12 +1596,16 @@ $('share').addEventListener('click', async e => {
 });
 // legends
 $('temp-legend').style.background = `linear-gradient(90deg,${TEMPERATURE_TICKS.map((t, i) => { const c = temperatureColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(i / (TEMPERATURE_TICKS.length - 1) * 100).toFixed(0)}%`; }).join(',')})`;
-$('wind-legend').style.background = `linear-gradient(90deg,${WIND.map(([t]) => { const c = windColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(t * 100).toFixed(1)}%`; }).join(',')})`;
+// Streaks are white (STREAK.white = 1): the speed shows as the length of the streak, so there is no colour scale. With STREAK.white below 1 the colour scale returns.
+const windGradient = `linear-gradient(90deg,${WIND.map(([t]) => { const c = windColour(t); return `rgb(${c[0]},${c[1]},${c[2]}) ${(t * 100).toFixed(1)}%`; }).join(',')})`;
+$('wind-legend').style.background = windGradient;
 // The scale follows the level: 0, 1/4, 1/2, 3/4 and the top of the level's range (windRange), in m/s with km/h below.
 function updateWindLegend() {
-  const range = windRange(state.level, state.sfcRange);
+  const range = windRange(state.level, state.sfcRange), tinted = STREAK.white < 1;
+  $('wind-legend').hidden = !tinted; $('wind-ticks').hidden = !tinted;
   $('wind-ticks').innerHTML = windTicks(range).map(({f, ms, kmh}) => `<span style="left:${f * 100}%">${ms}${f === 0 ? ' m/s' : ''}<br>${kmh}${f === 0 ? ' km/h' : ''}</span>`).join('');
   $('wind-legend').title = `Trail colour by wind speed: the top colour is ${range} m/s (${Math.round(range * 3.6)} km/h) at this level`;
+  $('wind-length-note').textContent = tinted ? '' : `Streak length shows the speed: short in light wind, longest from ${range} m/s (${Math.round(range * 3.6)} km/h) at this level.`;
 }
 updateWindLegend();
 $('legend').style.background = `linear-gradient(90deg,${[0.1, 0.5, 2, 5, 10, 25, 50].map(v => { const c = rainColour(v); return `rgb(${c[0]},${c[1]},${c[2]})`; }).join(',')})`;
@@ -1553,9 +1645,18 @@ function syncViewSliders() {
 controls.addEventListener('change', syncViewSliders);
 // ---- search ----
 { const input = $('search'), list = $('results'); let timer = 0, seq = 0;
-  const show = items => { list.innerHTML = ''; items.forEach(it => { const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.addEventListener('click', () => { flyTo({lon: it.lon, lat: it.lat, dist: 90, tilt: 55, heading: 0}); list.hidden = true; input.value = it.label.split(',')[0]; }); li.appendChild(b); list.appendChild(li); }); list.hidden = !items.length; };
+  // Typed coordinates ("35.3254, 75.5322"): fly there and open the forecast drawer for that point, the same as a click on the map.
+  const goTo = (lat, lon) => {
+    if (!inForecastArea(lat, lon)) { list.innerHTML = '<li class="results-note">Outside the forecast area (60 to 78 E, 23 to 38 N)</li>'; list.hidden = false; return false; }
+    const [x, z] = toScene(lon, lat); flyTo({lon, lat, dist: 40, tilt: 55, heading: 0});
+    openPoint({lon, lat, x, y: sceneHeightAt(x, z), z});
+    for (const ms of [800, 2500, 6000]) setTimeout(() => { if (point.lon === lon && point.lat === lat) marker.position.y = sceneHeightAt(x, z); }, ms);   // finer terrain arrives while the camera flies
+    list.hidden = true; input.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`; return true;
+  };
+  const show = items => { list.innerHTML = ''; items.forEach(it => { const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.addEventListener('click', () => { if (it.coords) { goTo(it.lat, it.lon); return; } flyTo({lon: it.lon, lat: it.lat, dist: 90, tilt: 55, heading: 0}); list.hidden = true; input.value = it.label.split(',')[0]; }); li.appendChild(b); list.appendChild(li); }); list.hidden = !items.length; };
   input.addEventListener('input', () => {
     clearTimeout(timer); const q = input.value.trim().toLowerCase(); if (q.length < 2) { list.hidden = true; return; }
+    const c = parseLatLon(input.value); if (c) { seq++; show([{label: `${c.lat.toFixed(4)}°N ${c.lon.toFixed(4)}°E · open the forecast here`, lat: c.lat, lon: c.lon, coords: true}]); return; }
     const local = townList.filter(t => t.name.toLowerCase().startsWith(q)).slice(0, 5).map(t => ({label: t.name, lon: t.lon, lat: t.lat}));
     show(local);
     const mine = ++seq;
@@ -1565,6 +1666,7 @@ controls.addEventListener('change', syncViewSliders);
       if (mine === seq) show([...local, ...found.filter(f => !local.some(l => l.label === f.label))].slice(0, 9));
     } catch { /* local matches stay */ } }, 300);
   });
+  input.addEventListener('keydown', e => { if (e.key !== 'Enter') return; const c = parseLatLon(input.value); if (c) { e.preventDefault(); goTo(c.lat, c.lon); } else { const b = list.querySelector('button'); if (b) b.click(); } });
   document.addEventListener('click', e => { if (!e.target.closest('.search')) list.hidden = true; }); }
 
 // ---- loop ----
@@ -1593,10 +1695,11 @@ function frame(now) {
   controls.update(); keepInside(); resize(); checkPatch(now); update1km();
   if (state.layers.has('r') || state.layers.has('s')) paintOverlay();
   if (state.layers.has('w')) { if (gpuReady) stepWindGpu(dt); else stepWind(dt); }
+  updateBoundary();
   updateClouds(dt);
   marker.scale.setScalar(Math.max(0.4, camera.position.distanceTo(controls.target) * 0.012));
   $('compass-needle').style.transform = 'rotate(' + (-controls.getAzimuthalAngle() * 180 / Math.PI) + 'deg)';
-  placeLabels();
+  placeLabels(); placePins();
   const tr = performance.now(); renderer.render(scene, camera); const rd = performance.now() - tr;
   if (rd > 40) { const L = (window.__slowRenders ||= []); L.push([Math.round(tr), Math.round(rd)]); if (L.length > 30) L.shift(); }       // renders over 40 ms: a new level's buffers and textures reaching the GPU
   if (fpsBox) countFrame(now);
@@ -1617,7 +1720,7 @@ function frame(now) {
   const dem = await loadTiles(TILE_URL, Z, TX0, TX1, TY0, TY1, 'terrain'), decoded = decodeDem(dem.canvas);
   heights = decoded.hts; baseCanvas.getContext('2d').drawImage(decoded.col, 0, 0);
   baseFlow = {...flowGrid(heights, W, H, 2, 1, 5, (MX1 - MX0) / W * 2 * SCALE * 1000), mx0: MX0, mx1: MX1, my0: MY0, my1: MY1};
-  makeBaseTextures(); initGpuWind();
+  makeBaseTextures(); initGpuWind(); initBoundary();
   const sat = await loadTiles(IMG_URL, Z, TX0, TX1, TY0, TY1, 'satellite imagery');
   const loaded = {failed: dem.failed}; if (sat.failed > 12) { state.imagery = false; $('t-sat').checked = false; } else baseSat = sat.canvas;
   buildTerrain(); loadLabels();

@@ -71,16 +71,16 @@ test('colour ramps are transparent when dry, ordered with intensity, and snow is
   assert.deepEqual(rainColour(500), rainColour(50));
   const [r, g, b] = snowColour(5); assert.ok(b > g && r > g);
   assert.ok(windColour(0.62)[1] < windColour(0.22)[1]);                                   // the wind palette (normalised speed) goes from pale to saturated
-  assert.deepEqual(elevationColour(7000), [255, 255, 255]);
+  assert.deepEqual(elevationColour(7000), [213, 220, 230]);                                  // snow: light grey-blue, below white
   assert.ok(elevationColour(-100)[2] < elevationColour(0)[2]);
 });
 test('land colours: the stops are exact, in between is linear, and the sea ramp is unchanged', () => {
   const stops = [[0, [84, 107, 61]], [550, [102, 117, 69]], [900, [115, 102, 69]], [1500, [128, 97, 71]], [2400, [140, 120, 102]], [3400, [175, 165, 155]],
-    [4500, [217, 217, 217]], [5500, [242, 244, 246]], [7000, [255, 255, 255]]];
+    [4500, [217, 217, 217]], [5500, [213, 220, 230]], [7000, [213, 220, 230]]];
   for (const [m, rgb] of stops) assert.deepEqual(elevationColour(m || 0.001), rgb, `${m} m`);           // exactly 0 m is the shore and takes the sea ramp, so the first land stop is read just above it
   assert.deepEqual(elevationColour(275), [93, 112, 65]);                         // half way between 0 and 550 m: (84 + 102) / 2, (107 + 117) / 2, (61 + 69) / 2
   assert.deepEqual(elevationColour(1200), [122, 100, 70]);                       // half way between 900 and 1500 m, (115 + 128) / 2 rounded
-  assert.deepEqual(elevationColour(9000), [255, 255, 255]);                      // above the last stop
+  assert.deepEqual(elevationColour(9000), [213, 220, 230]);                      // above the last stop: the snow, a light grey-blue
   assert.equal(elevationColour(0.5).length, 3);
   assert.ok(elevationColour(100)[1] > elevationColour(100)[0]);                  // plains read green: green is the strongest channel
   assert.ok(elevationColour(1500)[0] > elevationColour(1500)[1]);                // hills read brown: red is stronger than green

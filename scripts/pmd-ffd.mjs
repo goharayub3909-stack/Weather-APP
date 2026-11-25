@@ -109,6 +109,20 @@ const COL = {temperature: [5, 24], dew_point: [25, 32], humidity: [73, 80], pres
 const SHARES_161 = [81, 86, 91, 92, 93, 94, 95, 96, 105, 106, 107, 108, 109, 121, 122];
 const norm = n => String(n ?? '').toLowerCase().replace(/[^a-z]/g, '');
 
+// PMD's daily extremes are reported for fixed periods: the minimum (and the 24 h rain) at 08:00 PKT, the maximum at 17:00 PKT. The page gives "today" and "yesterday" values with no
+// recorded time, so the value of the LAST completed report is used and stamped with that report's hour: today's after the hour has passed, yesterday's before it. That is the stamp the
+// Live stations page expects of PMD (validStamp in public/realtime/core.js). Column 13 (minimum recorded at) is also the stamp of PMD's 24 h rain, which is already in column 105.
+// Humidity and pressure extremes are not on the page and stay empty.
+const PKT_MS = 5 * 3600000;
+export function applyExtremes(row, r, now = Date.now()) {
+  const local = new Date(now + PKT_MS), pad = n => String(n).padStart(2, '0');
+  const stamp = (hour, daysBack) => { const d = new Date(now + PKT_MS - daysBack * 86400000); return labelPkt(`${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(hour)}:00:00+05:00`); };
+  const maxDone = local.getUTCHours() >= 17, minDone = local.getUTCHours() >= 8;
+  const max = maxDone ? r.max_today : r.max_yesterday, min = minDone ? r.min_today : r.min_yesterday;
+  if (typeof max === 'number') { row.v[6] = max; row.v[7] = stamp(17, maxDone ? 0 : 1); row.v[24] = row.v[24] ?? labelPkt(r.observed_at); }
+  if (typeof min === 'number') row.v[12] = min;
+  if (typeof min === 'number' || typeof r.rain_mm === 'number') row.v[13] = stamp(8, minDone ? 0 : 1);
+}
 // Overlay the page readings on the PMD stations of a realtime.json object (changes it, returns a summary). A station row is found by WMO number
 // (first match in the page's order), else by name. A row that already has a sync newer than the page's observation is left alone.
 export function applyPmdFfd(data, ffd, parseLabel, now = Date.now()) {
@@ -120,6 +134,7 @@ export function applyPmdFfd(data, ffd, parseLabel, now = Date.now()) {
     const row = r.wmo.map(w => byId.get(String(w))).find(Boolean) ?? byName.get(norm(r.label)) ?? byName.get(norm(r.name));
     if (!row) { summary.unmatched.push(r.slug); continue; }
     const at = Date.parse(r.observed_at), label = labelPkt(r.observed_at);
+    applyExtremes(row, r, now);                                       // the daily extremes do not depend on whether the current values are newer
     const have = parseLabel(row.v[161], now);
     if (have !== null && have >= at) { summary.kept_newer++; continue; }
     const vals = {temperature: r.temperature, dew_point: r.dew_point, humidity: r.humidity, pressure_hpa: r.pressure_hpa,

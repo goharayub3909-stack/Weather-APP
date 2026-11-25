@@ -2,7 +2,9 @@
 // localhost shows live observations instead of the snapshot committed to git. CI still runs the
 // Python scripts; keep the two in step (the field indexes and limits below mirror sync-stations.py).
 import {newerFeed} from '../public/observation-feed.js';
-import {columnTable, unpermute} from '../public/realtime/core.js';
+import {columnTable, unpermute, parseLabel} from '../public/realtime/core.js';
+import {applyPmdFfd} from './pmd-ffd.mjs';
+import {readFile} from 'node:fs/promises';
 import {observationTime, slimStation, slimFromRealtime} from '../public/station-records.js';
 import {ELEVATION_SOURCE, loadElevationCache, saveElevationCache, fillElevations} from './station-elevation.mjs';
 
@@ -46,13 +48,16 @@ export function sanitizeStations(rows, perm, feedTime) {
   return out;
 }
 
+// The station feed is about 1.2 MB, uncompressed. On 23 Nov 2026 the site sent it at roughly 10 KB/s (about 2 minutes), which the old 40 s limit cut off every time: 5 minutes now.
+const FEED_TIMEOUT_MS = 5 * 60000;
 // Minimal cookie jar: fetch has none, and the provider sets its session across redirects.
 async function jarFetch(jar, url, init = {}, hops = 6) {
+  const {timeoutMs = 40000, ...fetchInit} = init;                               // the station feed is large and the site can send it slowly: that request gets a longer limit
   for (let i = 0; i <= hops; i++) {
     const cookie = [...jar].map(([k, v]) => k + '=' + v).join('; ');
-    const r = await fetch(url, {...init, redirect: 'manual', headers: {...init.headers, ...(cookie ? {Cookie: cookie} : {})}, signal: AbortSignal.timeout(40000)});
+    const r = await fetch(url, {...fetchInit, redirect: 'manual', headers: {...fetchInit.headers, ...(cookie ? {Cookie: cookie} : {})}, signal: AbortSignal.timeout(timeoutMs)});
     for (const c of r.headers.getSetCookie?.() || []) { const [pair] = c.split(';'), at = pair.indexOf('='); if (at > 0) jar.set(pair.slice(0, at).trim(), pair.slice(at + 1)); }
-    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { url = new URL(r.headers.get('location'), url).href; init = {headers: init.headers}; continue; }
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { url = new URL(r.headers.get('location'), url).href; init = {headers: init.headers, timeoutMs}; continue; }
     return {response: r, url};
   }
   throw Error('Too many redirects');
@@ -70,7 +75,7 @@ export async function fetchFeed({username, password}) {
   if (!match) throw Error('Station bootstrap unavailable');
   const boot = JSON.parse(match[1]), endpoint = new URL(boot.endpoint || '/feed/current', ORIGIN);
   if (endpoint.hostname !== 'forecasting.weatherwalay.com') throw Error('Unexpected endpoint');
-  const feed = await jarFetch(jar, endpoint.href, {headers: {'X-Requested-With': 'XMLHttpRequest', 'X-WW-Token': boot.token || ''}});
+  const feed = await jarFetch(jar, endpoint.href, {headers: {'X-Requested-With': 'XMLHttpRequest', 'X-WW-Token': boot.token || ''}, timeoutMs: FEED_TIMEOUT_MS});
   return {perm: boot.perm, payload: await feed.response.json()};
 }
 export function stationsFromFeed({perm, payload}) {
@@ -115,6 +120,19 @@ export async function realtimeWithElevations(raw, {fetcher = fetch, file = ELEVA
   return realtimeFromFeed(raw, elevationCache);
 }
 
+// The dev server builds realtime.json from the login alone, so the PMD rows would keep their old synoptic values (and no extremes). The PMD page readings that the refresh job
+// keeps in observation-data/pmd-ffd.json (at most 3 hours old, the stations freshness window) are laid over them, the same merge as scripts/sync-realtime.mjs. No network; a missing or
+// old copy leaves the data as it is. PMD_FFD=0 disables it.
+const PMD_CACHE = new URL('../public/observation-data/pmd-ffd.json', import.meta.url);
+export async function withPmdCache(data, {file = PMD_CACHE, now = Date.now(), env = process.env, read = f => readFile(f, 'utf8')} = {}) {
+  if (env.PMD_FFD === '0') return data;
+  try {
+    const cached = JSON.parse(await read(file)), age = now - Date.parse(cached.fetched_at);
+    if (Array.isArray(cached.stations) && cached.stations.length && age >= 0 && age < 3 * 3600000) applyPmdFfd(data, cached, parseLabel, now);
+  } catch { /* no usable copy */ }
+  return data;
+}
+
 // ---------- what the dev server serves ----------
 // Airports come from NOAA (no login). Stations come from WeatherWalay when WEATHERWALAY_USERNAME and
 // WEATHERWALAY_PASSWORD are set (a git-ignored .env file works); otherwise the newest already-published
@@ -133,7 +151,7 @@ async function pull(name, {env, fetcher}) {
     if (name === 'metar') data = await fetchMetar(fetcher);
     else if (env.WEATHERWALAY_USERNAME && env.WEATHERWALAY_PASSWORD) {
       const raw = await sharedFeed({username: env.WEATHERWALAY_USERNAME, password: env.WEATHERWALAY_PASSWORD}, Date.now());
-      data = name === 'realtime' ? await realtimeWithElevations(raw, {fetcher}) : stationsFromFeed(raw);
+      data = name === 'realtime' ? await withPmdCache(await realtimeWithElevations(raw, {fetcher})) : stationsFromFeed(raw);
     }
   } catch { data = null; }
   if (!data) {

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {withPmdCache} from '../scripts/observation-sync.mjs';
 import {parseStationPage, parseCities, pktIso, labelPkt, compassDegrees, applyPmdFfd, freshPmdFfd} from '../scripts/pmd-ffd.mjs';
 import {parseLabel} from '../public/realtime/core.js';
 
@@ -129,4 +130,39 @@ test('PMD cache: a copy that cannot be written does not stop the refresh, and a 
   const bad = memory(undefined); bad.fetchPages = async () => { throw Error('PMD unavailable'); };
   await assert.rejects(freshPmdFfd(opts(bad, 30)), /PMD unavailable/);
   assert.equal(bad.writes, 0);
+});
+
+test('daily extremes: the last completed PMD report is used and stamped with its hour (maximum 17:00, minimum and 24 h rain 08:00), so the Live stations page shows PMD', async () => {
+  const {stationFeatures} = await import('../public/realtime/core.js');
+  const rows = d => d.stations.map(s => s.v);
+  // 17:30 PKT: both reports of the day are done, today's values
+  const d1 = {stations: [row(41640, 'Lahore City')]}; applyPmdFfd(d1, ffd([rec()]), parseLabel, NOW);
+  const v = d1.stations[0].v;
+  assert.equal(v[6], 28); assert.equal(v[7], '05:00 pm, 17 November'); assert.equal(v[12], 13.8); assert.equal(v[13], '08:00 am, 17 November');
+  const only = new Set(['PMD']);
+  assert.equal(stationFeatures(rows(d1), 'temperature', 'Maximum', {networks: only, now: NOW}).length, 1);
+  assert.equal(stationFeatures(rows(d1), 'temperature', 'Minimum', {networks: only, now: NOW}).length, 1);
+  assert.equal(stationFeatures(rows(d1), 'rainfall', 'Last 24 Hours', {networks: only, now: NOW}).length, 1);
+  // 12:00 PKT: the maximum of today is not reported yet: yesterday's, stamped yesterday 17:00; the minimum is today's
+  const noon = Date.parse('2026-11-17T07:00:00Z'), d2 = {stations: [row(41640, 'Lahore City')]};
+  applyPmdFfd(d2, ffd([rec({observed_at: '2026-11-17T12:00:00+05:00'})]), parseLabel, noon);
+  assert.equal(d2.stations[0].v[6], 27.5); assert.equal(d2.stations[0].v[7], '05:00 pm, 16 November'); assert.equal(d2.stations[0].v[12], 13.8); assert.equal(d2.stations[0].v[13], '08:00 am, 17 November');
+  assert.equal(stationFeatures(rows(d2), 'temperature', 'Maximum', {networks: only, now: noon}).length, 1);
+  // 05:00 PKT: neither report of today yet: both yesterday's
+  const early = Date.parse('2026-11-17T00:00:00Z'), d3 = {stations: [row(41640, 'Lahore City')]};
+  applyPmdFfd(d3, ffd([rec({observed_at: '2026-11-17T04:00:00+05:00'})]), parseLabel, early);
+  assert.equal(d3.stations[0].v[12], 14.4); assert.equal(d3.stations[0].v[13], '08:00 am, 16 November'); assert.equal(d3.stations[0].v[6], 27.5);
+  assert.equal(stationFeatures(rows(d3), 'temperature', 'Minimum', {networks: only, now: early}).length, 1);
+  // a page with no extremes leaves the columns empty (no invented value)
+  const d4 = {stations: [row(41640, 'Lahore City')]}; applyPmdFfd(d4, ffd([rec({max_today: null, min_today: null, max_yesterday: null, min_yesterday: null})]), parseLabel, NOW);
+  assert.equal(d4.stations[0].v[6], null); assert.equal(d4.stations[0].v[12], null);
+});
+
+test('the live realtime data of the dev server gets the cached PMD page readings, only while the copy is fresh and not when PMD_FFD=0', async () => {
+  const cache = {...ffd([rec()]), fetched_at: '2026-11-17T12:00:00Z'}, read = async () => JSON.stringify(cache);
+  const fresh = () => ({stations: [row(41640, 'Lahore City')]});
+  const a = await withPmdCache(fresh(), {file: 'x', now: NOW, env: {}, read}); assert.equal(a.stations[0].v[5], 25); assert.equal(a.stations[0].v[6], 28);
+  const old = await withPmdCache(fresh(), {file: 'x', now: NOW + 4 * 3600000, env: {}, read}); assert.equal(old.stations[0].v[5], 1);          // 4.5 h old: not used
+  const off = await withPmdCache(fresh(), {file: 'x', now: NOW, env: {PMD_FFD: '0'}, read}); assert.equal(off.stations[0].v[5], 1);
+  const none = await withPmdCache(fresh(), {file: 'x', now: NOW, env: {}, read: async () => { throw Error('no file'); }}); assert.equal(none.stations[0].v[5], 1);   // no copy: untouched, no error
 });

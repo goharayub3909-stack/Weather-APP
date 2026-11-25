@@ -34,6 +34,10 @@ select.pill{padding-right:6px}
 #w-level{width:100%;padding:5px 6px;border-radius:8px;border:1px solid var(--border);background:#0e1828}
 .panel{position:absolute;z-index:10;left:14px;top:118px;width:230px;padding:14px;border-radius:14px;max-height:calc(100% - 210px);overflow:auto}
 .panel h2{margin:0 0 8px;font-size:10px;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;font-weight:600}
+.panel details.grp{margin:6px 0}.panel details.grp>summary{cursor:pointer;list-style:none;font-size:10px;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;font-weight:600;padding:5px 0;user-select:none}
+.panel details.grp>summary::-webkit-details-marker{display:none}.panel details.grp>summary::before{content:'\25B8';display:inline-block;width:12px;transition:transform .15s}.panel details.grp[open]>summary::before{transform:rotate(90deg)}
+.panel details.grp>summary:hover,.panel details.grp>summary:focus-visible{color:var(--fg,#e8f0ff)}
+.panel section>details.grp:only-child{margin:0}
 .panel section+section{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0}.row label{flex:1}
 .row input[type=range]{width:100%}.row.stack{display:block}.row.stack label{display:flex;justify-content:space-between;margin-bottom:3px;color:var(--muted)}
@@ -49,6 +53,7 @@ select.pill{padding-right:6px}
 .credits{position:absolute;z-index:8;right:14px;bottom:78px;max-width:420px;text-align:right;font-size:9.5px;color:var(--muted);line-height:1.5;text-shadow:0 1px 4px #000}
 .credits a{color:var(--muted)}
 #labels{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+#pins{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}#pins span{position:absolute;transform:translate(-50%,-50%);font:700 12px system-ui,Segoe UI,sans-serif;text-shadow:0 0 3px #000,0 0 5px #000,0 0 7px #000;pointer-events:auto;white-space:nowrap}#obs-modes button{margin:0 4px 4px 0;padding:4px 8px;font-size:11px}#obs-modes button[aria-pressed=true]{background:#2a4a78}
 #labels .t0{font-size:13px;font-weight:700}#labels .t1{font-size:12px;font-weight:600}#labels .t4,#labels .t5{font-size:10px;opacity:.9}#labels .k-p,#labels .k-s{color:#ffd28a}#labels .k-p:before,#labels .k-s:before{display:none}#labels .k-v:before{width:3px;height:3px}
 #labels span{position:absolute;transform:translate(-50%,-100%);font-size:10.5px;text-shadow:0 0 3px #000,0 0 6px #000;white-space:nowrap;color:#f2f7ff}
 #labels span:before{content:'';display:block;width:5px;height:5px;margin:0 auto 1px;border-radius:50%;background:#fff;box-shadow:0 0 4px #000}
@@ -89,11 +94,11 @@ body.has-fc .alt{max-height:calc(100% - 112px - 78px - min(46%,330px) - 14px)}
 </head>
 <body>
 <canvas id="scene" aria-label="3D terrain weather map of Pakistan. Drag to orbit, scroll to zoom, right-drag to pan, click for a point forecast."></canvas>
-<div id="labels" aria-hidden="true"></div>
+<div id="pins" aria-hidden="true"></div><div id="labels" aria-hidden="true"></div>
 <div class="top">
   <div class="title glass"><strong>Pakistan · Terrain explorer</strong><span id="subtitle">ECMWF IFS 9 km forecast over real terrain</span><br><span class="badge">Experimental · not official guidance · see PMD</span><br><span id="ml-badge" class="badge ml" tabindex="0" hidden></span></div>
   <div class="tools">
-    <div class="search"><input id="search" type="search" placeholder="Search a place in Pakistan" autocomplete="off" aria-label="Search a place"><ul id="results" class="results glass" hidden></ul></div>
+    <div class="search"><input id="search" type="search" placeholder="Search a place, or lat, lon" autocomplete="off" aria-label="Search a place"><ul id="results" class="results glass" hidden></ul></div>
     <select id="presets" class="pill" aria-label="Regional views"></select>
     <button id="share" class="pill" type="button">Copy view link</button>
   </div>
@@ -108,21 +113,31 @@ body.has-fc .alt{max-height:calc(100% - 112px - 78px - min(46%,330px) - 14px)}
     <div class="row"><label for="l-rain"><span class="swatch" style="background:#4aa0ff"></span>Rain, hourly</label><input id="l-rain" type="checkbox" checked></div>
     <div class="row"><label for="l-snow"><span class="swatch" style="background:#9b64f0"></span>Snow (water equivalent)</label><input id="l-snow" type="checkbox" checked></div>
     <div class="row"><label for="l-towns">Places, peaks and passes</label><input id="l-towns" type="checkbox" checked></div>
+    <div class="row"><label for="l-border">Pakistan boundary</label><input id="l-border" type="checkbox" checked></div>
+    <div class="row"><label for="l-obs" title="Temperature at every station, PMD station and airport: the reading, the 1 km model value, or the difference">Station readings vs model</label><input id="l-obs" type="checkbox"></div>
+    <div id="obs-modes" hidden style="margin:2px 0 6px"><button type="button" class="pill" data-mode="obs" aria-pressed="false">Observed</button><button type="button" class="pill" data-mode="fcst" aria-pressed="false">Model (1 km)</button><button type="button" class="pill" data-mode="bias" aria-pressed="true">Obs - model</button></div>
+    <p class="hint" id="obs-note" hidden></p>
     <div class="legend" id="legend" aria-hidden="true"></div><div class="legend-scale"><span>0.1</span><span>2</span><span>10</span><span>50 mm/h</span></div>
   </section>
   <section><h2>Wind</h2>
-    <div class="legend" id="wind-legend" aria-hidden="true" title="Trail colour by 10 m wind speed"></div><div class="wind-ticks" id="wind-ticks" aria-hidden="true"></div><p class="hint" style="margin:2px 0 8px">Trail colour = wind speed (m/s × 3.6 = km/h): pale cream calm, yellow, amber, orange, red, magenta at the top of the scale; the scale is set for the wind level chosen. Trails hug the ground; with “Follow the terrain” the 10 m wind is the 1 km mass-consistent field over the GLO-90 terrain when it is loaded (flow goes round peaks and speeds up where the layer thins over ridges, capped at 2×), otherwise a simpler slope rule. A terrain adjustment of the ECMWF wind, not a weather model.</p>
     <div class="row stack"><label for="w-level"><span>Wind altitude</span></label><select id="w-level"><option value="sfc">Surface (10 m)</option><option value="850">850 hPa (about 1.5 km)</option><option value="700">700 hPa (about 3 km)</option></select></div>
     <p class="hint" id="level-note"></p>
+    <details class="grp"><summary>Wind settings</summary>
     <div class="row stack"><label for="w-density"><span>Density</span><output id="o-density">6000</output></label><input id="w-density" type="range" min="2000" max="24000" step="1000" value="6000"></div>
+    <div class="row stack"><label for="w-width"><span>Particle width</span><output id="o-width">1.0×</output></label><input id="w-width" type="range" min="0.5" max="2.5" step="0.1" value="1"></div>
     <div class="row"><label for="w-follow">Follow the terrain</label><input id="w-follow" type="checkbox" checked></div>
     <div class="row stack"><label for="w-speed"><span>Animation speed</span><output id="o-speed">1×</output></label><input id="w-speed" type="range" min="0" max="4" step="1" value="1" list="speed-steps" aria-valuetext="1x"><datalist id="speed-steps"><option value="0" label="0.5×"></option><option value="1" label="1×"></option><option value="2" label="2×"></option><option value="3" label="4×"></option><option value="4" label="6×"></option></datalist><div class="wind-ticks" aria-hidden="true"><span style="left:0">0.5×</span><span style="left:25%">1×</span><span style="left:50%">2×</span><span style="left:75%">4×</span><span style="left:100%">6×</span></div></div>
     <div class="row stack"><label for="w-trail"><span>Trail length</span><output id="o-trail">8 segments · medium</output></label><input id="w-trail" type="range" min="4" max="13" step="1" value="8"></div>
+    </details>
+    <details class="grp"><summary>Scale and notes</summary>
+    <div class="legend" id="wind-legend" aria-hidden="true" title="Trail colour by 10 m wind speed"></div><div class="wind-ticks" id="wind-ticks" aria-hidden="true"></div><p class="hint" id="wind-length-note" style="margin:2px 0 4px"></p><p class="hint" style="margin:2px 0 8px">White streaks (m/s × 3.6 = km/h). Trails hug the ground; with “Follow the terrain” the 10 m wind is the 1 km mass-consistent field over the GLO-90 terrain when it is loaded (flow goes round peaks and speeds up where the layer thins over ridges, capped at 2×), otherwise a simpler slope rule. A terrain adjustment of the ECMWF wind, not a weather model.</p>
+    </details>
   </section>
-  <section><h2>Controls</h2>
+  <section><details class="grp"><summary>How to use the map</summary>
     <p class="hint"><b>Drag</b> to move · <b>right-drag</b>, <b>Shift-drag</b> or the ✥ button (rotate mode) to rotate and tilt · or use the Tilt and Rotation sliders · <b>scroll</b> to zoom to the cursor · <b>double-click</b> to zoom in · <b>click</b> for a forecast.<br>Keys: arrows move · + − zoom · Q E rotate · PgUp PgDn tilt · R mode · N north · H home · Space play. Touch: one finger moves, two fingers pinch and twist.</p>
+  </details>
   </section>
-  <section><h2>Terrain</h2>
+  <section><details class="grp"><summary>Terrain</summary>
     <div class="row stack"><label for="t-exag"><span>Height exaggeration</span><output id="o-exag">3.0×</output></label><input id="t-exag" type="range" min="1" max="10" step="0.5" value="3"></div>
     <div class="row stack"><label for="t-tilt"><span>Tilt (0 from above, 85 flat)</span><output id="o-tilt">52°</output></label><input id="t-tilt" type="range" min="0" max="85" step="1" value="52"></div>
     <div class="row stack"><label for="t-head"><span>Rotation</span><output id="o-head">0°</output></label><input id="t-head" type="range" min="-180" max="180" step="1" value="0"></div>
@@ -130,6 +145,7 @@ body.has-fc .alt{max-height:calc(100% - 112px - 78px - min(46%,330px) - 14px)}
     <div class="row"><label for="t-detail">Detailed terrain</label><input id="t-detail" type="checkbox"></div>
     <div class="row"><label for="t-top">Top-down view</label><input id="t-top" type="checkbox"></div>
     <p class="hint" id="detail-state">Zoom in for 130 m and 65 m detail</p>
+  </details>
   </section>
 </aside>
 <div class="nav glass" role="group" aria-label="Map navigation">
@@ -153,7 +169,7 @@ body.has-fc .alt{max-height:calc(100% - 112px - 78px - min(46%,330px) - 14px)}
   <p id="fc-note" class="fc-note"></p>
 </section>
 <nav id="alt-bar" class="alt glass" aria-label="Altitude: surface to 250 hPa"></nav>
-<div class="credits"><span id="credit-forecast">Forecast: ECMWF Open Data (CC BY 4.0)</span> · Terrain: Mapzen / AWS Terrain Tiles (SRTM, ASTER and others) · Imagery: Esri, Maxar, Earthstar Geographics and the GIS User Community · Place names: GeoNames (CC BY 4.0) · 3D: three.js (MIT)<br>Rain and snow are model values, not radar. A screening view, not an official forecast or warning: for those use the <a href="https://www.pmd.gov.pk/" target="_blank" rel="noopener noreferrer">Pakistan Meteorological Department</a>.</div>
+<div class="credits"><span id="credit-forecast">Forecast: ECMWF Open Data (CC BY 4.0)</span> · Terrain: Mapzen / AWS Terrain Tiles (SRTM, ASTER and others) · Imagery: Esri, Maxar, Earthstar Geographics and the GIS User Community · Place names: GeoNames (CC BY 4.0) · Boundary: Natural Earth (public domain), Pakistan point of view · 3D: three.js (MIT)<br>Rain and snow are model values, not radar. A screening view, not an official forecast or warning: for those use the <a href="https://www.pmd.gov.pk/" target="_blank" rel="noopener noreferrer">Pakistan Meteorological Department</a>.</div>
 <div class="bottom glass">
   <div class="time"><strong id="t-label">—</strong><span id="t-sub">Pakistan Standard Time</span></div>
   <button id="t-back" type="button" aria-label="Back one hour">−1 h</button>

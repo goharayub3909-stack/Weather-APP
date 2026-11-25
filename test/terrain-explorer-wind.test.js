@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {WIND_RANGES, windRange, percentile, histogramPercentile, windSpeedFromCode, surfaceRangeFrom, windTicks, WIND_MOTION, windMotion, levelFade, wind1kmWeight, easeInOut, transitionAt, LEVEL_TRANSITION, gridSpacings, gridOpacity, LEVEL_GRID, PRESSURE_LEVELS, catmullRom, bicubic, bilinear, windFromBlock, centripetalCatmullRom, midpointStep, eulerStep, simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
+import {BOUNDARY, boundarySegments, WIDTH_CONTROL, clampWidthControl, STREAK, streakLengthPx, streakWidthPx, streakAlpha, lengthControl, WIND_RANGES, windRange, percentile, histogramPercentile, windSpeedFromCode, surfaceRangeFrom, windTicks, WIND_MOTION, windMotion, levelFade, wind1kmWeight, easeInOut, transitionAt, LEVEL_TRANSITION, gridSpacings, gridOpacity, LEVEL_GRID, PRESSURE_LEVELS, catmullRom, bicubic, bilinear, windFromBlock, centripetalCatmullRom, midpointStep, eulerStep, simRowRange, spawnPlaneHeight, meshCellHeight, QUALITY, QUALITY_STEPS, newQuality, qualityStep, WIND, RIBBON, windColour, windRampGlsl, WIND_SIM, SPEED_STEPS, speedFromStep, slotInterval, trailPoint, trailLabel, kmPerPixel, ringSlot, sameLife, trailAlpha, trailWidthPx, zoomScale, lifespan, advect, withMinimumSpeed, respawnBox, outsideBox, outsideView, GRID} from '../public/explorer/core.js';
 
 test('a particle lives between 50 and 150 frames, a new random value each time', () => {
   assert.equal(WIND_SIM.life[0], 120); assert.equal(WIND_SIM.life[1], 300);
@@ -66,7 +66,7 @@ test('why particle positions are kept in local kilometres: a float32 longitude c
 });
 
 test('a trail is the live head plus 13 recorded positions in a ring buffer, newest first', () => {
-  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 4000); assert.equal(WIND_SIM.maxParticles, 24576);
+  assert.equal(WIND_SIM.trailPoints, 14); assert.equal(WIND_SIM.defaultCount, 10000); assert.equal(WIND_SIM.maxParticles, 24576);
   assert.deepEqual([1, 2, 3, 13].map(k => ringSlot(5, k)), [5, 4, 3, 6]);                    // newest at the head slot, then backwards, wrapping round
   assert.deepEqual([1, 2].map(k => ringSlot(0, k)), [0, 12]);
   const seen = new Set(); for (let k = 1; k <= 13; k++) seen.add(ringSlot(7, k)); assert.equal(seen.size, 13);   // the 13 slots, each once
@@ -84,7 +84,7 @@ test('trails are bright at the head and fade smoothly to nothing at the tail, an
   assert.ok(trailAlpha(0.5, 1) < trailAlpha(0.5, 8));                                       // calm air is fainter
   assert.ok(trailWidthPx(0, 12) > trailWidthPx(0, 1));                                      // fast wind is wider
   assert.ok(trailWidthPx(1, 6) < trailWidthPx(0, 6) && trailWidthPx(1, 6) > 0);             // narrows towards the tail but never vanishes geometrically
-  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.3) < 1e-9 && Math.abs(trailWidthPx(0, 99) - 2.5) < 1e-9);
+  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.7) < 1e-9 && Math.abs(trailWidthPx(0, 99) - 2.7) < 1e-9);
 });
 test('at 1x the wind moves at about 11 pixels a second for every m/s of wind, at any zoom', () => {
   for (const dist of [30, 60, 300, 1500, 2300]) {
@@ -141,9 +141,9 @@ test('the calm direction changes smoothly: heading in still air, the wind own di
   assert.deepEqual(withMinimumSpeed(m, 0, 5), [m, 0]);                                         // at the minimum the wind is untouched: continuous with the branch above
 });
 test('the shader wind ramp is generated from the colour table, and the ribbon has a dark halo wider than its core', () => {
-  assert.ok(windColour(0).every(v => v > 200));                                                // calm: pale cream
-  assert.deepEqual(windColour(1), [196, 48, 112]);                                             // the top of the range: magenta
-  assert.deepEqual(windColour(5), [196, 48, 112]);                                             // beyond the range: the top colour
+  assert.ok(windColour(0)[0] > 240 && windColour(0)[1] > 220);                                  // calm: a pale warm yellow
+  assert.deepEqual(windColour(1), [200, 45, 110]);                                             // the top of the range: magenta
+  assert.deepEqual(windColour(5), [200, 45, 110]);                                             // beyond the range: the top colour
   const g = windRampGlsl('rampX');
   assert.ok(g.startsWith('vec3 rampX(float t)') && (g.match(/return mix/g) || []).length === WIND.length - 1);
   for (const [v, r, gg, b] of WIND) assert.ok(g.includes(`vec3(${r.toFixed(1)}, ${gg.toFixed(1)}, ${b.toFixed(1)}) / 255.`), `stop at t = ${v}`);
@@ -205,11 +205,11 @@ test('a particle lives 2 to 5 seconds at 60 frames a second', () => {
 });
 
 // ---- Batch C: density and performance ----
-test('the default is 4,000 trails of 8 segments, drawn a little thinner', () => {
-  assert.equal(WIND_SIM.defaultCount, 4000); assert.equal(WIND_SIM.trailSegments.default, 8);
+test('the default is 10,000 trails of 8 segments, drawn a little thinner', () => {
+  assert.equal(WIND_SIM.defaultCount, 10000); assert.equal(WIND_SIM.trailSegments.default, 8);
   assert.ok(WIND_SIM.trailSegments.default >= WIND_SIM.trailSegments.min && WIND_SIM.trailSegments.default <= WIND_SIM.trailSegments.max);
-  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.3) < 1e-12); assert.ok(Math.abs(trailWidthPx(0, 12) - 2.5) < 1e-12);               // 1.3 + 1.2 x min(1, speed / 12), full width at the head
-  assert.ok(Math.abs(trailWidthPx(1, 12) - 1.25) < 1e-12);                                                                      // half of it at the tail
+  assert.ok(Math.abs(trailWidthPx(0, 0) - 1.7) < 1e-12); assert.ok(Math.abs(trailWidthPx(0, 12) - 2.7) < 1e-12);               // 1.7 + 1.0 x min(1, speed / 12), full width at the head
+  assert.ok(Math.abs(trailWidthPx(1, 12) - 1.35) < 1e-12);                                                                      // half of it at the tail
 });
 test('only the rows of the state texture that are drawn are simulated, and rows that become active are respawned', () => {
   assert.deepEqual(simRowRange(6000, 256, 96, 0), {rows: 24, activate: null});                                                  // 6000 / 256 = 23.4 -> 24 rows; first frame: everything is respawned anyway
@@ -282,14 +282,15 @@ test('the midpoint step is second order: in a rotating wind it stays on the circ
 
 // ---- Batch E: every level looks good ----
 test('E1 the palette has the six normalised stops of the design and is smooth between them', () => {
-  assert.deepEqual(WIND, [[0, 247, 245, 230], [0.22, 250, 232, 173], [0.42, 250, 204, 97], [0.62, 242, 156, 44], [0.8, 228, 92, 46], [1, 196, 48, 112]]);
-  assert.deepEqual(windColour(0.22), [250, 232, 173]);
-  const mid = windColour(0.11); assert.deepEqual(mid, [Math.round((247 + 250) / 2), Math.round((245 + 232) / 2), Math.round((230 + 173) / 2)]);
+  assert.deepEqual(WIND, [[0, 255, 244, 110], [0.1, 255, 232, 20], [0.35, 255, 214, 0], [0.55, 255, 160, 20], [0.75, 240, 100, 40], [1, 200, 45, 110]]);
+  assert.deepEqual(windColour(0.1), [255, 232, 20]);
+  const mid = windColour(0.05); assert.deepEqual(mid, [255, Math.round((244 + 232) / 2), Math.round((110 + 20) / 2)]);
+  assert.ok(windColour(0)[2] < 160 && windColour(0.16)[2] < 30 && windColour(0.16)[0] > 250 && windColour(0.16)[1] > 220);          // even calm air is a warm yellow and light and moderate wind a bright yellow, not near-white
 });
 test('E2 every level has a range, the surface 10 m/s, 1000 hPa 15 m/s, up to 80 m/s at 250 hPa, and the legend ticks follow it', () => {
-  assert.deepEqual(WIND_RANGES, {sfc: 10, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80});
+  assert.deepEqual(WIND_RANGES, {sfc: 7, 1000: 15, 925: 25, 850: 30, 700: 40, 600: 45, 500: 50, 400: 60, 300: 70, 250: 80});
   for (const l of PRESSURE_LEVELS) assert.ok(WIND_RANGES[l] > 0, `${l} hPa has a range`);
-  assert.equal(windRange('500'), 50); assert.equal(windRange('sfc'), 10); assert.equal(windRange('sfc', 35), 35); assert.equal(windRange('500', 35), 50);
+  assert.equal(windRange('500'), 50); assert.equal(windRange('sfc'), 7); assert.equal(windRange('sfc', 35), 35); assert.equal(windRange('500', 35), 50);
   assert.deepEqual(windTicks(20).map(t => [t.f, t.ms, t.kmh]), [[0, 0, 0], [0.25, 5, 18], [0.5, 10, 36], [0.75, 15, 54], [1, 20, 72]]);
   assert.deepEqual(windTicks(80).map(t => [t.ms, t.kmh]), [[0, 0], [20, 72], [40, 144], [60, 216], [80, 288]]);
   assert.equal(windTicks(25)[1].ms, 6.3);                                                       // one decimal at most
@@ -300,8 +301,8 @@ test('E3 the 99th percentile of a speed list and of a histogram agree, and the s
   const hist = new Float64Array(1000); for (let i = 0; i < 100; i++) hist[i * 2]++;             // speeds 0, 0.2, ... 19.8 m/s
   const h = histogramPercentile(hist, 0.1, 0.99); assert.ok(h > 19.4 && h <= 19.8 + 1e-9, String(h));
   assert.equal(histogramPercentile(new Float64Array(10), 0.1, 0.5), null);
-  assert.equal(surfaceRangeFrom(6.65), 10); assert.equal(surfaceRangeFrom(10), 10); assert.equal(surfaceRangeFrom(10.1), 15); assert.equal(surfaceRangeFrom(12.3), 15); assert.equal(surfaceRangeFrom(20.1), 25); assert.equal(surfaceRangeFrom(25), 25);
-  assert.equal(surfaceRangeFrom(25.01), 30); assert.equal(surfaceRangeFrom(null), 10); assert.equal(surfaceRangeFrom(NaN), 10);
+  assert.equal(surfaceRangeFrom(6.65), 7); assert.equal(surfaceRangeFrom(7), 7); assert.equal(surfaceRangeFrom(7.1), 10); assert.equal(surfaceRangeFrom(10), 10); assert.equal(surfaceRangeFrom(10.1), 15); assert.equal(surfaceRangeFrom(12.3), 15); assert.equal(surfaceRangeFrom(20.1), 25); assert.equal(surfaceRangeFrom(25), 25);
+  assert.equal(surfaceRangeFrom(25.01), 30); assert.equal(surfaceRangeFrom(null), 7); assert.equal(surfaceRangeFrom(NaN), 7);
 });
 test('E3 the 1 km wind pixel decodes to a speed, and 4095 is missing', () => {
   const px = (u, v) => { const val = u * 4096 + v; return [val >> 16, (val >> 8) & 255, val & 255]; };
@@ -344,8 +345,54 @@ test('E8 the reference grid: 1 degree lines, 0.25 degree lines only in a close v
 });
 
 test('trail opacity and width follow the speed against the level range, so light wind stays visible at the surface', () => {
-  assert.ok(Math.abs(trailAlpha(0, 4, 10) - 0.95) < 1e-9); assert.ok(Math.abs(trailAlpha(0, 0, 10) - 0.475) < 1e-9);     // 4 m/s of a 10 m/s range is full strength; calm air keeps half
-  assert.ok(Math.abs(trailWidthPx(0, 6, 10) - 2.5) < 1e-9); assert.ok(Math.abs(trailWidthPx(0, 0, 10) - 1.3) < 1e-9);
+  assert.ok(Math.abs(trailAlpha(0, 4, 10) - 0.95) < 1e-9); assert.ok(Math.abs(trailAlpha(0, 0, 10) - 0.7125) < 1e-9);     // 4 m/s of a 10 m/s range is full strength; calm air keeps three quarters
+  assert.ok(Math.abs(trailWidthPx(0, 6, 10) - 2.7) < 1e-9); assert.ok(Math.abs(trailWidthPx(0, 0, 10) - 1.7) < 1e-9);
   assert.ok(trailAlpha(0, 4, 10) > trailAlpha(0, 4, 50) && trailWidthPx(0, 4, 10) > trailWidthPx(0, 4, 50));              // the same wind is stronger at the surface than at 500 hPa
   assert.equal(trailAlpha(0.3, 8), trailAlpha(0.3, 8, 20));                                                                // default range 20: the earlier curve
+});
+
+// ---- the streaks (every particle one tapered streak, the same at every level) ----
+test('streak length on screen grows with the speed against the level range, between the minimum and maximum, so light surface wind and an upper-level jet both read', () => {
+  assert.equal(streakLengthPx(0, 7), STREAK.minPx); assert.equal(streakLengthPx(100, 7), STREAK.maxPx);                          // calm: the minimum dash; beyond 60 % of the range: the maximum
+  assert.ok(Math.abs(streakLengthPx(7 * STREAK.fullAtFraction, 7) - STREAK.maxPx) < 1e-9);
+  const lens = [0, 0.5, 1, 2, 3, 4, 5].map(v => streakLengthPx(v, 7)); assert.ok(lens.every((l, i) => i === 0 || l >= lens[i - 1]));
+  assert.ok(Math.abs(streakLengthPx(3, 7) - streakLengthPx(9, 21)) < 1e-9);                                                      // the same share of the range gives the same length at any level
+  assert.ok(Math.abs(streakLengthPx(2, 7, 2) - 2 * streakLengthPx(2, 7)) < 1e-9);                                                 // the Trail length control scales it
+  assert.equal(lengthControl(8), 1); assert.ok(lengthControl(4) === 0.5 && lengthControl(13) > 1.5);
+});
+test('streak width tapers from the head to the tail and its opacity fades to nothing, sharply at the head', () => {
+  assert.equal(streakWidthPx(0), STREAK.headWidthPx); assert.equal(streakWidthPx(1), STREAK.tailWidthPx); assert.ok(streakWidthPx(0.5) < streakWidthPx(0) && streakWidthPx(0.5) > streakWidthPx(1));
+  assert.equal(streakAlpha(0), STREAK.alphaHead); assert.equal(streakAlpha(1), 0); assert.ok(streakAlpha(0.3) > streakAlpha(0.6));
+  assert.ok(Math.abs(streakAlpha(0, 0.5) - STREAK.alphaHead * 0.5) < 1e-12);                                                       // life fade and level fade multiply
+  assert.ok(STREAK.headWidthPx >= 2 && STREAK.alphaHead >= 0.9 && STREAK.minPx >= 12);                                              // thin enough to be sharp, strong enough to be seen on any terrain
+});
+test('the streaks are white, with the speed shown by their length; the speed colour palette is kept for tinting and the CPU fallback', () => {
+  assert.equal(STREAK.white, 1);
+  assert.ok(STREAK.halo > 0 && STREAK.halo < 1);                                                                                              // a dark edge keeps white readable on snow
+  assert.ok(WIND.length === 6 && windColour(0.2).every(v => v >= 0 && v <= 255));
+});
+
+test('the particle width control is a factor of 0.5 to 2.5, 1 by default, and never leaves that range', () => {
+  assert.deepEqual(WIDTH_CONTROL, {min: 0.5, max: 2.5, step: 0.1, default: 1});
+  assert.equal(clampWidthControl(1), 1); assert.equal(clampWidthControl(0), 0.5); assert.equal(clampWidthControl(9), 2.5); assert.equal(clampWidthControl(NaN), 1); assert.equal(clampWidthControl(1.7), 1.7);
+});
+test('boundary segments join each point of a ring to the next, and the line is thin with a halo wider than its core', () => {
+  assert.deepEqual(boundarySegments([[[0, 0], [1, 0], [1, 1], [0, 0]]]), [[0, 0, 1, 0], [1, 0, 1, 1], [1, 1, 0, 0]]);
+  assert.equal(boundarySegments([[[0, 0], [1, 1]], [[5, 5], [6, 6], [7, 7]]]).length, 3);
+  assert.deepEqual(boundarySegments([]), []);
+  assert.ok(BOUNDARY.coreHalfPx > 0 && BOUNDARY.haloHalfPx > BOUNDARY.coreHalfPx && BOUNDARY.haloAlpha > 0 && BOUNDARY.haloAlpha < 1);
+});
+
+test('the boundary data is Pakistan as drawn on the official map of Pakistan: it contains Lahore, Karachi, Gilgit, Muzaffarabad, Srinagar, Jammu and Leh, and not New Delhi or Kabul', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const {rings} = JSON.parse(await readFile(new URL('../public/explorer/pakistan-boundary.json', import.meta.url), 'utf8'));
+  assert.ok(rings.length >= 1 && rings.every(r => r.length > 3 && r[0][0] === r.at(-1)[0] && r[0][1] === r.at(-1)[1]));             // closed rings
+  const inside = (lon, lat) => rings.reduce((n, ring) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return n + (c ? 1 : 0); }, 0) % 2 === 1;
+  for (const [name, lon, lat] of [['Lahore', 74.34, 31.55], ['Karachi', 67.0, 24.86], ['Gilgit', 74.3, 35.92], ['Muzaffarabad', 73.47, 34.37], ['Srinagar', 74.8, 34.08], ['Jammu', 74.86, 32.73], ['Leh', 77.58, 34.17]]) assert.equal(inside(lon, lat), true, name);
+  for (const [name, lon, lat] of [['New Delhi', 77.2, 28.6], ['Kabul', 69.17, 34.53], ['Amritsar', 74.87, 31.63]]) assert.equal(inside(lon, lat), false, name);
+});
+test('the streaks are pure white, fully opaque at the head, drawn as a smooth curve of several pieces, with a slim edge', () => {
+  assert.equal(STREAK.white, 1); assert.equal(STREAK.alphaHead, 1); assert.ok(STREAK.segments >= 4 && Number.isInteger(STREAK.segments));
+  assert.ok(STREAK.fadePow <= 1.1 && streakAlpha(0.5) > 0.4);                                                                                // a gentle fade: still clearly white half way along
+  assert.ok(RIBBON.outline > 1.2 && RIBBON.outline <= 1.6);                                                                                    // about half a pixel of edge on each side
 });
